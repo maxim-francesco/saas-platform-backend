@@ -79,4 +79,102 @@ const getAttributesForCategory = async (req, res) => {
   }
 };
 
-module.exports = { createAttribute, getAttributesForCategory };
+const updateAttribute = async (req, res) => {
+  const { categoryId, attributeId } = req.params;
+  const { name, type } = req.body;
+  const { businessId } = req.user;
+
+  // Validare
+  const validTypes = ["STRING", "NUMBER", "BOOLEAN"];
+  if (!name || !type || !validTypes.includes(type)) {
+    return res
+      .status(400)
+      .json({ message: "Numele și tipul valid sunt obligatorii." });
+  }
+
+  try {
+    // Verificăm dacă atributul pe care vrem să-l modificăm chiar aparține
+    // unei categorii care aparține business-ului utilizatorului. Securitate!
+    const attributeToUpdate = await prisma.attribute.findFirst({
+      where: {
+        id: attributeId,
+        categoryId: categoryId,
+        category: {
+          businessId: businessId,
+        },
+      },
+    });
+
+    if (!attributeToUpdate) {
+      return res
+        .status(404)
+        .json({ message: "Atributul nu a fost găsit sau nu aveți acces." });
+    }
+
+    const updatedAttribute = await prisma.attribute.update({
+      where: { id: attributeId },
+      data: { name, type },
+    });
+
+    res.status(200).json(updatedAttribute);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Eroare la actualizarea atributului.", error });
+  }
+};
+
+// Funcția pentru a șterge un atribut
+const deleteAttribute = async (req, res) => {
+  const { categoryId, attributeId } = req.params;
+  const { businessId } = req.user;
+
+  try {
+    // Aceeași verificare de securitate ca la update
+    const attributeToDelete = await prisma.attribute.findFirst({
+      where: {
+        id: attributeId,
+        categoryId: categoryId,
+        category: {
+          businessId: businessId,
+        },
+      },
+    });
+
+    if (!attributeToDelete) {
+      return res
+        .status(404)
+        .json({ message: "Atributul nu a fost găsit sau nu aveți acces." });
+    }
+
+    // Prisma va preveni ștergerea dacă există valori asociate.
+    // O strategie robustă ar fi să ștergem mai întâi valorile, dar pentru moment,
+    // lăsăm eroarea default a bazei de date dacă există dependențe.
+    await prisma.attribute.delete({
+      where: { id: attributeId },
+    });
+
+    res.status(200).json({ message: "Atributul a fost șters." });
+  } catch (error) {
+    // Prindem eroarea în caz că atributul este folosit în anunțuri
+    if (error.code === "P2003") {
+      // Cod specific Prisma pentru foreign key constraint
+      return res
+        .status(409)
+        .json({
+          message:
+            "Acest atribut nu poate fi șters deoarece este folosit de unul sau mai multe anunțuri.",
+        });
+    }
+    res
+      .status(500)
+      .json({ message: "Eroare la ștergerea atributului.", error });
+  }
+};
+
+module.exports = {
+  createAttribute,
+  getAttributesForCategory,
+  updateAttribute, // Adaugă funcția nouă
+  deleteAttribute, // Adaugă funcția nouă
+};
