@@ -1,0 +1,124 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- MODELE CENTRALE PENTRU MULTI-TENANCY ---
+
+// Modelul pentru Business (Tenant) - fiecare dealer auto sau agenție imobiliară
+model Business {
+  id          String    @id @default(cuid())
+  name        String    @unique // Numele afacerii
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relații
+  users       User[]    // Un business are mai mulți utilizatori (administratori)
+  categories  Category[]// Un business își poate defini propriile categorii
+  listings    Listing[] // Un business are mai multe anunțuri
+}
+
+// Modelul pentru Utilizatori (Administratorii care se loghează în panou)
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  password    String   // Parola va fi stocată ca hash
+  role        Role     @default(ADMIN) // Rolul utilizatorului
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relație: Un utilizator aparține unui singur Business
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+}
+
+enum Role {
+  SUPER_ADMIN // Poate gestiona tot sistemul
+  ADMIN       // Administratorul unui tenant
+}
+
+
+// --- MODELE PENTRU SISTEMUL DE ANUNȚURI DINAMICE ---
+
+// Modelul pentru Categorii (ex: "Autoturisme", "Apartamente de închiriat")
+model Category {
+  id          String   @id @default(cuid())
+  name        String   // Numele categoriei
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relație: O categorie aparține unui Business
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+
+  // Relații
+  attributes  Attribute[] // O categorie are mai multe atribute definibile
+  listings    Listing[]   // O categorie are mai multe anunțuri
+}
+
+// Modelul pentru Atribute (ex: "Kilometraj", "An fabricație", "Suprafață utilă")
+model Attribute {
+  id          String   @id @default(cuid())
+  name        String   // Numele atributului (ex: "Culoare")
+  type        AttributeType // Tipul de dată (text, număr, etc.)
+
+  // Relație: Un atribut aparține unei singure Categorii
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  // Relație
+  values      AttributeValue[] // Un atribut poate avea mai multe valori (una per anunț)
+}
+
+enum AttributeType {
+  STRING // Pentru text (ex: Culoare, Model)
+  NUMBER // Pentru numere (ex: Preț, An, Kilometraj)
+  BOOLEAN // Pentru Da/Nu (ex: "Aer condiționat")
+}
+
+// Modelul central - Anunțul (Listing)
+model Listing {
+  id          String    @id @default(cuid())
+  title       String    // Titlul anunțului (ex: "VW Golf 7, 2018")
+  description String?   // Descriere opțională
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Relație: Un anunț aparține unui Business
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+
+  // Relație: Un anunț aparține unei Categorii
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+
+  // Relație
+  attributeValues AttributeValue[] // Anunțul are mai multe valori pentru atributele sale
+}
+
+// MODELUL CHEIE: Valoarea unui atribut pentru un anumit anunț
+model AttributeValue {
+  id          String  @id @default(cuid())
+
+  // Valorile efective. Doar una dintre ele va fi completată, în funcție de tipul atributului
+  stringValue String?
+  numberValue Float?
+  booleanValue Boolean?
+
+  // Relație: Valoarea este pentru un anumit anunț
+  listingId   String
+  listing     Listing @relation(fields: [listingId], references: [id])
+
+  // Relație: Valoarea corespunde unui anumit atribut
+  attributeId String
+  attribute   Attribute @relation(fields: [attributeId], references: [id])
+
+  // Prevenim crearea de valori duplicate pentru același atribut la același anunț
+  @@unique([listingId, attributeId])
+}
