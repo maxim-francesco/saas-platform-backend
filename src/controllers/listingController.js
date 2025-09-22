@@ -193,4 +193,36 @@ const deleteListing = async (req, res) => {
   }
 };
 
-module.exports = { createListing, getListings, updateListing, deleteListing };
+const getListingById = async (req, res) => {
+  const { listingId } = req.params;
+  const { businessId } = req.user;
+
+  try {
+    const listing = await prisma.listing.findFirst({
+      where: {
+        id: listingId,
+        businessId: businessId, // Securitate: asigură-te că user-ul cere un anunț propriu
+      },
+      include: {
+        attributeValues: true, // Includem valorile atributelor
+      },
+    });
+
+    if (!listing) {
+      return res.status(404).json({ message: "Anunțul nu a fost găsit." });
+    }
+
+    res.status(200).json(listing);
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la preluarea anunțului." });
+  }
+};
+
+// Nu uita să o exporți la final!
+module.exports = {
+  createListing,
+  getListings,
+  updateListing,
+  deleteListing,
+  getListingById,
+};
