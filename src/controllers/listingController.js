@@ -103,53 +103,63 @@ const getListings = async (req, res) => {
 };
 
 // Funcția de a actualiza un anunț
+// Înlocuiește funcția existentă cu aceasta
 const updateListing = async (req, res) => {
   const { listingId } = req.params;
-  const { title, description, attributes } = req.body;
   const { businessId } = req.user;
+
+  // --- LOGGING PENTRU DEBUG ---
+  console.log(`[DEBUG] Încercare de update pentru listingId: ${listingId}`);
+  console.log(`[DEBUG] Acțiune efectuată de businessId: ${businessId}`);
+  // --- SFÂRȘIT LOGGING ---
 
   try {
     await prisma.$transaction(async (prisma) => {
-      // 1. Verificăm dacă anunțul există și aparține business-ului
       const listing = await prisma.listing.findFirst({
-        where: { id: listingId, businessId },
+        where: {
+          id: listingId,
+          businessId: businessId, // Condiția cheie de securitate
+        },
       });
 
+      // --- LOGGING PENTRU DEBUG ---
       if (!listing) {
+        console.log(
+          `[DEBUG] REZULTAT: Anunțul NU a fost găsit pentru acest business. Se returnează 404.`
+        );
         throw new Error("Anunțul nu a fost găsit sau nu aveți acces la el.");
+      } else {
+        console.log(
+          `[DEBUG] REZULTAT: Anunțul a fost găsit. Se continuă cu update-ul.`
+        );
       }
+      // --- SFÂRȘIT LOGGING ---
 
-      // 2. Actualizăm datele de bază ale anunțului
+      // ... restul logicii de update (rămâne neschimbată) ...
+      const { title, description, attributes } = req.body;
       await prisma.listing.update({
         where: { id: listingId },
         data: { title, description },
       });
 
-      // 3. Dacă au fost trimise atribute noi, le actualizăm
       if (attributes && Array.isArray(attributes)) {
-        // Strategia "Delete & Create": ștergem toate valorile vechi...
         await prisma.attributeValue.deleteMany({ where: { listingId } });
-
-        // ... și le creăm din nou pe cele noi (similar cu logica din `createListing`)
         const categoryAttributes = await prisma.attribute.findMany({
           where: { categoryId: listing.categoryId },
         });
-
         for (const attr of attributes) {
           const definedAttribute = categoryAttributes.find(
             (a) => a.id === attr.attributeId
           );
           if (!definedAttribute)
             throw new Error(`Atribut invalid: ${attr.attributeId}`);
-
           const valueData = { listingId, attributeId: attr.attributeId };
           if (definedAttribute.type === "STRING")
             valueData.stringValue = attr.value;
           else if (definedAttribute.type === "NUMBER")
-            value.numberValue = parseFloat(attr.value);
+            valueData.numberValue = parseFloat(attr.value);
           else if (definedAttribute.type === "BOOLEAN")
             valueData.booleanValue = Boolean(attr.value);
-
           await prisma.attributeValue.create({ data: valueData });
         }
       }

@@ -15,8 +15,8 @@ router.use(isAuthenticated);
 
 router.post("/", createListing);
 router.get("/", getListings);
-router.get("/:listingId", getListingById); // ADAUGĂ ACEASTĂ LINIE NOUĂ
-router.put("/:listingId", updateListing);
+router.get("/:listingId", getListingById);
+router.put("/:listingId", updateListing); // <-- VERIFICĂ ACEASTĂ LINIE ÎN MOD SPECIAL
 router.delete("/:listingId", deleteListing);
 
 module.exports = router;
