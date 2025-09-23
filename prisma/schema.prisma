@@ -89,6 +89,7 @@ model Listing {
   description String?   // Descriere opțională
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  images    ListingImage[] // Adaugă această linie
 
   // Relație: Un anunț aparține unui Business
   businessId  String
@@ -121,4 +122,12 @@ model AttributeValue {
 
   // Prevenim crearea de valori duplicate pentru același atribut la același anunț
   @@unique([listingId, attributeId])
+}
+
+// Adaugă acest model nou
+model ListingImage {
+  id        String  @id @default(cuid())
+  url       String
+  listingId String
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }

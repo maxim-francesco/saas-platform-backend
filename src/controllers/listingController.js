@@ -1,5 +1,38 @@
 // src/controllers/listingController.js
 const prisma = require("../config/prismaClient");
+const cloudinary = require("../config/cloudinary");
+
+// ADAUGĂ ACEASTĂ FUNCȚIE NOUĂ
+const uploadImages = async (req, res) => {
+  const { listingId } = req.params;
+  const { businessId } = req.user;
+  try {
+    const listing = await prisma.listing.findFirst({
+      where: { id: listingId, businessId },
+    });
+    if (!listing) return res.status(404).json({ message: "Anunț negăsit." });
+    if (!req.file)
+      return res.status(400).json({ message: "Niciun fișier încărcat." });
+
+    const folderPath = `saas-platform/${listing.businessId}/${listing.id}`;
+    const uploadStream = cloudinary.uploader.upload_stream(
+      { resource_type: "image", folder: folderPath },
+      async (error, result) => {
+        if (error)
+          return res
+            .status(500)
+            .json({ message: "Eroare la upload Cloudinary." });
+        const image = await prisma.listingImage.create({
+          data: { url: result.secure_url, listingId: listingId },
+        });
+        res.status(201).json(image);
+      }
+    );
+    uploadStream.end(req.file.buffer);
+  } catch (error) {
+    res.status(500).json({ message: "Eroare internă server." });
+  }
+};
 
 // Funcția de creare a unui nou anunț
 const createListing = async (req, res) => {
@@ -83,23 +116,17 @@ const createListing = async (req, res) => {
 // Funcția de a prelua toate anunțurile unui business
 const getListings = async (req, res) => {
   const { businessId } = req.user;
-
-  try {
-    const listings = await prisma.listing.findMany({
-      where: { businessId },
-      include: {
-        category: { select: { name: true } },
-        attributeValues: {
-          include: {
-            attribute: { select: { name: true, type: true } },
-          },
-        },
+  const listings = await prisma.listing.findMany({
+    where: { businessId },
+    include: {
+      category: { select: { name: true } },
+      attributeValues: {
+        include: { attribute: { select: { name: true, type: true } } },
       },
-    });
-    res.status(200).json(listings);
-  } catch (error) {
-    res.status(500).json({ message: "Eroare la preluarea anunțurilor." });
-  }
+      images: { select: { url: true }, take: 1 }, // Adaugă această linie
+    },
+  });
+  res.status(200).json(listings);
 };
 
 // Funcția de a actualiza un anunț
@@ -235,4 +262,5 @@ module.exports = {
   updateListing,
   deleteListing,
   getListingById,
+  uploadImages,
 };
