@@ -3,7 +3,9 @@ const prisma = require("../config/prismaClient");
 
 const searchListings = async (req, res) => {
   try {
+    // MODIFICARE 1: Extragem explicit `businessId` din query
     const {
+      businessId,
       categoryId,
       q,
       page = 1,
@@ -11,10 +13,14 @@ const searchListings = async (req, res) => {
       ...dynamicFilters
     } = req.query;
 
-    // Vom construi o listă de condiții pe care le vom uni la final cu AND
     const whereConditions = [];
 
-    // 1. Adăugăm filtrele de bază la lista de condiții
+    // MODIFICARE 2: Adăugăm `businessId` ca un filtru principal, dacă există
+    if (businessId) {
+      whereConditions.push({ businessId: businessId });
+    }
+
+    // Restul filtrelor de bază rămân la fel
     if (categoryId) {
       whereConditions.push({ categoryId: categoryId });
     }
@@ -27,19 +33,18 @@ const searchListings = async (req, res) => {
       });
     }
 
-    // 2. Iterăm prin filtrele dinamice și creăm o condiție `some` pentru fiecare
+    // Logica pentru filtrele dinamice rămâne neschimbată
     for (const key in dynamicFilters) {
       const value = dynamicFilters[key];
       let attributeName = key;
-      let conditionType = "equals";
       let operator;
 
       if (key.endsWith("_max")) {
         attributeName = key.replace("_max", "");
-        operator = "lte"; // Less than or equal
+        operator = "lte";
       } else if (key.endsWith("_min")) {
         attributeName = key.replace("_min", "");
-        operator = "gte"; // Greater than or equal
+        operator = "gte";
       }
 
       const isNumeric = !isNaN(parseFloat(value)) && operator;
@@ -54,19 +59,16 @@ const searchListings = async (req, res) => {
       };
 
       if (operator) {
-        // Pentru _min/_max
         attributeCondition[isNumeric ? "numberValue" : "stringValue"] = {
           [operator]: isNumeric ? parseFloat(value) : value,
         };
       } else {
-        // Pentru egalitate
         attributeCondition[isNumeric ? "numberValue" : "stringValue"] = {
           equals: isNumeric ? parseFloat(value) : value,
           mode: "insensitive",
         };
       }
 
-      // Adăugăm o condiție complexă: "anunțul trebuie să aibă CEL PUȚIN UN atribut care..."
       whereConditions.push({
         attributeValues: {
           some: attributeCondition,
@@ -76,17 +78,17 @@ const searchListings = async (req, res) => {
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // 3. Paginare
+    // Restul funcției (paginare, query, etc.) rămâne la fel...
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
-    // 4. Executăm query-ul final
     const listings = await prisma.listing.findMany({
       where,
       skip,
       take,
       include: {
         category: { select: { name: true } },
+        images: { select: { url: true }, take: 1 },
         attributeValues: {
           include: {
             attribute: { select: { name: true, type: true } },
