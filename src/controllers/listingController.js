@@ -230,28 +230,55 @@ const deleteListing = async (req, res) => {
   }
 };
 
+// Înlocuiește funcția getListingById existentă cu aceasta:
 const getListingById = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
-
   try {
     const listing = await prisma.listing.findFirst({
-      where: {
-        id: listingId,
-        businessId: businessId, // Securitate: asigură-te că user-ul cere un anunț propriu
-      },
+      where: { id: listingId, businessId: businessId },
       include: {
-        attributeValues: true, // Includem valorile atributelor
+        attributeValues: true,
+        images: true, // <-- LINIA CHEIE ADĂUGATĂ
       },
     });
-
-    if (!listing) {
+    if (!listing)
       return res.status(404).json({ message: "Anunțul nu a fost găsit." });
-    }
-
     res.status(200).json(listing);
   } catch (error) {
     res.status(500).json({ message: "Eroare la preluarea anunțului." });
+  }
+};
+
+// Adaugă această funcție NOUĂ în același fișier:
+const deleteImage = async (req, res) => {
+  const { listingId, imageId } = req.params;
+  const { businessId } = req.user;
+  try {
+    // Verificare de securitate complexă: ștergem o imagine (imageId) care aparține unui anunț (listingId)
+    // care, la rândul lui, aparține business-ului utilizatorului logat.
+    const imageToDelete = await prisma.listingImage.findFirst({
+      where: {
+        id: imageId,
+        listingId: listingId,
+        listing: {
+          businessId: businessId,
+        },
+      },
+    });
+
+    if (!imageToDelete) {
+      return res
+        .status(404)
+        .json({ message: "Imaginea nu a fost găsită sau nu aveți acces." });
+    }
+
+    // Aici am putea adăuga logica de ștergere și din Cloudinary, dar pentru simplitate o lăsăm momentan.
+    await prisma.listingImage.delete({ where: { id: imageId } });
+
+    res.status(200).json({ message: "Imaginea a fost ștearsă." });
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la ștergerea imaginii." });
   }
 };
 
@@ -262,5 +289,6 @@ module.exports = {
   updateListing,
   deleteListing,
   getListingById,
+  deleteImage,
   uploadImages,
 };

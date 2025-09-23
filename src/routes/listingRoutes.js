@@ -7,6 +7,7 @@ const {
   deleteListing,
   getListingById,
   uploadImages,
+  deleteImage,
 } = require("../controllers/listingController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -21,5 +22,6 @@ router.get("/:listingId", getListingById);
 router.put("/:listingId", updateListing); // <-- VERIFICĂ ACEASTĂ LINIE ÎN MOD SPECIAL
 router.delete("/:listingId", deleteListing);
 router.post("/:listingId/images", upload.single("image"), uploadImages);
+router.delete("/:listingId/images/:imageId", deleteImage); // <-- ADAUGĂ ACEASTĂ LINIE NOUĂ
 
 module.exports = router;
