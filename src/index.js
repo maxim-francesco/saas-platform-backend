@@ -10,12 +10,14 @@ const publicRoutes = require("./routes/publicRoutes");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 2. Configurează CORS pentru a permite cereri DOAR de la adresa frontend-ului tău
-const corsOptions = {
-  origin:
-    "https://6000-firebase-studio-1758560203835.cluster-axf5tvtfjjfekvhwxwkkkzsk2y.cloudworkstations.dev",
-};
-app.use(cors(corsOptions));
+// // 2. Configurează CORS pentru a permite cereri DOAR de la adresa frontend-ului tău
+// const corsOptions = {
+//   origin:
+//     "https://6000-firebase-studio-1758560203835.cluster-axf5tvtfjjfekvhwxwkkkzsk2y.cloudworkstations.dev",
+// };
+// app.use(cors(corsOptions));
+
+app.use(cors());
 
 // Middleware pentru a putea parsa body-ul request-urilor JSON
 app.use(express.json());
