@@ -112,4 +112,29 @@ const searchListings = async (req, res) => {
   }
 };
 
-module.exports = { searchListings };
+const getPublicListingById = async (req, res) => {
+  try {
+    const { listingId } = req.params;
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      include: {
+        category: { select: { name: true } },
+        images: { select: { url: true } },
+        attributeValues: {
+          include: {
+            attribute: { select: { name: true, type: true } },
+          },
+        },
+      },
+    });
+
+    if (!listing) {
+      return res.status(404).json({ message: "Anunțul nu a fost găsit." });
+    }
+    res.status(200).json(listing);
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la preluarea anunțului." });
+  }
+};
+
+module.exports = { searchListings, getPublicListingById };
