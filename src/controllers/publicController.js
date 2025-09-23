@@ -139,4 +139,21 @@ const getPublicListingById = async (req, res) => {
   }
 };
 
-module.exports = { searchListings, getPublicListingById };
+const getPublicAttributesForCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const attributes = await prisma.attribute.findMany({
+      where: { categoryId: categoryId },
+      orderBy: { name: "asc" },
+    });
+    res.status(200).json(attributes);
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la preluarea atributelor." });
+  }
+};
+
+module.exports = {
+  searchListings,
+  getPublicListingById,
+  getPublicAttributesForCategory,
+};
