@@ -39,74 +39,75 @@ const createListing = async (req, res) => {
   const { title, description, categoryId, attributes } = req.body;
   const { businessId } = req.user;
 
-  // Validare de bază
-  if (!title || !categoryId || !attributes || !Array.isArray(attributes)) {
-    return res.status(400).json({
-      message:
-        "Titlul, ID-ul categoriei și o listă de atribute sunt obligatorii.",
-    });
-  }
-
   try {
-    // Folosim o tranzacție pentru a garanta integritatea datelor
     const newListing = await prisma.$transaction(async (prisma) => {
-      // Pas 1: Verificăm dacă categoria aparține business-ului. Securitate!
+      // 1. Găsim categoria și atributele ei predefinite pentru validare
       const category = await prisma.category.findFirst({
         where: { id: categoryId, businessId: businessId },
-        include: { attributes: true }, // Includem atributele definite pentru a le valida
+        include: { attributes: true },
       });
-
       if (!category) {
         throw new Error("Categoria nu a fost găsită sau nu aveți acces la ea.");
       }
 
-      // Pas 2: Creăm anunțul de bază
+      // 2. Extragem prețul și kilometrajul din atributele primite în request
+      let priceValue = null;
+      let mileageValue = null;
+      if (attributes && Array.isArray(attributes)) {
+        for (const attr of attributes) {
+          const definedAttribute = category.attributes.find(
+            (a) => a.id === attr.attributeId
+          );
+          // Căutăm insensibil la majuscule/minuscule
+          if (definedAttribute?.name.toLowerCase() === "price") {
+            priceValue = parseFloat(attr.value);
+          }
+          if (definedAttribute?.name.toLowerCase() === "kilometraj") {
+            mileageValue = parseInt(attr.value, 10);
+          }
+        }
+      }
+
+      // 3. Creăm anunțul de bază, incluzând noile câmpuri
       const listing = await prisma.listing.create({
         data: {
           title,
           description,
           businessId,
           categoryId,
+          price: priceValue, // Salvăm prețul în coloana dedicată
+          mileage: mileageValue, // Salvăm kilometrajul în coloana dedicată
         },
       });
 
-      // Pas 3: Iterăm prin atributele trimise în request și le salvăm
-      for (const attr of attributes) {
-        // Verificăm dacă atributul trimis există în definiția categoriei
-        const definedAttribute = category.attributes.find(
-          (a) => a.id === attr.attributeId
-        );
-        if (!definedAttribute) {
-          throw new Error(
-            `Atributul cu ID ${attr.attributeId} nu este valid pentru această categorie.`
+      // 4. Salvăm TOATE atributele în mod dinamic, ca și până acum
+      if (attributes && Array.isArray(attributes)) {
+        for (const attr of attributes) {
+          const definedAttribute = category.attributes.find(
+            (a) => a.id === attr.attributeId
           );
+          if (!definedAttribute)
+            throw new Error(`Atribut invalid: ${attr.attributeId}`);
+
+          const valueData = {
+            listingId: listing.id,
+            attributeId: attr.attributeId,
+          };
+          if (definedAttribute.type === "STRING")
+            valueData.stringValue = attr.value;
+          else if (definedAttribute.type === "NUMBER")
+            valueData.numberValue = parseFloat(attr.value);
+          else if (definedAttribute.type === "BOOLEAN")
+            valueData.booleanValue = Boolean(attr.value);
+
+          await prisma.attributeValue.create({ data: valueData });
         }
-
-        // Pregătim datele pentru salvare, completând coloana corectă (stringValue, numberValue etc.)
-        const valueData = {
-          listingId: listing.id,
-          attributeId: attr.attributeId,
-        };
-
-        if (definedAttribute.type === "STRING") {
-          valueData.stringValue = attr.value;
-        } else if (definedAttribute.type === "NUMBER") {
-          // Convertim valoarea la număr
-          valueData.numberValue = parseFloat(attr.value);
-        } else if (definedAttribute.type === "BOOLEAN") {
-          // Convertim valoarea la boolean
-          valueData.booleanValue = Boolean(attr.value);
-        }
-
-        await prisma.attributeValue.create({ data: valueData });
       }
 
       return listing;
     });
-
     res.status(201).json(newListing);
   } catch (error) {
-    // Dacă apare orice eroare în tranzacție, Prisma face rollback automat
     res
       .status(400)
       .json({ message: error.message || "Eroare la crearea anunțului." });
@@ -133,42 +134,48 @@ const getListings = async (req, res) => {
 // Înlocuiește funcția existentă cu aceasta
 const updateListing = async (req, res) => {
   const { listingId } = req.params;
+  const { title, description, attributes } = req.body;
   const { businessId } = req.user;
-
-  // --- LOGGING PENTRU DEBUG ---
-  console.log(`[DEBUG] Încercare de update pentru listingId: ${listingId}`);
-  console.log(`[DEBUG] Acțiune efectuată de businessId: ${businessId}`);
-  // --- SFÂRȘIT LOGGING ---
 
   try {
     await prisma.$transaction(async (prisma) => {
       const listing = await prisma.listing.findFirst({
-        where: {
-          id: listingId,
-          businessId: businessId, // Condiția cheie de securitate
+        where: { id: listingId, businessId },
+      });
+      if (!listing) {
+        throw new Error("Anunțul nu a fost găsit sau nu aveți acces la el.");
+      }
+
+      // 1. Extragem prețul și kilometrajul din atributele primite în request
+      let priceValue = listing.price; // Păstrăm valorile vechi ca default
+      let mileageValue = listing.mileage;
+      if (attributes && Array.isArray(attributes)) {
+        const categoryAttributes = await prisma.attribute.findMany({
+          where: { categoryId: listing.categoryId },
+        });
+        for (const attr of attributes) {
+          const definedAttribute = categoryAttributes.find(
+            (a) => a.id === attr.attributeId
+          );
+          if (definedAttribute?.name.toLowerCase() === "price")
+            priceValue = parseFloat(attr.value);
+          if (definedAttribute?.name.toLowerCase() === "kilometraj")
+            mileageValue = parseInt(attr.value, 10);
+        }
+      }
+
+      // 2. Actualizăm anunțul, incluzând noile câmpuri
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: {
+          title,
+          description,
+          price: priceValue,
+          mileage: mileageValue,
         },
       });
 
-      // --- LOGGING PENTRU DEBUG ---
-      if (!listing) {
-        console.log(
-          `[DEBUG] REZULTAT: Anunțul NU a fost găsit pentru acest business. Se returnează 404.`
-        );
-        throw new Error("Anunțul nu a fost găsit sau nu aveți acces la el.");
-      } else {
-        console.log(
-          `[DEBUG] REZULTAT: Anunțul a fost găsit. Se continuă cu update-ul.`
-        );
-      }
-      // --- SFÂRȘIT LOGGING ---
-
-      // ... restul logicii de update (rămâne neschimbată) ...
-      const { title, description, attributes } = req.body;
-      await prisma.listing.update({
-        where: { id: listingId },
-        data: { title, description },
-      });
-
+      // 3. Actualizăm TOATE atributele folosind strategia "Delete & Create"
       if (attributes && Array.isArray(attributes)) {
         await prisma.attributeValue.deleteMany({ where: { listingId } });
         const categoryAttributes = await prisma.attribute.findMany({
@@ -180,6 +187,7 @@ const updateListing = async (req, res) => {
           );
           if (!definedAttribute)
             throw new Error(`Atribut invalid: ${attr.attributeId}`);
+
           const valueData = { listingId, attributeId: attr.attributeId };
           if (definedAttribute.type === "STRING")
             valueData.stringValue = attr.value;
@@ -187,6 +195,7 @@ const updateListing = async (req, res) => {
             valueData.numberValue = parseFloat(attr.value);
           else if (definedAttribute.type === "BOOLEAN")
             valueData.booleanValue = Boolean(attr.value);
+
           await prisma.attributeValue.create({ data: valueData });
         }
       }

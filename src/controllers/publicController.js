@@ -5,7 +5,6 @@ const prisma = require("../config/prismaClient");
 
 const searchListings = async (req, res) => {
   try {
-    // Extragem și 'sortBy' din query, cu o valoare default 'newest'
     const {
       businessId,
       categoryId,
@@ -17,10 +16,10 @@ const searchListings = async (req, res) => {
     } = req.query;
 
     const whereConditions = [];
+
     if (businessId) {
       whereConditions.push({ businessId: businessId });
     }
-    // ... restul logicii de filtrare rămâne neschimbată ...
     if (categoryId) {
       whereConditions.push({ categoryId: categoryId });
     }
@@ -32,8 +31,8 @@ const searchListings = async (req, res) => {
         ],
       });
     }
+
     for (const key in dynamicFilters) {
-      // ... logica pentru filtrele dinamice rămâne neschimbată ...
       const value = dynamicFilters[key];
       let attributeName = key;
       let operator;
@@ -77,13 +76,26 @@ const searchListings = async (req, res) => {
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // --- AICI ESTE LOGICA NOUĂ PENTRU SORTARE ---
+    // --- LOGICA DE SORTARE ACTUALIZATĂ ---
     let orderBy = { createdAt: "desc" }; // Default: cele mai noi
-    if (sortBy === "oldest") {
-      orderBy = { createdAt: "asc" }; // Cele mai vechi
+    switch (sortBy) {
+      case "oldest":
+        orderBy = { createdAt: "asc" };
+        break;
+      case "price_asc":
+        orderBy = { price: "asc" };
+        break;
+      case "price_desc":
+        orderBy = { price: "desc" };
+        break;
+      case "mileage_asc":
+        orderBy = { mileage: "asc" };
+        break;
+      case "mileage_desc":
+        orderBy = { mileage: "desc" };
+        break;
     }
-    // Aici vom putea adăuga în viitor sortare după preț, ex: 'price_asc'
-    // --- SFÂRȘIT LOGICĂ NOUĂ ---
+    // --- SFÂRȘIT LOGICĂ DE SORTARE ---
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
@@ -92,9 +104,8 @@ const searchListings = async (req, res) => {
       where,
       skip,
       take,
-      orderBy, // Adăugăm obiectul de sortare la query-ul Prisma
+      orderBy, // Folosim obiectul de sortare actualizat
       include: {
-        // ... include-urile tale existente ...
         category: { select: { name: true } },
         images: { select: { url: true }, take: 1 },
         attributeValues: {

@@ -83,24 +83,31 @@ enum AttributeType {
 }
 
 // Modelul central - Anunțul (Listing)
+// prisma/schema.prisma
+
 model Listing {
   id          String    @id @default(cuid())
-  title       String    // Titlul anunțului (ex: "VW Golf 7, 2018")
-  description String?   // Descriere opțională
+  title       String
+  description String?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  images    ListingImage[] // Adaugă această linie
 
-  // Relație: Un anunț aparține unui Business
+  // CÂMPURI NOI PENTRU SORTARE
+  price       Float? // Adaugă acest câmp pentru preț
+  mileage     Int?   // Adaugă acest câmp pentru kilometraj
+
   businessId  String
   business    Business @relation(fields: [businessId], references: [id])
-
-  // Relație: Un anunț aparține unei Categorii
+  
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
 
-  // Relație
-  attributeValues AttributeValue[] // Anunțul are mai multe valori pentru atributele sale
+  attributeValues AttributeValue[]
+  images      ListingImage[]
+  
+  // INDEX NOU PENTRU PERFORMANȚĂ
+  @@index([price])
+  @@index([mileage])
 }
 
 // MODELUL CHEIE: Valoarea unui atribut pentru un anumit anunț
