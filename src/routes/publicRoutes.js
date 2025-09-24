@@ -4,6 +4,7 @@ const {
   searchListings,
   getPublicListingById,
   getPublicAttributesForCategory,
+  getUniqueAttributeValues,
 } = require("../controllers/publicController");
 const router = express.Router();
 
@@ -14,5 +15,6 @@ router.get(
   "/categories/:categoryId/attributes",
   getPublicAttributesForCategory
 ); // ADAUGĂ ACEASTĂ LINIE NOUĂ
+router.get("/attributes/:attributeId/unique-values", getUniqueAttributeValues); // ADAUGĂ ACEASTĂ LINIE NOUĂ
 
 module.exports = router;

@@ -3,6 +3,30 @@ const prisma = require("../config/prismaClient");
 
 // src/controllers/publicController.js
 
+const getUniqueAttributeValues = async (req, res) => {
+  try {
+    const { attributeId } = req.params;
+    const distinctValues = await prisma.attributeValue.findMany({
+      where: {
+        attributeId: attributeId,
+        stringValue: { not: null }, // Ne asigurăm că luăm doar valorile de tip text
+      },
+      distinct: ["stringValue"],
+      select: {
+        stringValue: true,
+      },
+      orderBy: {
+        stringValue: "asc",
+      },
+    });
+    // Transformăm array-ul de obiecte într-un array simplu de string-uri
+    const values = distinctValues.map((item) => item.stringValue);
+    res.status(200).json(values);
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la preluarea valorilor unice." });
+  }
+};
+
 const searchListings = async (req, res) => {
   try {
     const {
@@ -175,4 +199,5 @@ module.exports = {
   searchListings,
   getPublicListingById,
   getPublicAttributesForCategory,
+  getUniqueAttributeValues,
 };
