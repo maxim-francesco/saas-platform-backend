@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes"); // Importă rutele
 const categoryRoutes = require("./routes/categoryRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const publicRoutes = require("./routes/publicRoutes");
+const messageRoutes = require("./routes/messageRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -31,6 +32,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/public", publicRoutes);
+app.use("/api/messages", messageRoutes); // Adaugă rutele de mesaje
 
 app.listen(PORT, () => {
   console.log(`🚀 Serverul rulează la adresa http://localhost:${PORT}`);
