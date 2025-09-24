@@ -1,26 +1,26 @@
 // src/controllers/publicController.js
 const prisma = require("../config/prismaClient");
 
+// src/controllers/publicController.js
+
 const searchListings = async (req, res) => {
   try {
-    // MODIFICARE 1: Extragem explicit `businessId` din query
+    // Extragem și 'sortBy' din query, cu o valoare default 'newest'
     const {
       businessId,
       categoryId,
       q,
       page = 1,
       limit = 10,
+      sortBy = "newest",
       ...dynamicFilters
     } = req.query;
 
     const whereConditions = [];
-
-    // MODIFICARE 2: Adăugăm `businessId` ca un filtru principal, dacă există
     if (businessId) {
       whereConditions.push({ businessId: businessId });
     }
-
-    // Restul filtrelor de bază rămân la fel
+    // ... restul logicii de filtrare rămâne neschimbată ...
     if (categoryId) {
       whereConditions.push({ categoryId: categoryId });
     }
@@ -32,9 +32,8 @@ const searchListings = async (req, res) => {
         ],
       });
     }
-
-    // Logica pentru filtrele dinamice rămâne neschimbată
     for (const key in dynamicFilters) {
+      // ... logica pentru filtrele dinamice rămâne neschimbată ...
       const value = dynamicFilters[key];
       let attributeName = key;
       let operator;
@@ -78,7 +77,14 @@ const searchListings = async (req, res) => {
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // Restul funcției (paginare, query, etc.) rămâne la fel...
+    // --- AICI ESTE LOGICA NOUĂ PENTRU SORTARE ---
+    let orderBy = { createdAt: "desc" }; // Default: cele mai noi
+    if (sortBy === "oldest") {
+      orderBy = { createdAt: "asc" }; // Cele mai vechi
+    }
+    // Aici vom putea adăuga în viitor sortare după preț, ex: 'price_asc'
+    // --- SFÂRȘIT LOGICĂ NOUĂ ---
+
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
 
@@ -86,7 +92,9 @@ const searchListings = async (req, res) => {
       where,
       skip,
       take,
+      orderBy, // Adăugăm obiectul de sortare la query-ul Prisma
       include: {
+        // ... include-urile tale existente ...
         category: { select: { name: true } },
         images: { select: { url: true }, take: 1 },
         attributeValues: {
