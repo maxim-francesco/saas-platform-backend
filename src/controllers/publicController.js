@@ -195,9 +195,30 @@ const getPublicAttributesForCategory = async (req, res) => {
   }
 };
 
+const getAttributeStats = async (req, res) => {
+  try {
+    const { attributeId } = req.params;
+    const stats = await prisma.attributeValue.aggregate({
+      where: {
+        attributeId: attributeId,
+        numberValue: { not: null },
+      },
+      _min: { numberValue: true },
+      _max: { numberValue: true },
+    });
+    res.status(200).json({
+      min: stats._min.numberValue || 0,
+      max: stats._max.numberValue || 100000, // Valori default în caz că nu se găsește nimic
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la preluarea statisticilor." });
+  }
+};
+
 module.exports = {
   searchListings,
   getPublicListingById,
   getPublicAttributesForCategory,
   getUniqueAttributeValues,
+  getAttributeStats,
 };
