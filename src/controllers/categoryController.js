@@ -27,12 +27,21 @@ const createCategory = async (req, res) => {
 
 // Funcția pentru a lista toate categoriile unui business
 const getCategories = async (req, res) => {
-  const { businessId } = req.user; // Preluat din token via middleware!
+  const { businessId } = req.user;
 
   try {
     const categories = await prisma.category.findMany({
       where: {
-        businessId: businessId, // Filtru esențial pentru multi-tenancy!
+        businessId: businessId,
+      },
+      // AICI ESTE MODIFICAREA CHEIE:
+      include: {
+        _count: {
+          select: { listings: true }, // Selectează și numără anunțurile asociate
+        },
+      },
+      orderBy: {
+        name: "asc",
       },
     });
     res.status(200).json(categories);
