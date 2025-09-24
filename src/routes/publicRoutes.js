@@ -6,6 +6,7 @@ const {
   getPublicAttributesForCategory,
   getUniqueAttributeValues,
   getAttributeStats,
+  submitContactForm,
 } = require("../controllers/publicController");
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.get(
 ); // ADAUGĂ ACEASTĂ LINIE NOUĂ
 router.get("/attributes/:attributeId/unique-values", getUniqueAttributeValues); // ADAUGĂ ACEASTĂ LINIE NOUĂ
 router.get("/attributes/:attributeId/stats", getAttributeStats); // ADAUGĂ ACEASTĂ LINIE NOUĂ
+router.post("/contact", submitContactForm); // ADAUGĂ ACEASTĂ LINIE NOUĂ
 
 module.exports = router;

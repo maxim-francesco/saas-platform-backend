@@ -22,6 +22,7 @@ model Business {
   users       User[]    // Un business are mai mulți utilizatori (administratori)
   categories  Category[]// Un business își poate defini propriile categorii
   listings    Listing[] // Un business are mai multe anunțuri
+  messages    Message[]
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)
@@ -84,6 +85,21 @@ enum AttributeType {
 
 // Modelul central - Anunțul (Listing)
 // prisma/schema.prisma
+
+// Model pentru stocarea mesajelor din formularul de contact
+model Message {
+  id          String    @id @default(cuid())
+  name        String    // Numele expeditorului
+  email       String
+  phone       String?   // Numărul de telefon este opțional
+  message     String    @db.Text // Folosim @db.Text pentru mesaje lungi
+  isRead      Boolean   @default(false) // Pentru a marca mesajele ca citite în admin
+  createdAt   DateTime  @default(now())
+
+  // Relație: Un mesaj este trimis către un singur Business
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+}
 
 model Listing {
   id          String    @id @default(cuid())

@@ -215,10 +215,46 @@ const getAttributeStats = async (req, res) => {
   }
 };
 
+const submitContactForm = async (req, res) => {
+  // Vom primi ID-ul afacerii direct în body-ul cererii de la frontend
+  const { businessId, name, email, phone, message } = req.body;
+
+  if (!businessId || !name || !email || !message) {
+    return res
+      .status(400)
+      .json({ message: "Toate câmpurile obligatorii trebuie completate." });
+  }
+
+  try {
+    const newMessage = await prisma.message.create({
+      data: {
+        name,
+        email,
+        phone,
+        message,
+        businessId, // Legăm mesajul de afacerea corectă
+      },
+    });
+    res.status(201).json({
+      message: "Mesajul tău a fost trimis cu succes!",
+      data: newMessage,
+    });
+  } catch (error) {
+    // Acest cod prinde eroarea dacă, de exemplu, se trimite un businessId invalid
+    if (error.code === "P2003") {
+      return res
+        .status(400)
+        .json({ message: "Afacerea specificată nu a fost găsită." });
+    }
+    res.status(500).json({ message: "Eroare la trimiterea mesajului." });
+  }
+};
+
 module.exports = {
   searchListings,
   getPublicListingById,
   getPublicAttributesForCategory,
   getUniqueAttributeValues,
   getAttributeStats,
+  submitContactForm,
 };
