@@ -157,7 +157,10 @@ const updateListing = async (req, res) => {
           const definedAttribute = categoryAttributes.find(
             (a) => a.id === attr.attributeId
           );
-          if (definedAttribute?.name.toLowerCase() === "price")
+          if (
+            definedAttribute?.name.toLowerCase() === "price" ||
+            definedAttribute?.name.toLowerCase() === "pret"
+          )
             priceValue = parseFloat(attr.value);
           if (definedAttribute?.name.toLowerCase() === "kilometraj")
             mileageValue = parseInt(attr.value, 10);
