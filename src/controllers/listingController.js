@@ -59,7 +59,10 @@ const createListing = async (req, res) => {
             (a) => a.id === attr.attributeId
           );
           // Căutăm insensibil la majuscule/minuscule
-          if (definedAttribute?.name.toLowerCase() === "price") {
+          if (
+            definedAttribute?.name.toLowerCase() === "price" ||
+            definedAttribute?.name.toLowerCase() === "pret"
+          ) {
             priceValue = parseFloat(attr.value);
           }
           if (definedAttribute?.name.toLowerCase() === "kilometraj") {
