@@ -1,4 +1,5 @@
 // src/controllers/listingController.js
+const sharp = require("sharp");
 const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
