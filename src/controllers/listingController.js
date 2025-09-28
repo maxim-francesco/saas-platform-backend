@@ -38,7 +38,7 @@ const uploadImages = async (req, res) => {
       const bannerImage = sharp(bannerBuffer).resize({
         width: 800,
         height: 120,
-        fit: "contain",
+        fit: "fill",
         background: { r: 255, g: 255, b: 255, alpha: 1 },
       });
       const bannerResizedBuffer = await bannerImage.toBuffer();
