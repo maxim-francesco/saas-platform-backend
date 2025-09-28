@@ -23,6 +23,7 @@ model Business {
   categories  Category[]// Un business își poate defini propriile categorii
   listings    Listing[] // Un business are mai multe anunțuri
   messages    Message[]
+  bannerUrl   String?
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)

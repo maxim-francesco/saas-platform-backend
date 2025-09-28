@@ -1,20 +1,54 @@
 // src/controllers/listingController.js
 const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
+const axios = require("axios");
 
 // ADAUGĂ ACEASTĂ FUNCȚIE NOUĂ
 const uploadImages = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
+
   try {
+    if (!req.file)
+      return res.status(400).json({ message: "Niciun fișier încărcat." });
+
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+    });
     const listing = await prisma.listing.findFirst({
       where: { id: listingId, businessId },
     });
     if (!listing) return res.status(404).json({ message: "Anunț negăsit." });
-    if (!req.file)
-      return res.status(400).json({ message: "Niciun fișier încărcat." });
 
-    const folderPath = `saas-platform/${listing.businessId}/${listing.id}`;
+    let imageBuffer = req.file.buffer;
+
+    // --- Aici se întâmplă magia ---
+    if (business.bannerUrl) {
+      // Descarcă banner-ul din Cloudinary
+      const bannerResponse = await axios({
+        url: business.bannerUrl,
+        responseType: "arraybuffer",
+      });
+      const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
+
+      // Procesează imaginea principală și banner-ul cu Sharp
+      const mainImage = sharp(req.file.buffer).resize({ width: 800 }); // Redimensionăm imaginea principală
+      const bannerImage = sharp(bannerBuffer).resize({ width: 800 }); // Redimensionăm banner-ul la aceeași lățime
+      const bannerMetadata = await bannerImage.metadata();
+
+      // Combinăm cele două imagini
+      imageBuffer = await mainImage
+        .extend({
+          bottom: bannerMetadata.height,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }, // Fundal alb
+        })
+        .composite([{ input: bannerBuffer, gravity: "south" }])
+        .jpeg() // Convertim la JPEG
+        .toBuffer();
+    }
+    // --- Sfârșitul magiei ---
+
+    const folderPath = `saas-platform/${businessId}/${listing.id}`;
     const uploadStream = cloudinary.uploader.upload_stream(
       { resource_type: "image", folder: folderPath },
       async (error, result) => {
@@ -22,15 +56,18 @@ const uploadImages = async (req, res) => {
           return res
             .status(500)
             .json({ message: "Eroare la upload Cloudinary." });
+
         const image = await prisma.listingImage.create({
           data: { url: result.secure_url, listingId: listingId },
         });
         res.status(201).json(image);
       }
     );
-    uploadStream.end(req.file.buffer);
+
+    uploadStream.end(imageBuffer);
   } catch (error) {
-    res.status(500).json({ message: "Eroare internă server." });
+    console.error("Image processing error:", error);
+    res.status(500).json({ message: "Eroare internă la procesarea imaginii." });
   }
 };
 
