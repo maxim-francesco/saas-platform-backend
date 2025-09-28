@@ -10,6 +10,6 @@ const router = express.Router();
 router.use(isAuthenticated);
 
 router.get("/me", getMyBusiness);
-router.post("/banner", upload.single("banner"), uploadBanner);
+router.post("/upload-banner", upload.single("banner"), uploadBanner);
 
 module.exports = router;
