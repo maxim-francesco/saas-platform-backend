@@ -30,7 +30,11 @@ const uploadImages = async (req, res) => {
       });
       const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-      const mainImage = sharp(req.file.buffer).resize({ width: 800 });
+      const mainImage = sharp(req.file.buffer).resize({
+        width: 800,
+        height: 600,
+        fit: "cover",
+      });
 
       // --- MODIFICARE 1: Redimensionăm banner-ul la o înălțime fixă de 120px ---
       // 'fit: contain' asigură că logo-ul/textul din banner încape corect,
