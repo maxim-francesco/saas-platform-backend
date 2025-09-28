@@ -23,31 +23,36 @@ const uploadImages = async (req, res) => {
 
     let imageBuffer = req.file.buffer;
 
-    // --- Aici se întâmplă magia ---
     if (business.bannerUrl) {
-      // Descarcă banner-ul din Cloudinary
       const bannerResponse = await axios({
         url: business.bannerUrl,
         responseType: "arraybuffer",
       });
       const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-      // Procesează imaginea principală și banner-ul cu Sharp
-      const mainImage = sharp(req.file.buffer).resize({ width: 800 }); // Redimensionăm imaginea principală
-      const bannerImage = sharp(bannerBuffer).resize({ width: 800 }); // Redimensionăm banner-ul la aceeași lățime
-      const bannerMetadata = await bannerImage.metadata();
+      const mainImage = sharp(req.file.buffer).resize({ width: 800 });
 
-      // Combinăm cele două imagini
+      // --- MODIFICARE 1: Redimensionăm banner-ul la o înălțime fixă de 120px ---
+      // 'fit: contain' asigură că logo-ul/textul din banner încape corect,
+      // iar 'background' umple spațiul gol cu alb dacă banner-ul nu are proporția perfectă.
+      const bannerImage = sharp(bannerBuffer).resize({
+        width: 800,
+        height: 120,
+        fit: "contain",
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      });
+      const bannerResizedBuffer = await bannerImage.toBuffer();
+
+      // --- MODIFICARE 2: Extindem pânza cu o valoare fixă de 120px în partea de jos ---
       imageBuffer = await mainImage
         .extend({
-          bottom: bannerMetadata.height,
-          background: { r: 255, g: 255, b: 255, alpha: 1 }, // Fundal alb
+          bottom: 120, // Valoare fixă pentru înălțimea banner-ului
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
         })
-        .composite([{ input: bannerBuffer, gravity: "south" }])
-        .jpeg() // Convertim la JPEG
+        .composite([{ input: bannerResizedBuffer, gravity: "south" }])
+        .jpeg()
         .toBuffer();
     }
-    // --- Sfârșitul magiei ---
 
     const folderPath = `saas-platform/${businessId}/${listing.id}`;
     const uploadStream = cloudinary.uploader.upload_stream(
