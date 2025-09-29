@@ -313,12 +313,14 @@ const getListingById = async (req, res) => {
 };
 
 // Adaugă această funcție NOUĂ în același fișier:
+// Înlocuiește funcția deleteImage existentă cu aceasta:
+
 const deleteImage = async (req, res) => {
   const { listingId, imageId } = req.params;
   const { businessId } = req.user;
+
   try {
-    // Verificare de securitate complexă: ștergem o imagine (imageId) care aparține unui anunț (listingId)
-    // care, la rândul lui, aparține business-ului utilizatorului logat.
+    // Verificăm dacă imaginea există și aparține utilizatorului logat
     const imageToDelete = await prisma.listingImage.findFirst({
       where: {
         id: imageId,
@@ -335,12 +337,39 @@ const deleteImage = async (req, res) => {
         .json({ message: "Imaginea nu a fost găsită sau nu aveți acces." });
     }
 
-    // Aici am putea adăuga logica de ștergere și din Cloudinary, dar pentru simplitate o lăsăm momentan.
+    // --- START LOGICĂ NOUĂ ---
+
+    // 1. Extragem ID-ul public din URL-ul imaginii de pe Cloudinary
+    //    URL-ul arată cam așa: .../upload/v12345/folder/nume_fisier.jpg
+    //    ID-ul public este: folder/nume_fisier
+    const publicIdMatch = imageToDelete.url.match(/upload\/(?:v\d+\/)?(.+?)\./);
+
+    if (publicIdMatch && publicIdMatch[1]) {
+      const publicId = publicIdMatch[1];
+
+      // 2. Trimitem comanda de ștergere către Cloudinary
+      await cloudinary.uploader.destroy(publicId);
+    } else {
+      // Dacă nu putem extrage ID-ul, nu oprim procesul, dar înregistrăm o eroare
+      console.error(
+        "Nu s-a putut extrage ID-ul public din URL:",
+        imageToDelete.url
+      );
+    }
+
+    // --- FINAL LOGICĂ NOUĂ ---
+
+    // 3. Ștergem imaginea din baza noastră de date (acest pas exista deja)
     await prisma.listingImage.delete({ where: { id: imageId } });
 
-    res.status(200).json({ message: "Imaginea a fost ștearsă." });
+    res
+      .status(200)
+      .json({
+        message: "Imaginea a fost ștearsă cu succes (DB & Cloudinary).",
+      });
   } catch (error) {
-    res.status(500).json({ message: "Eroare la ștergerea imaginii." });
+    console.error("Eroare la ștergerea imaginii:", error);
+    res.status(500).json({ message: "Eroare internă la ștergerea imaginii." });
   }
 };
 
