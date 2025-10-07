@@ -3,6 +3,7 @@ const express = require("express");
 const {
   rotateImage,
   updateImageOrder,
+  testRoute,
 } = require("../controllers/imageController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
