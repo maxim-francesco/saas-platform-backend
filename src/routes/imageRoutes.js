@@ -9,6 +9,9 @@ const router = express.Router();
 
 router.use(isAuthenticated);
 
+// --- RUTA NOUĂ DE TEST ---
+router.get("/test", testRoute);
+
 // Rută pentru a roti o imagine
 router.put("/:imageId/rotate", rotateImage);
 

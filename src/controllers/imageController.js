@@ -158,9 +158,18 @@ const updateImageOrder = async (req, res) => {
   }
 };
 
+const testRoute = (req, res) => {
+  console.log("[TEST] Ruta de test a fost apelată cu succes!");
+  res.status(200).json({
+    status: "success",
+    message: "Ruta de test pentru imagini funcționează!",
+  });
+};
+
 // La finalul fișierului src/controllers/imageController.js
 
 module.exports = {
   rotateImage,
   updateImageOrder, // Asigură-te că este aici!
+  testRoute,
 };
