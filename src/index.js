@@ -9,6 +9,7 @@ const publicRoutes = require("./routes/publicRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const businessRoutes = require("./routes/businessRoutes");
+const imageRoutes = require("./routes/imageRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,6 +38,7 @@ app.use("/api/public", publicRoutes);
 app.use("/api/messages", messageRoutes); // Adaugă rutele de mesaje
 app.use("/api/dashboard", dashboardRoutes); // Adaugă rutele de dashboard
 app.use("/api/business", businessRoutes);
+app.use("/api/images", imageRoutes);
 
 app.listen(PORT, () => {
   console.log(`🚀 Serverul rulează la adresa http://localhost:${PORT}`);
