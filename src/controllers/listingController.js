@@ -4,10 +4,12 @@ const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
 
-// ADAUGĂ ACEASTĂ FUNCȚIE NOUĂ
 const uploadImages = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
+
+  // MODIFICARE 1: Citim unghiul de rotație din body-ul cererii
+  const rotation = parseInt(req.body.rotation || "0", 10);
 
   try {
     if (!req.file)
@@ -23,6 +25,15 @@ const uploadImages = async (req, res) => {
 
     let imageBuffer = req.file.buffer;
 
+    // MODIFICARE 2: Aplicăm rotația ÎNAINTE de orice altă procesare
+    const mainImage = sharp(req.file.buffer)
+      .rotate(rotation) // <-- APLICĂM ROTAȚIA AICI
+      .resize({
+        width: 800,
+        height: 600,
+        fit: "cover",
+      });
+
     if (business.bannerUrl) {
       const bannerResponse = await axios({
         url: business.bannerUrl,
@@ -30,32 +41,23 @@ const uploadImages = async (req, res) => {
       });
       const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-      const mainImage = sharp(req.file.buffer).resize({
-        width: 800,
-        height: 600,
-        fit: "cover",
-      });
-
-      // --- MODIFICARE 1: Redimensionăm banner-ul la o înălțime fixă de 120px ---
-      // 'fit: contain' asigură că logo-ul/textul din banner încape corect,
-      // iar 'background' umple spațiul gol cu alb dacă banner-ul nu are proporția perfectă.
       const bannerImage = sharp(bannerBuffer).resize({
         width: 800,
         height: 120,
         fit: "fill",
-        background: { r: 255, g: 255, b: 255, alpha: 1 },
       });
       const bannerResizedBuffer = await bannerImage.toBuffer();
 
-      // --- MODIFICARE 2: Extindem pânza cu o valoare fixă de 120px în partea de jos ---
       imageBuffer = await mainImage
         .extend({
-          bottom: 120, // Valoare fixă pentru înălțimea banner-ului
+          bottom: 120,
           background: { r: 255, g: 255, b: 255, alpha: 1 },
         })
         .composite([{ input: bannerResizedBuffer, gravity: "south" }])
         .jpeg()
         .toBuffer();
+    } else {
+      imageBuffer = await mainImage.jpeg().toBuffer();
     }
 
     const folderPath = `saas-platform/${businessId}/${listing.id}`;
@@ -362,11 +364,9 @@ const deleteImage = async (req, res) => {
     // 3. Ștergem imaginea din baza noastră de date (acest pas exista deja)
     await prisma.listingImage.delete({ where: { id: imageId } });
 
-    res
-      .status(200)
-      .json({
-        message: "Imaginea a fost ștearsă cu succes (DB & Cloudinary).",
-      });
+    res.status(200).json({
+      message: "Imaginea a fost ștearsă cu succes (DB & Cloudinary).",
+    });
   } catch (error) {
     console.error("Eroare la ștergerea imaginii:", error);
     res.status(500).json({ message: "Eroare internă la ștergerea imaginii." });
