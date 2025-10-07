@@ -11,6 +11,8 @@ router.use(isAuthenticated);
 
 // Rută pentru a roti o imagine
 router.put("/:imageId/rotate", rotateImage);
+
+// Rută pentru a actualiza ordinea
 router.put("/order/:listingId", updateImageOrder);
 
 module.exports = router;

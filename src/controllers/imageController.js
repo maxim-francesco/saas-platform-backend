@@ -158,4 +158,9 @@ const updateImageOrder = async (req, res) => {
   }
 };
 
-module.exports = { rotateImage, updateImageOrder };
+// La finalul fișierului src/controllers/imageController.js
+
+module.exports = {
+  rotateImage,
+  updateImageOrder, // Asigură-te că este aici!
+};
