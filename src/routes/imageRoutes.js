@@ -5,10 +5,10 @@ const {
   updateImageOrder,
   testRoute,
 } = require("../controllers/imageController");
-const { isAuthenticated } = require("../middlewares/authMiddleware");
+// const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
-router.use(isAuthenticated);
+// router.use(isAuthenticated);
 
 // --- RUTA NOUĂ DE TEST ---
 router.get("/test", testRoute);
