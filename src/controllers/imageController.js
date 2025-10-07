@@ -103,10 +103,19 @@ const rotateImage = async (req, res) => {
 
 const updateImageOrder = async (req, res) => {
   const { listingId } = req.params;
-  const { imageIds } = req.body; // Așteptăm un array de ID-uri de imagini, în ordinea corectă
+  const { imageIds } = req.body;
   const { businessId } = req.user;
 
+  // --- LOG-URI PENTRU DEBUG ---
+  console.log(
+    `[DEBUG] Primit cerere de reordonare pentru listingId: ${listingId}`
+  );
+  console.log(`[DEBUG] Body-ul cererii (req.body):`, req.body);
+  console.log(`[DEBUG] Array-ul de ID-uri extras (imageIds):`, imageIds);
+  // --- SFÂRȘIT LOG-URI ---
+
   if (!Array.isArray(imageIds)) {
+    console.log("[DEBUG] EROARE: imageIds nu este un array.");
     return res
       .status(400)
       .json({ message: "Este necesar un array de ID-uri." });
@@ -116,24 +125,37 @@ const updateImageOrder = async (req, res) => {
     const listing = await prisma.listing.findFirst({
       where: { id: listingId, businessId },
     });
-    if (!listing) return res.status(404).json({ message: "Anunț negăsit." });
+    if (!listing) {
+      console.log(
+        "[DEBUG] EROARE: Anunțul nu a fost găsit pentru acest business."
+      );
+      return res.status(404).json({ message: "Anunț negăsit." });
+    }
 
-    // Folosim o tranzacție pentru a actualiza toate imaginile odată
-    const updatePromises = imageIds.map((imageId, index) =>
-      prisma.listingImage.update({
-        where: { id: imageId },
-        data: { order: index },
-      })
+    console.log(
+      `[DEBUG] Se pregătesc ${imageIds.length} operațiuni de update.`
     );
 
+    const updatePromises = imageIds.map((imageId, index) => {
+      console.log(
+        ` -> Pregătire update: imaginea cu ID ${imageId} va primi order = ${index}`
+      );
+      return prisma.listingImage.update({
+        where: { id: imageId },
+        data: { order: index },
+      });
+    });
+
     await prisma.$transaction(updatePromises);
+
+    console.log("[DEBUG] Tranzacția de update a fost finalizată cu succes.");
     res.status(200).json({ message: "Ordinea imaginilor a fost actualizată." });
   } catch (error) {
+    console.error("[DEBUG] EROARE MAJORĂ în updateImageOrder:", error);
     res
       .status(500)
       .json({ message: "Eroare la actualizarea ordinii imaginilor." });
   }
 };
-// Nu uita să o exporți: module.exports = { rotateImage, updateImageOrder };
 
 module.exports = { rotateImage, updateImageOrder };
