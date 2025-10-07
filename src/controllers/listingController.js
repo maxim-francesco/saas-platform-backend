@@ -176,7 +176,7 @@ const getListings = async (req, res) => {
       attributeValues: {
         include: { attribute: { select: { name: true, type: true } } },
       },
-      images: { select: { url: true }, take: 1 }, // Adaugă această linie
+      images: { select: { id: true, url: true }, orderBy: { order: "asc" } },
     },
   });
   res.status(200).json(listings);

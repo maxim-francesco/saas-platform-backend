@@ -164,7 +164,7 @@ const getPublicListingById = async (req, res) => {
       where: { id: listingId },
       include: {
         category: { select: { name: true } },
-        images: { select: { url: true } },
+        images: { select: { id: true, url: true }, orderBy: { order: "asc" } },
         attributeValues: {
           include: {
             attribute: { select: { name: true, type: true } },

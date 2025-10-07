@@ -101,4 +101,39 @@ const rotateImage = async (req, res) => {
   }
 };
 
-module.exports = { rotateImage };
+const updateImageOrder = async (req, res) => {
+  const { listingId } = req.params;
+  const { imageIds } = req.body; // Așteptăm un array de ID-uri de imagini, în ordinea corectă
+  const { businessId } = req.user;
+
+  if (!Array.isArray(imageIds)) {
+    return res
+      .status(400)
+      .json({ message: "Este necesar un array de ID-uri." });
+  }
+
+  try {
+    const listing = await prisma.listing.findFirst({
+      where: { id: listingId, businessId },
+    });
+    if (!listing) return res.status(404).json({ message: "Anunț negăsit." });
+
+    // Folosim o tranzacție pentru a actualiza toate imaginile odată
+    const updatePromises = imageIds.map((imageId, index) =>
+      prisma.listingImage.update({
+        where: { id: imageId },
+        data: { order: index },
+      })
+    );
+
+    await prisma.$transaction(updatePromises);
+    res.status(200).json({ message: "Ordinea imaginilor a fost actualizată." });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Eroare la actualizarea ordinii imaginilor." });
+  }
+};
+// Nu uita să o exporți: module.exports = { rotateImage, updateImageOrder };
+
+module.exports = { rotateImage, updateImageOrder };

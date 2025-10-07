@@ -152,6 +152,7 @@ model AttributeValue {
 model ListingImage {
   id        String  @id @default(cuid())
   url       String
+  order     Int     @default(0)
   listingId String
   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
