@@ -176,7 +176,7 @@ const getListings = async (req, res) => {
       attributeValues: {
         include: { attribute: { select: { name: true, type: true } } },
       },
-      images: { select: { id: true, url: true }, orderBy: { order: "asc" } },
+      images: { orderBy: { order: "asc" } },
     },
   });
   res.status(200).json(listings);
@@ -303,7 +303,7 @@ const getListingById = async (req, res) => {
       where: { id: listingId, businessId: businessId },
       include: {
         attributeValues: true,
-        images: true, // <-- LINIA CHEIE ADĂUGATĂ
+        images: { orderBy: { order: "asc" } }, // <-- LINIA CHEIE ADĂUGATĂ
       },
     });
     if (!listing)
