@@ -8,20 +8,21 @@ const {
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
-// --- Middleware "Spion" ---
-// Acest cod se va executa pentru FIECARE cerere care ajunge la /api/images
 router.use((req, res, next) => {
   console.log(
     `[ROUTER DEBUG] A intrat o cerere în imageRoutes. METODA: ${req.method}, URL: ${req.originalUrl}`
   );
-  next(); // Trimite cererea mai departe la următoarea rută potrivită
+  next();
 });
-// --- Sfârșit Middleware ---
 
 router.use(isAuthenticated);
 
 router.get("/test", testRoute);
-router.put("/:imageId/rotate", rotateImage);
+
+// --- MODIFICARE CHEIE: Ruta mai specifică este acum PRIMA ---
 router.put("/order/:listingId", updateImageOrder);
+
+// Ruta mai generală este acum a DOUA
+router.put("/:imageId/rotate", rotateImage);
 
 module.exports = router;
