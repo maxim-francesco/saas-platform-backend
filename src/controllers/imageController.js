@@ -4,6 +4,7 @@ const cloudinary = require("../config/cloudinary");
 const sharp = require("sharp");
 const axios = require("axios");
 
+// src/controllers/imageController.js
 const rotateImage = async (req, res) => {
   const { imageId } = req.params;
   const { businessId } = req.user;
@@ -16,7 +17,6 @@ const rotateImage = async (req, res) => {
   }
 
   try {
-    // 1. Verificare de securitate
     const image = await prisma.listingImage.findFirst({
       where: { id: imageId, listing: { businessId: businessId } },
       include: { listing: { include: { business: true } } },
@@ -28,7 +28,6 @@ const rotateImage = async (req, res) => {
     if (!bannerUrl)
       throw new Error("Acest business nu are un banner configurat.");
 
-    // 2. Descarcă imaginea compusă și banner-ul
     const [imageResponse, bannerResponse] = await Promise.all([
       axios({ url: image.url, responseType: "arraybuffer" }),
       axios({ url: bannerUrl, responseType: "arraybuffer" }),
@@ -36,30 +35,40 @@ const rotateImage = async (req, res) => {
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
     const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-    // 3. Extragem doar poza mașinii (presupunem 800x600)
+    // Extragem poza mașinii (800x600)
     const carPhotoBuffer = await sharp(imageBuffer)
       .extract({ left: 0, top: 0, width: 800, height: 600 })
       .toBuffer();
 
-    // 4. Rotim DOAR poza mașinii
-    const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
+    // Rotim DOAR poza mașinii
+    const rotatedCarPhotoBuffer = await sharp(carPhotoBuffer)
+      .rotate(angle)
+      .toBuffer();
+    const rotatedMetadata = await sharp(rotatedCarPhotoBuffer).metadata();
 
-    // 5. Re-pregătim banner-ul
-    const bannerImage = sharp(bannerBuffer).resize({
-      width: 800,
-      height: 120,
-      fit: "fill",
-    });
-    const bannerResizedBuffer = await bannerImage.toBuffer();
+    // Re-pregătim banner-ul
+    const bannerResizedBuffer = await sharp(bannerBuffer)
+      .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" }) // Banner-ul ia lățimea POZEI ROTITE
+      .toBuffer();
 
-    // 6. Recompunem imaginea finală
-    const finalBuffer = await rotatedCarPhoto
-      .extend({ bottom: 120, background: { r: 255, g: 255, b: 255, alpha: 1 } })
-      .composite([{ input: bannerResizedBuffer, gravity: "south" }])
+    // --- AICI ESTE MODIFICAREA CHEIE ---
+    // Creăm o pânză nouă cu dimensiunile finale corecte și lipim ambele piese
+    const finalBuffer = await sharp({
+      create: {
+        width: rotatedMetadata.width,
+        height: rotatedMetadata.height + 120,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      },
+    })
+      .composite([
+        { input: rotatedCarPhotoBuffer, gravity: "north" },
+        { input: bannerResizedBuffer, gravity: "south" },
+      ])
       .jpeg()
       .toBuffer();
 
-    // 7. Suprascriem imaginea pe Cloudinary
+    // Suprascriem imaginea pe Cloudinary
     const urlParts = image.url.split("/");
     const publicIdWithExtension = urlParts
       .slice(urlParts.indexOf("saas-platform"))
@@ -76,10 +85,12 @@ const rotateImage = async (req, res) => {
           return res
             .status(500)
             .json({ message: "Eroare la re-upload Cloudinary." });
-        res.status(200).json({
-          message: "Imaginea a fost rotită cu succes.",
-          url: result.secure_url,
-        });
+        res
+          .status(200)
+          .json({
+            message: "Imaginea a fost rotită cu succes.",
+            url: result.secure_url,
+          });
       }
     );
     uploadStream.end(finalBuffer);
