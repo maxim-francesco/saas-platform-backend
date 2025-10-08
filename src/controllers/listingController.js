@@ -7,8 +7,6 @@ const axios = require("axios");
 const uploadImages = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
-
-  // MODIFICARE 1: Citim unghiul de rotație din body-ul cererii
   const rotation = parseInt(req.body.rotation || "0", 10);
 
   try {
@@ -25,9 +23,9 @@ const uploadImages = async (req, res) => {
 
     let imageBuffer = req.file.buffer;
 
-    // MODIFICARE 2: Aplicăm rotația ÎNAINTE de orice altă procesare
     const mainImage = sharp(req.file.buffer)
-      .rotate(rotation) // <-- APLICĂM ROTAȚIA AICI
+      .rotate() // Rotație automată EXIF
+      .rotate(rotation) // Rotație manuală
       .resize({
         width: 800,
         height: 600,
@@ -40,14 +38,12 @@ const uploadImages = async (req, res) => {
         responseType: "arraybuffer",
       });
       const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
-
       const bannerImage = sharp(bannerBuffer).resize({
         width: 800,
         height: 120,
         fit: "fill",
       });
       const bannerResizedBuffer = await bannerImage.toBuffer();
-
       imageBuffer = await mainImage
         .extend({
           bottom: 120,
@@ -68,7 +64,6 @@ const uploadImages = async (req, res) => {
           return res
             .status(500)
             .json({ message: "Eroare la upload Cloudinary." });
-
         const image = await prisma.listingImage.create({
           data: { url: result.secure_url, listingId: listingId },
         });
