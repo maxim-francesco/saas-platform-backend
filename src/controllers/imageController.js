@@ -35,17 +35,12 @@ const rotateImage = async (req, res) => {
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
     const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-    // --- AICI ESTE MODIFICAREA CHEIE ---
-    // 1. Obținem dimensiunile reale ale imaginii compuse
     const metadata = await sharp(imageBuffer).metadata();
-
-    // 2. Calculăm dinamic înălțimea pozei (total - înălțimea banner-ului)
     const carPhotoHeight = metadata.height - 120;
     if (carPhotoHeight <= 0) {
       throw new Error("Imaginea este prea mică pentru a extrage poza mașinii.");
     }
 
-    // 3. Extragem poza mașinii folosind dimensiunile dinamice
     const carPhotoBuffer = await sharp(imageBuffer)
       .extract({
         left: 0,
@@ -54,7 +49,6 @@ const rotateImage = async (req, res) => {
         height: carPhotoHeight,
       })
       .toBuffer();
-    // --- SFÂRȘITUL MODIFICĂRII ---
 
     const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
     const rotatedMetadata = await rotatedCarPhoto.metadata();
@@ -63,17 +57,15 @@ const rotateImage = async (req, res) => {
       .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
       .toBuffer();
 
-    const finalBuffer = await sharp({
-      create: {
-        width: rotatedMetadata.width,
-        height: rotatedMetadata.height + 120,
-        channels: 4,
+    // --- AICI ESTE MODIFICAREA CHEIE (Metodă alternativă de compunere) ---
+    // Vom porni de la banner, îi vom extinde pânza în sus și vom lipi poza rotită.
+    const finalBuffer = await sharp(bannerResizedBuffer)
+      .extend({
+        top: rotatedMetadata.height,
         background: { r: 255, g: 255, b: 255, alpha: 1 },
-      },
-    })
+      })
       .composite([
         { input: await rotatedCarPhoto.toBuffer(), gravity: "north" },
-        { input: bannerResizedBuffer, gravity: "south" },
       ])
       .jpeg()
       .toBuffer();
