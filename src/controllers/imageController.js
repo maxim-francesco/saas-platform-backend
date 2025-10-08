@@ -35,24 +35,34 @@ const rotateImage = async (req, res) => {
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
     const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-    // Extragem poza mașinii (800x600)
-    const carPhotoBuffer = await sharp(imageBuffer)
-      .extract({ left: 0, top: 0, width: 800, height: 600 })
-      .toBuffer();
-
-    // Rotim DOAR poza mașinii
-    const rotatedCarPhotoBuffer = await sharp(carPhotoBuffer)
-      .rotate(angle)
-      .toBuffer();
-    const rotatedMetadata = await sharp(rotatedCarPhotoBuffer).metadata();
-
-    // Re-pregătim banner-ul
-    const bannerResizedBuffer = await sharp(bannerBuffer)
-      .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" }) // Banner-ul ia lățimea POZEI ROTITE
-      .toBuffer();
-
     // --- AICI ESTE MODIFICAREA CHEIE ---
-    // Creăm o pânză nouă cu dimensiunile finale corecte și lipim ambele piese
+    // 1. Obținem dimensiunile reale ale imaginii compuse
+    const metadata = await sharp(imageBuffer).metadata();
+
+    // 2. Calculăm dinamic înălțimea pozei (total - înălțimea banner-ului)
+    const carPhotoHeight = metadata.height - 120;
+    if (carPhotoHeight <= 0) {
+      throw new Error("Imaginea este prea mică pentru a extrage poza mașinii.");
+    }
+
+    // 3. Extragem poza mașinii folosind dimensiunile dinamice
+    const carPhotoBuffer = await sharp(imageBuffer)
+      .extract({
+        left: 0,
+        top: 0,
+        width: metadata.width,
+        height: carPhotoHeight,
+      })
+      .toBuffer();
+    // --- SFÂRȘITUL MODIFICĂRII ---
+
+    const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
+    const rotatedMetadata = await rotatedCarPhoto.metadata();
+
+    const bannerResizedBuffer = await sharp(bannerBuffer)
+      .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
+      .toBuffer();
+
     const finalBuffer = await sharp({
       create: {
         width: rotatedMetadata.width,
@@ -62,13 +72,12 @@ const rotateImage = async (req, res) => {
       },
     })
       .composite([
-        { input: rotatedCarPhotoBuffer, gravity: "north" },
+        { input: await rotatedCarPhoto.toBuffer(), gravity: "north" },
         { input: bannerResizedBuffer, gravity: "south" },
       ])
       .jpeg()
       .toBuffer();
 
-    // Suprascriem imaginea pe Cloudinary
     const urlParts = image.url.split("/");
     const publicIdWithExtension = urlParts
       .slice(urlParts.indexOf("saas-platform"))
