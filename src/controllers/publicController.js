@@ -56,46 +56,71 @@ const searchListings = async (req, res) => {
       });
     }
 
+    // Aceasta este versiunea NOUĂ și CORECTĂ
     for (const key in dynamicFilters) {
       const value = dynamicFilters[key];
-      let attributeName = key;
-      let operator;
+      const attributeName = key.replace(/ /g, "_"); // Formatăm numele atributului din start
 
-      if (key.endsWith("_max")) {
-        attributeName = key.replace("_max", "");
-        operator = "lte";
-      } else if (key.endsWith("_min")) {
-        attributeName = key.replace("_min", "");
-        operator = "gte";
-      }
+      let attributeCondition;
 
-      const isNumeric = !isNaN(parseFloat(value)) && operator;
-
-      const attributeCondition = {
-        attribute: {
-          name: {
-            equals: attributeName.replace(/_/g, " "),
-            mode: "insensitive",
+      // --- BLOC NOU PENTRU FILTRE BOOLEAN (DA/NU) ---
+      if (value === "true" || value === "false") {
+        attributeCondition = {
+          attribute: {
+            name: {
+              equals: attributeName.replace(/_/g, " "),
+              mode: "insensitive",
+            },
           },
-        },
-      };
-
-      if (operator) {
-        attributeCondition[isNumeric ? "numberValue" : "stringValue"] = {
-          [operator]: isNumeric ? parseFloat(value) : value,
+          booleanValue: {
+            equals: value === "true", // Convertim textul "true" in boolean true
+          },
+        };
+        // --- SFÂRȘIT BLOC NOU ---
+      } else if (key.endsWith("_max")) {
+        // Logica existentă pentru intervale numerice (partea maximă)
+        const attrNameNoSuffix = attributeName.replace("_max", "");
+        attributeCondition = {
+          attribute: {
+            name: {
+              equals: attrNameNoSuffix.replace(/_/g, " "),
+              mode: "insensitive",
+            },
+          },
+          numberValue: { lte: parseFloat(value) },
+        };
+      } else if (key.endsWith("_min")) {
+        // Logica existentă pentru intervale numerice (partea minimă)
+        const attrNameNoSuffix = attributeName.replace("_min", "");
+        attributeCondition = {
+          attribute: {
+            name: {
+              equals: attrNameNoSuffix.replace(/_/g, " "),
+              mode: "insensitive",
+            },
+          },
+          numberValue: { gte: parseFloat(value) },
         };
       } else {
-        attributeCondition[isNumeric ? "numberValue" : "stringValue"] = {
-          equals: isNumeric ? parseFloat(value) : value,
-          mode: "insensitive",
+        // Logica existentă pentru filtre de tip text (checkbox-uri)
+        attributeCondition = {
+          attribute: {
+            name: {
+              equals: attributeName.replace(/_/g, " "),
+              mode: "insensitive",
+            },
+          },
+          stringValue: { equals: value, mode: "insensitive" },
         };
       }
 
-      whereConditions.push({
-        attributeValues: {
-          some: attributeCondition,
-        },
-      });
+      if (attributeCondition) {
+        whereConditions.push({
+          attributeValues: {
+            some: attributeCondition,
+          },
+        });
+      }
     }
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
