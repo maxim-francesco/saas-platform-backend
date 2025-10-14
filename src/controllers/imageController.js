@@ -24,70 +24,53 @@ const rotateImage = async (req, res) => {
     if (!image)
       return res.status(404).json({ message: "Imaginea nu a fost găsită." });
 
-    // Descarcă imaginea originală de pe Cloudinary
-    const imageResponse = await axios({
-      url: image.url,
-      responseType: "arraybuffer",
-    });
-    const imageBuffer = Buffer.from(imageResponse.data, "binary");
-
-    let finalBuffer; // Vom stoca buffer-ul final aici
-
     const bannerUrl = image.listing.business.bannerUrl;
+    if (!bannerUrl)
+      throw new Error("Acest business nu are un banner configurat.");
 
-    // --- AICI ESTE NOUA LOGICĂ IF/ELSE ---
-    if (bannerUrl) {
-      // CAZUL 1: Business-ul ARE banner
-      const bannerResponse = await axios({
-        url: bannerUrl,
-        responseType: "arraybuffer",
-      });
-      const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
+    const [imageResponse, bannerResponse] = await Promise.all([
+      axios({ url: image.url, responseType: "arraybuffer" }),
+      axios({ url: bannerUrl, responseType: "arraybuffer" }),
+    ]);
+    const imageBuffer = Buffer.from(imageResponse.data, "binary");
+    const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-      const metadata = await sharp(imageBuffer).metadata();
-      const carPhotoHeight = metadata.height - 120;
-      if (carPhotoHeight <= 0) throw new Error("Imaginea este prea mică.");
+    const metadata = await sharp(imageBuffer).metadata();
+    const carPhotoHeight = metadata.height - 120;
+    if (carPhotoHeight <= 0) throw new Error("Imaginea este prea mică.");
 
-      const carPhotoBuffer = await sharp(imageBuffer)
-        .extract({
-          left: 0,
-          top: 0,
-          width: metadata.width,
-          height: carPhotoHeight,
-        })
-        .toBuffer();
-      const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
-      const rotatedMetadata = await rotatedCarPhoto.metadata();
-      const bannerResizedBuffer = await sharp(bannerBuffer)
-        .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
-        .toBuffer();
-
-      finalBuffer = await sharp({
-        create: {
-          width: rotatedMetadata.width,
-          height: rotatedMetadata.height + 120,
-          channels: 4,
-          background: { r: 255, g: 255, b: 255, alpha: 1 },
-        },
+    const carPhotoBuffer = await sharp(imageBuffer)
+      .extract({
+        left: 0,
+        top: 0,
+        width: metadata.width,
+        height: carPhotoHeight,
       })
-        .composite([
-          { input: await rotatedCarPhoto.toBuffer(), gravity: "north" },
-          { input: bannerResizedBuffer, gravity: "south" },
-        ])
-        .jpeg()
-        .toBuffer();
-    } else {
-      // CAZUL 2: Business-ul NU are banner
-      finalBuffer = await sharp(imageBuffer)
-        .rotate() // Rotație automată EXIF (bonus)
-        .rotate(angle) // Rotație manuală
-        .resize({ width: 800, height: 600, fit: "cover" })
-        .jpeg()
-        .toBuffer();
-    }
-    // --- SFÂRȘIT LOGICĂ IF/ELSE ---
+      .toBuffer();
 
-    // Suprascriem imaginea pe Cloudinary, indiferent de caz
+    const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
+    const rotatedMetadata = await rotatedCarPhoto.metadata();
+
+    const bannerResizedBuffer = await sharp(bannerBuffer)
+      .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
+      .toBuffer();
+
+    // --- AICI ESTE MODIFICAREA CHEIE (Revenim la metoda `create`) ---
+    const finalBuffer = await sharp({
+      create: {
+        width: rotatedMetadata.width,
+        height: rotatedMetadata.height + 120,
+        channels: 4,
+        background: { r: 255, g: 255, b: 255, alpha: 1 },
+      },
+    })
+      .composite([
+        { input: await rotatedCarPhoto.toBuffer(), gravity: "north" },
+        { input: bannerResizedBuffer, gravity: "south" },
+      ])
+      .jpeg()
+      .toBuffer();
+
     const urlParts = image.url.split("/");
     const publicIdWithExtension = urlParts
       .slice(urlParts.indexOf("saas-platform"))
