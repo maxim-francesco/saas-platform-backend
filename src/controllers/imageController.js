@@ -14,7 +14,6 @@ const rotateImage = async (req, res) => {
   console.log(`[DEBUG] Angle primit: ${angle}, Business ID: ${businessId}`);
 
   if (angle === undefined || angle % 90 !== 0) {
-    console.error("[DEBUG] Eroare: Unghiul de rotație este invalid.");
     return res
       .status(400)
       .json({ message: "Unghiul de rotație este invalid." });
@@ -28,62 +27,77 @@ const rotateImage = async (req, res) => {
     });
 
     if (!image) {
-      console.error("[DEBUG] Eroare: Imaginea nu a fost găsită în DB.");
       return res.status(404).json({ message: "Imaginea nu a fost găsită." });
     }
     console.log(`[DEBUG] Pas 2: Imaginea a fost găsită. URL: ${image.url}`);
 
-    console.log(
-      "[DEBUG] Pas 3: Se descarcă imaginea de la URL-ul de mai sus..."
-    );
+    console.log("[DEBUG] Pas 3: Se descarcă imaginea de la URL...");
     const imageResponse = await axios({
       url: image.url,
       responseType: "arraybuffer",
     });
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
-    console.log(
-      "[DEBUG] Pas 4: Imaginea a fost descărcată cu succes în buffer."
-    );
+    console.log("[DEBUG] Pas 4: Imaginea a fost descărcată cu succes.");
 
     let finalBuffer;
     const bannerUrl = image.listing.business.bannerUrl;
 
-    // --- BLOC MODIFICAT PENTRU PROCESAREA CU BANNER ---
     if (bannerUrl) {
-      console.log(
-        "[DEBUG] Pas 5: Se procesează imaginea CU banner (LOGICĂ NOUĂ)..."
-      );
+      // --- BLOC CENTRAL: LOGICĂ NOUĂ ȘI ROBUSTĂ PENTRU PROCESAREA CU BANNER ---
+      console.log("[DEBUG] Pas 5: Se procesează imaginea CU banner...");
 
-      // 1. Descarcă banner-ul
+      // 1. Descarcă fișierul șablon de banner
       const bannerResponse = await axios({
         url: bannerUrl,
         responseType: "arraybuffer",
       });
       const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
+      if (!bannerBuffer || bannerBuffer.length === 0) {
+        throw new Error("Fișierul șablon de banner descărcat este gol.");
+      }
+      console.log("[DEBUG] Banner-ul șablon a fost descărcat.");
 
-      // 2. Rotește imaginea principală
-      const rotatedImage = await sharp(imageBuffer)
+      // 2. Rotește imaginea principală (cu tot cu bannerul vechi pe ea)
+      const rotatedImageBuffer = await sharp(imageBuffer)
         .rotate()
         .rotate(angle)
         .toBuffer();
-      const metadata = await sharp(rotatedImage).metadata();
+      if (!rotatedImageBuffer || rotatedImageBuffer.length === 0) {
+        throw new Error("Imaginea rotită a rezultat într-un fișier gol.");
+      }
+      const metadata = await sharp(rotatedImageBuffer).metadata();
+      console.log(
+        `[DEBUG] Imaginea a fost rotită. Dimensiuni noi: ${metadata.width}x${metadata.height}`
+      );
 
-      // 3. Redimensionează banner-ul să se potrivească cu lățimea imaginii rotite
-      const resizedBanner = await sharp(bannerBuffer)
+      // 3. Redimensionează banner-ul șablon pentru a se potrivi cu NOUA lățime a imaginii rotite
+      const resizedBannerBuffer = await sharp(bannerBuffer)
         .resize({ width: metadata.width, height: 120, fit: "fill" })
         .toBuffer();
+      if (!resizedBannerBuffer || resizedBannerBuffer.length === 0) {
+        throw new Error(
+          "Banner-ul șablon redimensionat a rezultat într-un fișier gol."
+        );
+      }
+      console.log("[DEBUG] Banner-ul șablon a fost redimensionat.");
 
-      // 4. Compune imaginea rotită cu banner-ul dedesubt
-      finalBuffer = await sharp(rotatedImage)
-        .composite([{ input: resizedBanner, gravity: "south" }])
+      // 4. Compune imaginea rotită cu noul banner, care va acoperi perfect vechiul banner ajuns pe lateral
+      finalBuffer = await sharp(rotatedImageBuffer)
+        .composite([{ input: resizedBannerBuffer, gravity: "south" }])
         .jpeg({ quality: 90 })
         .toBuffer();
 
-      console.log("[DEBUG] Pas 6: Procesarea CU banner a fost finalizată.");
-    } else {
+      if (!finalBuffer || finalBuffer.length === 0) {
+        throw new Error(
+          "Compunerea finală (imagine + banner) a rezultat într-un fișier gol."
+        );
+      }
       console.log(
-        "[DEBUG] Pas 5: Se procesează imaginea FĂRĂ banner folosind Sharp..."
+        "[DEBUG] Pas 6: Procesarea CU banner a fost finalizată cu succes."
       );
+      // --- SFÂRȘIT BLOC CENTRAL ---
+    } else {
+      console.log("[DEBUG] Pas 5: Se procesează imaginea FĂRĂ banner...");
       finalBuffer = await sharp(imageBuffer)
         .rotate()
         .rotate(angle)
@@ -92,7 +106,6 @@ const rotateImage = async (req, res) => {
         .toBuffer();
       console.log("[DEBUG] Pas 6: Procesarea FĂRĂ banner a fost finalizată.");
     }
-    // --- SFÂRȘIT BLOC MODIFICAT ---
 
     const publicIdMatch = image.url.match(/upload\/(?:v\d+\/)?(.+?)\./);
     if (!publicIdMatch || !publicIdMatch[1]) {
@@ -122,7 +135,10 @@ const rotateImage = async (req, res) => {
     );
     uploadStream.end(finalBuffer);
   } catch (error) {
-    console.error("[DEBUG] EROARE GENERALĂ în blocul try-catch:", error);
+    console.error(
+      "[DEBUG] EROARE GENERALĂ în blocul try-catch:",
+      error.message
+    );
     res.status(500).json({
       message: "Eroare internă la rotirea imaginii.",
       error: error.message,
