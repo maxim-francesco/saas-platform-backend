@@ -17,10 +17,6 @@ const rotateImage = async (req, res) => {
   }
 
   try {
-    console.log(
-      `[DEBUG] Start rotire pentru imaginea ${imageId} cu unghiul ${angle}`
-    );
-
     const image = await prisma.listingImage.findFirst({
       where: { id: imageId, listing: { businessId: businessId } },
       include: { listing: { include: { business: true } } },
@@ -28,75 +24,70 @@ const rotateImage = async (req, res) => {
     if (!image)
       return res.status(404).json({ message: "Imaginea nu a fost găsită." });
 
-    const bannerUrl = image.listing.business.bannerUrl;
-    if (!bannerUrl)
-      throw new Error("Acest business nu are un banner configurat.");
-
-    const [imageResponse, bannerResponse] = await Promise.all([
-      axios({ url: image.url, responseType: "arraybuffer" }),
-      axios({ url: bannerUrl, responseType: "arraybuffer" }),
-    ]);
+    // Descarcă imaginea originală de pe Cloudinary
+    const imageResponse = await axios({
+      url: image.url,
+      responseType: "arraybuffer",
+    });
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
-    const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-    const initialMetadata = await sharp(imageBuffer).metadata();
-    console.log(
-      `[DEBUG] Dimensiuni imagine originală compusă: ${initialMetadata.width}x${initialMetadata.height}`
-    );
+    let finalBuffer; // Vom stoca buffer-ul final aici
 
-    const carPhotoHeight = initialMetadata.height - 120;
-    if (carPhotoHeight <= 0) throw new Error("Imaginea este prea mică.");
+    const bannerUrl = image.listing.business.bannerUrl;
 
-    const carPhotoBuffer = await sharp(imageBuffer)
-      .extract({
-        left: 0,
-        top: 0,
-        width: initialMetadata.width,
-        height: carPhotoHeight,
+    // --- AICI ESTE NOUA LOGICĂ IF/ELSE ---
+    if (bannerUrl) {
+      // CAZUL 1: Business-ul ARE banner
+      const bannerResponse = await axios({
+        url: bannerUrl,
+        responseType: "arraybuffer",
+      });
+      const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
+
+      const metadata = await sharp(imageBuffer).metadata();
+      const carPhotoHeight = metadata.height - 120;
+      if (carPhotoHeight <= 0) throw new Error("Imaginea este prea mică.");
+
+      const carPhotoBuffer = await sharp(imageBuffer)
+        .extract({
+          left: 0,
+          top: 0,
+          width: metadata.width,
+          height: carPhotoHeight,
+        })
+        .toBuffer();
+      const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
+      const rotatedMetadata = await rotatedCarPhoto.metadata();
+      const bannerResizedBuffer = await sharp(bannerBuffer)
+        .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
+        .toBuffer();
+
+      finalBuffer = await sharp({
+        create: {
+          width: rotatedMetadata.width,
+          height: rotatedMetadata.height + 120,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
+        },
       })
-      .toBuffer();
-    const carPhotoMetadata = await sharp(carPhotoBuffer).metadata();
-    console.log(
-      `[DEBUG] Dimensiuni poză mașină extrasă: ${carPhotoMetadata.width}x${carPhotoMetadata.height}`
-    );
+        .composite([
+          { input: await rotatedCarPhoto.toBuffer(), gravity: "north" },
+          { input: bannerResizedBuffer, gravity: "south" },
+        ])
+        .jpeg()
+        .toBuffer();
+    } else {
+      // CAZUL 2: Business-ul NU are banner
+      finalBuffer = await sharp(imageBuffer)
+        .rotate() // Rotație automată EXIF (bonus)
+        .rotate(angle) // Rotație manuală
+        .resize({ width: 800, height: 600, fit: "cover" })
+        .jpeg()
+        .toBuffer();
+    }
+    // --- SFÂRȘIT LOGICĂ IF/ELSE ---
 
-    const rotatedCarPhotoBuffer = await sharp(carPhotoBuffer)
-      .rotate(angle)
-      .toBuffer();
-    const rotatedMetadata = await sharp(rotatedCarPhotoBuffer).metadata();
-    console.log(
-      `[DEBUG] Dimensiuni poză mașină rotită: ${rotatedMetadata.width}x${rotatedMetadata.height}`
-    );
-
-    const bannerResizedBuffer = await sharp(bannerBuffer)
-      .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
-      .toBuffer();
-    const bannerMetadata = await sharp(bannerResizedBuffer).metadata();
-    console.log(
-      `[DEBUG] Dimensiuni banner redimensionat: ${bannerMetadata.width}x${bannerMetadata.height}`
-    );
-
-    console.log(
-      `[DEBUG] Se creează pânza finală de ${rotatedMetadata.width}x${
-        rotatedMetadata.height + 120
-      }`
-    );
-    const finalBuffer = await sharp({
-      create: {
-        width: rotatedMetadata.width,
-        height: rotatedMetadata.height + 120,
-        channels: 4,
-        background: { r: 255, g: 255, b: 255, alpha: 1 },
-      },
-    })
-      .composite([
-        { input: rotatedCarPhotoBuffer, gravity: "north" },
-        { input: bannerResizedBuffer, gravity: "south" },
-      ])
-      .jpeg()
-      .toBuffer();
-    console.log("[DEBUG] Imaginea finală a fost compusă cu succes.");
-
+    // Suprascriem imaginea pe Cloudinary, indiferent de caz
     const urlParts = image.url.split("/");
     const publicIdWithExtension = urlParts
       .slice(urlParts.indexOf("saas-platform"))
@@ -109,12 +100,10 @@ const rotateImage = async (req, res) => {
     const uploadStream = cloudinary.uploader.upload_stream(
       { public_id: publicId, overwrite: true, invalidate: true },
       (error, result) => {
-        if (error) {
-          console.error("[DEBUG] Eroare la re-upload Cloudinary:", error);
+        if (error)
           return res
             .status(500)
             .json({ message: "Eroare la re-upload Cloudinary." });
-        }
         res
           .status(200)
           .json({
