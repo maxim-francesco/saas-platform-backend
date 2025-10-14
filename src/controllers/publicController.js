@@ -156,7 +156,11 @@ const searchListings = async (req, res) => {
       orderBy, // Folosim obiectul de sortare actualizat
       include: {
         category: { select: { name: true } },
-        images: { select: { url: true }, take: 1 },
+        images: {
+          select: { url: true },
+          orderBy: { order: "asc" }, // <-- ADAUGĂ ACEASTĂ LINIE
+          take: 1,
+        },
         attributeValues: {
           include: {
             attribute: { select: { name: true, type: true } },
