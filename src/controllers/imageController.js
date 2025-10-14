@@ -38,22 +38,17 @@ const rotateImage = async (req, res) => {
 
     let finalBuffer;
     const bannerUrl = image.listing.business.bannerUrl;
-    const BANNER_HEIGHT = 120; // Definim înălțimea banner-ului ca o constantă
+    const BANNER_HEIGHT = 120;
 
     if (bannerUrl) {
-      // --- ✅ BLOC CENTRAL: LOGICĂ NOUĂ ȘI CORECTĂ (DECUPEAZĂ -> ROTEȘTE -> RE-COMPUNE) ---
       console.log(
         "[DEBUG] Se procesează imaginea CU banner folosind logica de decupare..."
       );
-
-      // Pasul 1: Decupăm DOAR fotografia, eliminând banner-ul vechi
       const metadata = await sharp(imageBuffer).metadata();
       const photoHeight = metadata.height - BANNER_HEIGHT;
 
       if (photoHeight <= 0) {
-        throw new Error(
-          "Imaginea este prea mică sau are dimensiuni invalide pentru a decupa banner-ul."
-        );
+        throw new Error("Imaginea este prea mică pentru a decupa banner-ul.");
       }
 
       const photoOnlyBuffer = await sharp(imageBuffer)
@@ -66,20 +61,18 @@ const rotateImage = async (req, res) => {
         .toBuffer();
       console.log(`[DEBUG] Fotografia a fost decupată (fără banner-ul vechi).`);
 
-      // Pasul 2: Rotim DOAR fotografia decupată
       const rotatedPhoto = sharp(photoOnlyBuffer).rotate().rotate(angle);
-      const rotatedMetadata = await rotatedPhoto.metadata();
+      const rotatedPhotoBuffer = await rotatedPhoto.toBuffer();
+      const rotatedMetadata = await sharp(rotatedPhotoBuffer).metadata();
       console.log(
         `[DEBUG] Fotografia decupată a fost rotită. Dimensiuni noi: ${rotatedMetadata.width}x${rotatedMetadata.height}`
       );
 
-      // Pasul 3: Pregătim un banner proaspăt, redimensionat la NOUA lățime
       const bannerResponse = await axios({
         url: bannerUrl,
         responseType: "arraybuffer",
       });
       const bannerTemplateBuffer = Buffer.from(bannerResponse.data, "binary");
-
       const resizedBannerBuffer = await sharp(bannerTemplateBuffer)
         .resize({
           width: rotatedMetadata.width,
@@ -91,19 +84,25 @@ const rotateImage = async (req, res) => {
         `[DEBUG] Un banner nou a fost pregătit la lățimea de ${rotatedMetadata.width}px.`
       );
 
-      // Pasul 4: Re-compunem imaginea finală
-      const rotatedPhotoOutputBuffer = await rotatedPhoto.toBuffer();
-      finalBuffer = await sharp(rotatedPhotoOutputBuffer)
-        .extend({
-          bottom: BANNER_HEIGHT,
+      // --- ✅ BLOC MODIFICAT: Re-compunere pe o pânză goală ---
+      console.log("[DEBUG] Se re-compune imaginea finală pe o pânză nouă...");
+      finalBuffer = await sharp({
+        create: {
+          width: rotatedMetadata.width,
+          height: rotatedMetadata.height + BANNER_HEIGHT,
+          channels: 4,
           background: { r: 255, g: 255, b: 255, alpha: 1 },
-        })
-        .composite([{ input: resizedBannerBuffer, gravity: "south" }])
+        },
+      })
+        .composite([
+          { input: rotatedPhotoBuffer, gravity: "north" },
+          { input: resizedBannerBuffer, gravity: "south" },
+        ])
         .jpeg({ quality: 90 })
         .toBuffer();
 
       console.log("[DEBUG] Procesarea CU banner a fost finalizată cu succes.");
-      // --- SFÂRȘIT BLOC CENTRAL ---
+      // --- SFÂRȘIT BLOC MODIFICAT ---
     } else {
       console.log("[DEBUG] Se procesează imaginea FĂRĂ banner...");
       finalBuffer = await sharp(imageBuffer)
