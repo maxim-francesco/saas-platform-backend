@@ -24,53 +24,70 @@ const rotateImage = async (req, res) => {
     if (!image)
       return res.status(404).json({ message: "Imaginea nu a fost găsită." });
 
-    const bannerUrl = image.listing.business.bannerUrl;
-    if (!bannerUrl)
-      throw new Error("Acest business nu are un banner configurat.");
-
-    const [imageResponse, bannerResponse] = await Promise.all([
-      axios({ url: image.url, responseType: "arraybuffer" }),
-      axios({ url: bannerUrl, responseType: "arraybuffer" }),
-    ]);
+    // Descarcă imaginea originală de pe Cloudinary
+    const imageResponse = await axios({
+      url: image.url,
+      responseType: "arraybuffer",
+    });
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
-    const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
 
-    const metadata = await sharp(imageBuffer).metadata();
-    const carPhotoHeight = metadata.height - 120;
-    if (carPhotoHeight <= 0) throw new Error("Imaginea este prea mică.");
+    let finalBuffer; // Vom stoca buffer-ul final aici
 
-    const carPhotoBuffer = await sharp(imageBuffer)
-      .extract({
-        left: 0,
-        top: 0,
-        width: metadata.width,
-        height: carPhotoHeight,
+    const bannerUrl = image.listing.business.bannerUrl;
+
+    // --- AICI ESTE LOGICA IF/ELSE PENTRU AMBELE CAZURI ---
+    if (bannerUrl) {
+      // CAZUL 1: Business-ul ARE banner
+      const bannerResponse = await axios({
+        url: bannerUrl,
+        responseType: "arraybuffer",
+      });
+      const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
+
+      const metadata = await sharp(imageBuffer).metadata();
+      const carPhotoHeight = metadata.height - 120;
+      if (carPhotoHeight <= 0) throw new Error("Imaginea este prea mică.");
+
+      const carPhotoBuffer = await sharp(imageBuffer)
+        .extract({
+          left: 0,
+          top: 0,
+          width: metadata.width,
+          height: carPhotoHeight,
+        })
+        .toBuffer();
+      const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
+      const rotatedMetadata = await rotatedCarPhoto.metadata();
+      const bannerResizedBuffer = await sharp(bannerBuffer)
+        .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
+        .toBuffer();
+
+      finalBuffer = await sharp({
+        create: {
+          width: rotatedMetadata.width,
+          height: rotatedMetadata.height + 120,
+          channels: 4,
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
+        },
       })
-      .toBuffer();
+        .composite([
+          { input: await rotatedCarPhoto.toBuffer(), gravity: "north" },
+          { input: bannerResizedBuffer, gravity: "south" },
+        ])
+        .jpeg()
+        .toBuffer();
+    } else {
+      // CAZUL 2: Business-ul NU are banner
+      finalBuffer = await sharp(imageBuffer)
+        .rotate() // Rotație automată EXIF
+        .rotate(angle) // Rotație manuală
+        .resize({ width: 800, height: 600, fit: "cover" })
+        .jpeg()
+        .toBuffer();
+    }
+    // --- SFÂRȘIT LOGICĂ IF/ELSE ---
 
-    const rotatedCarPhoto = sharp(carPhotoBuffer).rotate(angle);
-    const rotatedMetadata = await rotatedCarPhoto.metadata();
-
-    const bannerResizedBuffer = await sharp(bannerBuffer)
-      .resize({ width: rotatedMetadata.width, height: 120, fit: "fill" })
-      .toBuffer();
-
-    // --- AICI ESTE MODIFICAREA CHEIE (Revenim la metoda `create`) ---
-    const finalBuffer = await sharp({
-      create: {
-        width: rotatedMetadata.width,
-        height: rotatedMetadata.height + 120,
-        channels: 4,
-        background: { r: 255, g: 255, b: 255, alpha: 1 },
-      },
-    })
-      .composite([
-        { input: await rotatedCarPhoto.toBuffer(), gravity: "north" },
-        { input: bannerResizedBuffer, gravity: "south" },
-      ])
-      .jpeg()
-      .toBuffer();
-
+    // Suprascriem imaginea pe Cloudinary, indiferent de caz
     const urlParts = image.url.split("/");
     const publicIdWithExtension = urlParts
       .slice(urlParts.indexOf("saas-platform"))
@@ -87,23 +104,19 @@ const rotateImage = async (req, res) => {
           return res
             .status(500)
             .json({ message: "Eroare la re-upload Cloudinary." });
-        res
-          .status(200)
-          .json({
-            message: "Imaginea a fost rotită cu succes.",
-            url: result.secure_url,
-          });
+        res.status(200).json({
+          message: "Imaginea a fost rotită cu succes.",
+          url: result.secure_url,
+        });
       }
     );
     uploadStream.end(finalBuffer);
   } catch (error) {
     console.error("Image rotation error:", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Eroare internă la rotirea imaginii.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Eroare internă la rotirea imaginii.",
+      error: error.message,
+    });
   }
 };
 
