@@ -4,12 +4,6 @@ const cloudinary = require("../config/cloudinary");
 const sharp = require("sharp");
 const axios = require("axios");
 
-// src/controllers/imageController.js
-const prisma = require("../config/prismaClient");
-const cloudinary = require("../config/cloudinary");
-const sharp = require("sharp");
-const axios = require("axios");
-
 const rotateImage = async (req, res) => {
   const { imageId } = req.params;
   const { businessId } = req.user;
@@ -104,26 +98,20 @@ const rotateImage = async (req, res) => {
           return res
             .status(500)
             .json({ message: "Eroare la re-upload Cloudinary." });
-        res
-          .status(200)
-          .json({
-            message: "Imaginea a fost rotită cu succes.",
-            url: result.secure_url,
-          });
+        res.status(200).json({
+          message: "Imaginea a fost rotită cu succes.",
+          url: result.secure_url,
+        });
       }
     );
     uploadStream.end(finalBuffer);
   } catch (error) {
     console.error("Image rotation error:", error.message);
-    res
-      .status(500)
-      .json({
-        message: "Eroare internă la rotirea imaginii.",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Eroare internă la rotirea imaginii.",
+      error: error.message,
+    });
   }
 };
-
-module.exports = { rotateImage };
 
 module.exports = { rotateImage };
