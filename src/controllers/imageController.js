@@ -5,16 +5,12 @@ const sharp = require("sharp");
 const axios = require("axios");
 
 const rotateImage = async (req, res) => {
-  // --- DEBUG LOG 1: Verificăm dacă funcția este apelată ---
   console.log(
     `[DEBUG] Start rotateImage pentru imaginea cu ID: ${req.params.imageId}`
   );
-
   const { imageId } = req.params;
   const { businessId } = req.user;
   const { angle } = req.body;
-
-  // --- DEBUG LOG 2: Verificăm datele primite ---
   console.log(`[DEBUG] Angle primit: ${angle}, Business ID: ${businessId}`);
 
   if (angle === undefined || angle % 90 !== 0) {
@@ -25,7 +21,6 @@ const rotateImage = async (req, res) => {
   }
 
   try {
-    // --- DEBUG LOG 3: Căutăm imaginea în baza de date ---
     console.log("[DEBUG] Pas 1: Se caută imaginea în baza de date...");
     const image = await prisma.listingImage.findFirst({
       where: { id: imageId, listing: { businessId: businessId } },
@@ -36,11 +31,8 @@ const rotateImage = async (req, res) => {
       console.error("[DEBUG] Eroare: Imaginea nu a fost găsită în DB.");
       return res.status(404).json({ message: "Imaginea nu a fost găsită." });
     }
-
-    // --- DEBUG LOG 4: Imagine găsită, afișăm URL-ul ---
     console.log(`[DEBUG] Pas 2: Imaginea a fost găsită. URL: ${image.url}`);
 
-    // --- DEBUG LOG 5: Încercăm să descărcăm imaginea ---
     console.log(
       "[DEBUG] Pas 3: Se descarcă imaginea de la URL-ul de mai sus..."
     );
@@ -56,12 +48,39 @@ const rotateImage = async (req, res) => {
     let finalBuffer;
     const bannerUrl = image.listing.business.bannerUrl;
 
+    // --- BLOC MODIFICAT PENTRU PROCESAREA CU BANNER ---
     if (bannerUrl) {
-      // Logica pentru banner rămâne aici, dar adăugăm un log
-      console.log("[DEBUG] Se procesează imaginea CU banner...");
-      // ... (logica existentă pt. banner)
+      console.log(
+        "[DEBUG] Pas 5: Se procesează imaginea CU banner (LOGICĂ NOUĂ)..."
+      );
+
+      // 1. Descarcă banner-ul
+      const bannerResponse = await axios({
+        url: bannerUrl,
+        responseType: "arraybuffer",
+      });
+      const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
+
+      // 2. Rotește imaginea principală
+      const rotatedImage = await sharp(imageBuffer)
+        .rotate()
+        .rotate(angle)
+        .toBuffer();
+      const metadata = await sharp(rotatedImage).metadata();
+
+      // 3. Redimensionează banner-ul să se potrivească cu lățimea imaginii rotite
+      const resizedBanner = await sharp(bannerBuffer)
+        .resize({ width: metadata.width, height: 120, fit: "fill" })
+        .toBuffer();
+
+      // 4. Compune imaginea rotită cu banner-ul dedesubt
+      finalBuffer = await sharp(rotatedImage)
+        .composite([{ input: resizedBanner, gravity: "south" }])
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      console.log("[DEBUG] Pas 6: Procesarea CU banner a fost finalizată.");
     } else {
-      // --- DEBUG LOG 6: Procesăm imaginea fără banner ---
       console.log(
         "[DEBUG] Pas 5: Se procesează imaginea FĂRĂ banner folosind Sharp..."
       );
@@ -71,10 +90,10 @@ const rotateImage = async (req, res) => {
         .resize({ width: 800, fit: "inside", withoutEnlargement: true })
         .jpeg({ quality: 90 })
         .toBuffer();
-      console.log("[DEBUG] Pas 6: Procesarea cu Sharp a fost finalizată.");
+      console.log("[DEBUG] Pas 6: Procesarea FĂRĂ banner a fost finalizată.");
     }
+    // --- SFÂRȘIT BLOC MODIFICAT ---
 
-    // Extragem publicId
     const publicIdMatch = image.url.match(/upload\/(?:v\d+\/)?(.+?)\./);
     if (!publicIdMatch || !publicIdMatch[1]) {
       throw new Error("Nu s-a putut extrage public_id din URL-ul imaginii.");
@@ -82,7 +101,6 @@ const rotateImage = async (req, res) => {
     const publicId = publicIdMatch[1];
     console.log(`[DEBUG] Pas 7: public_id extras cu succes: ${publicId}`);
 
-    // --- DEBUG LOG 7: Re-upload pe Cloudinary ---
     console.log(
       "[DEBUG] Pas 8: Se re-încarcă imaginea procesată pe Cloudinary..."
     );
@@ -95,7 +113,6 @@ const rotateImage = async (req, res) => {
             .status(500)
             .json({ message: "Eroare la re-upload Cloudinary." });
         }
-        // --- DEBUG LOG 8: Succes ---
         console.log("[DEBUG] Pas 9: Imaginea a fost re-încărcată cu succes!");
         res.status(200).json({
           message: "Imaginea a fost rotită cu succes.",
@@ -105,8 +122,6 @@ const rotateImage = async (req, res) => {
     );
     uploadStream.end(finalBuffer);
   } catch (error) {
-    // --- DEBUG LOG 9: Eroare generală prinsă ---
-    // Logăm întregul obiect de eroare, nu doar mesajul, pentru mai multe detalii
     console.error("[DEBUG] EROARE GENERALĂ în blocul try-catch:", error);
     res.status(500).json({
       message: "Eroare internă la rotirea imaginii.",
