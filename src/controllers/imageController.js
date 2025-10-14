@@ -5,6 +5,11 @@ const sharp = require("sharp");
 const axios = require("axios");
 
 // src/controllers/imageController.js
+const prisma = require("../config/prismaClient");
+const cloudinary = require("../config/cloudinary");
+const sharp = require("sharp");
+const axios = require("axios");
+
 const rotateImage = async (req, res) => {
   const { imageId } = req.params;
   const { businessId } = req.user;
@@ -24,18 +29,15 @@ const rotateImage = async (req, res) => {
     if (!image)
       return res.status(404).json({ message: "Imaginea nu a fost găsită." });
 
-    // Descarcă imaginea originală de pe Cloudinary
     const imageResponse = await axios({
       url: image.url,
       responseType: "arraybuffer",
     });
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
 
-    let finalBuffer; // Vom stoca buffer-ul final aici
-
+    let finalBuffer;
     const bannerUrl = image.listing.business.bannerUrl;
 
-    // --- AICI ESTE LOGICA IF/ELSE PENTRU AMBELE CAZURI ---
     if (bannerUrl) {
       // CAZUL 1: Business-ul ARE banner
       const bannerResponse = await axios({
@@ -79,15 +81,13 @@ const rotateImage = async (req, res) => {
     } else {
       // CAZUL 2: Business-ul NU are banner
       finalBuffer = await sharp(imageBuffer)
-        .rotate() // Rotație automată EXIF
-        .rotate(angle) // Rotație manuală
+        .rotate()
+        .rotate(angle)
         .resize({ width: 800, height: 600, fit: "cover" })
         .jpeg()
         .toBuffer();
     }
-    // --- SFÂRȘIT LOGICĂ IF/ELSE ---
 
-    // Suprascriem imaginea pe Cloudinary, indiferent de caz
     const urlParts = image.url.split("/");
     const publicIdWithExtension = urlParts
       .slice(urlParts.indexOf("saas-platform"))
@@ -104,20 +104,26 @@ const rotateImage = async (req, res) => {
           return res
             .status(500)
             .json({ message: "Eroare la re-upload Cloudinary." });
-        res.status(200).json({
-          message: "Imaginea a fost rotită cu succes.",
-          url: result.secure_url,
-        });
+        res
+          .status(200)
+          .json({
+            message: "Imaginea a fost rotită cu succes.",
+            url: result.secure_url,
+          });
       }
     );
     uploadStream.end(finalBuffer);
   } catch (error) {
     console.error("Image rotation error:", error.message);
-    res.status(500).json({
-      message: "Eroare internă la rotirea imaginii.",
-      error: error.message,
-    });
+    res
+      .status(500)
+      .json({
+        message: "Eroare internă la rotirea imaginii.",
+        error: error.message,
+      });
   }
 };
+
+module.exports = { rotateImage };
 
 module.exports = { rotateImage };
