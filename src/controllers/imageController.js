@@ -11,7 +11,6 @@ const rotateImage = async (req, res) => {
   const { imageId } = req.params;
   const { businessId } = req.user;
   const { angle } = req.body;
-  console.log(`[DEBUG] Angle primit: ${angle}, Business ID: ${businessId}`);
 
   if (angle === undefined || angle % 90 !== 0) {
     return res
@@ -20,7 +19,6 @@ const rotateImage = async (req, res) => {
   }
 
   try {
-    console.log("[DEBUG] Pas 1: Se caută imaginea în baza de date...");
     const image = await prisma.listingImage.findFirst({
       where: { id: imageId, listing: { businessId: businessId } },
       include: { listing: { include: { business: true } } },
@@ -29,82 +27,92 @@ const rotateImage = async (req, res) => {
     if (!image) {
       return res.status(404).json({ message: "Imaginea nu a fost găsită." });
     }
-    console.log(`[DEBUG] Pas 2: Imaginea a fost găsită. URL: ${image.url}`);
+    console.log(`[DEBUG] Imaginea găsită. URL: ${image.url}`);
 
-    console.log("[DEBUG] Pas 3: Se descarcă imaginea de la URL...");
     const imageResponse = await axios({
       url: image.url,
       responseType: "arraybuffer",
     });
     const imageBuffer = Buffer.from(imageResponse.data, "binary");
-    console.log("[DEBUG] Pas 4: Imaginea a fost descărcată cu succes.");
+    console.log("[DEBUG] Imaginea a fost descărcată.");
 
     let finalBuffer;
     const bannerUrl = image.listing.business.bannerUrl;
+    const BANNER_HEIGHT = 120; // Definim înălțimea banner-ului ca o constantă
 
     if (bannerUrl) {
-      // --- BLOC CENTRAL: LOGICĂ NOUĂ ȘI ROBUSTĂ PENTRU PROCESAREA CU BANNER ---
-      console.log("[DEBUG] Pas 5: Se procesează imaginea CU banner...");
+      // --- ✅ BLOC CENTRAL: LOGICĂ NOUĂ ȘI CORECTĂ (DECUPEAZĂ -> ROTEȘTE -> RE-COMPUNE) ---
+      console.log(
+        "[DEBUG] Se procesează imaginea CU banner folosind logica de decupare..."
+      );
 
-      // 1. Descarcă fișierul șablon de banner
+      // Pasul 1: Decupăm DOAR fotografia, eliminând banner-ul vechi
+      const metadata = await sharp(imageBuffer).metadata();
+      const photoHeight = metadata.height - BANNER_HEIGHT;
+
+      if (photoHeight <= 0) {
+        throw new Error(
+          "Imaginea este prea mică sau are dimensiuni invalide pentru a decupa banner-ul."
+        );
+      }
+
+      const photoOnlyBuffer = await sharp(imageBuffer)
+        .extract({
+          left: 0,
+          top: 0,
+          width: metadata.width,
+          height: photoHeight,
+        })
+        .toBuffer();
+      console.log(`[DEBUG] Fotografia a fost decupată (fără banner-ul vechi).`);
+
+      // Pasul 2: Rotim DOAR fotografia decupată
+      const rotatedPhoto = sharp(photoOnlyBuffer).rotate().rotate(angle);
+      const rotatedMetadata = await rotatedPhoto.metadata();
+      console.log(
+        `[DEBUG] Fotografia decupată a fost rotită. Dimensiuni noi: ${rotatedMetadata.width}x${rotatedMetadata.height}`
+      );
+
+      // Pasul 3: Pregătim un banner proaspăt, redimensionat la NOUA lățime
       const bannerResponse = await axios({
         url: bannerUrl,
         responseType: "arraybuffer",
       });
-      const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
-      if (!bannerBuffer || bannerBuffer.length === 0) {
-        throw new Error("Fișierul șablon de banner descărcat este gol.");
-      }
-      console.log("[DEBUG] Banner-ul șablon a fost descărcat.");
+      const bannerTemplateBuffer = Buffer.from(bannerResponse.data, "binary");
 
-      // 2. Rotește imaginea principală (cu tot cu bannerul vechi pe ea)
-      const rotatedImageBuffer = await sharp(imageBuffer)
-        .rotate()
-        .rotate(angle)
+      const resizedBannerBuffer = await sharp(bannerTemplateBuffer)
+        .resize({
+          width: rotatedMetadata.width,
+          height: BANNER_HEIGHT,
+          fit: "fill",
+        })
         .toBuffer();
-      if (!rotatedImageBuffer || rotatedImageBuffer.length === 0) {
-        throw new Error("Imaginea rotită a rezultat într-un fișier gol.");
-      }
-      const metadata = await sharp(rotatedImageBuffer).metadata();
       console.log(
-        `[DEBUG] Imaginea a fost rotită. Dimensiuni noi: ${metadata.width}x${metadata.height}`
+        `[DEBUG] Un banner nou a fost pregătit la lățimea de ${rotatedMetadata.width}px.`
       );
 
-      // 3. Redimensionează banner-ul șablon pentru a se potrivi cu NOUA lățime a imaginii rotite
-      const resizedBannerBuffer = await sharp(bannerBuffer)
-        .resize({ width: metadata.width, height: 120, fit: "fill" })
-        .toBuffer();
-      if (!resizedBannerBuffer || resizedBannerBuffer.length === 0) {
-        throw new Error(
-          "Banner-ul șablon redimensionat a rezultat într-un fișier gol."
-        );
-      }
-      console.log("[DEBUG] Banner-ul șablon a fost redimensionat.");
-
-      // 4. Compune imaginea rotită cu noul banner, care va acoperi perfect vechiul banner ajuns pe lateral
-      finalBuffer = await sharp(rotatedImageBuffer)
+      // Pasul 4: Re-compunem imaginea finală
+      const rotatedPhotoOutputBuffer = await rotatedPhoto.toBuffer();
+      finalBuffer = await sharp(rotatedPhotoOutputBuffer)
+        .extend({
+          bottom: BANNER_HEIGHT,
+          background: { r: 255, g: 255, b: 255, alpha: 1 },
+        })
         .composite([{ input: resizedBannerBuffer, gravity: "south" }])
         .jpeg({ quality: 90 })
         .toBuffer();
 
-      if (!finalBuffer || finalBuffer.length === 0) {
-        throw new Error(
-          "Compunerea finală (imagine + banner) a rezultat într-un fișier gol."
-        );
-      }
-      console.log(
-        "[DEBUG] Pas 6: Procesarea CU banner a fost finalizată cu succes."
-      );
+      console.log("[DEBUG] Procesarea CU banner a fost finalizată cu succes.");
       // --- SFÂRȘIT BLOC CENTRAL ---
     } else {
-      console.log("[DEBUG] Pas 5: Se procesează imaginea FĂRĂ banner...");
+      console.log("[DEBUG] Se procesează imaginea FĂRĂ banner...");
       finalBuffer = await sharp(imageBuffer)
         .rotate()
         .rotate(angle)
         .resize({ width: 800, fit: "inside", withoutEnlargement: true })
         .jpeg({ quality: 90 })
         .toBuffer();
-      console.log("[DEBUG] Pas 6: Procesarea FĂRĂ banner a fost finalizată.");
+      console.log("[DEBUG] Procesarea FĂRĂ banner a fost finalizată.");
     }
 
     const publicIdMatch = image.url.match(/upload\/(?:v\d+\/)?(.+?)\./);
@@ -112,11 +120,8 @@ const rotateImage = async (req, res) => {
       throw new Error("Nu s-a putut extrage public_id din URL-ul imaginii.");
     }
     const publicId = publicIdMatch[1];
-    console.log(`[DEBUG] Pas 7: public_id extras cu succes: ${publicId}`);
 
-    console.log(
-      "[DEBUG] Pas 8: Se re-încarcă imaginea procesată pe Cloudinary..."
-    );
+    console.log("[DEBUG] Se re-încarcă imaginea procesată pe Cloudinary...");
     const uploadStream = cloudinary.uploader.upload_stream(
       { public_id: publicId, overwrite: true, invalidate: true },
       (error, result) => {
@@ -126,7 +131,7 @@ const rotateImage = async (req, res) => {
             .status(500)
             .json({ message: "Eroare la re-upload Cloudinary." });
         }
-        console.log("[DEBUG] Pas 9: Imaginea a fost re-încărcată cu succes!");
+        console.log("[DEBUG] Imaginea a fost re-încărcată cu succes!");
         res.status(200).json({
           message: "Imaginea a fost rotită cu succes.",
           url: result.secure_url,
