@@ -33,7 +33,7 @@ const rotateImage = async (req, res) => {
     const bannerUrl = image.listing.business.bannerUrl;
 
     if (bannerUrl) {
-      // CAZUL 1: Business-ul ARE banner
+      // CAZUL 1: Business-ul ARE banner (ACEST BLOC RĂMÂNE NEMODIFICAT DEOCAMDATĂ)
       const bannerResponse = await axios({
         url: bannerUrl,
         responseType: "arraybuffer",
@@ -73,23 +73,22 @@ const rotateImage = async (req, res) => {
         .jpeg()
         .toBuffer();
     } else {
-      // CAZUL 2: Business-ul NU are banner
+      // CAZUL 2: Business-ul NU are banner (BLOC MODIFICAT PENTRU CLARITATE ȘI ROBUSTEȚE)
       finalBuffer = await sharp(imageBuffer)
-        .rotate()
-        .rotate(angle)
-        .resize({ width: 800, height: 600, fit: "cover" })
-        .jpeg()
+        .rotate() // 1. Corectează automat orientarea din datele EXIF
+        .rotate(angle) // 2. Aplică rotația manuală cerută (ex: 90 grade)
+        .resize({ width: 800, fit: "inside", withoutEnlargement: true }) // 3. Redimensionează inteligent fără a mări imaginea
+        .jpeg({ quality: 90 }) // 4. Setează formatul și calitatea pentru a optimiza mărimea
         .toBuffer();
     }
 
-    const urlParts = image.url.split("/");
-    const publicIdWithExtension = urlParts
-      .slice(urlParts.indexOf("saas-platform"))
-      .join("/");
-    const publicId = publicIdWithExtension.substring(
-      0,
-      publicIdWithExtension.lastIndexOf(".")
-    );
+    // --- BLOC MODIFICAT: Extragerea 'publicId' folosind o metodă robustă ---
+    const publicIdMatch = image.url.match(/upload\/(?:v\d+\/)?(.+?)\./);
+    if (!publicIdMatch || !publicIdMatch[1]) {
+      throw new Error("Nu s-a putut extrage public_id din URL-ul imaginii.");
+    }
+    const publicId = publicIdMatch[1];
+    // --- SFÂRȘIT BLOC MODIFICAT ---
 
     const uploadStream = cloudinary.uploader.upload_stream(
       { public_id: publicId, overwrite: true, invalidate: true },
