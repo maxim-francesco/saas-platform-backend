@@ -220,4 +220,5 @@ module.exports = {
   getAttributesForCategory,
   updateAttribute, // Adaugă funcția nouă
   deleteAttribute, // Adaugă funcția nouă
+  getUngroupedAttributes,
 };

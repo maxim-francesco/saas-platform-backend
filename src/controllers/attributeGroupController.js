@@ -80,11 +80,9 @@ exports.assignAttributesToGroup = async (req, res) => {
       },
     });
 
-    res
-      .status(200)
-      .json({
-        message: `${attributeIds.length} atribute au fost asignate grupului.`,
-      });
+    res.status(200).json({
+      message: `${attributeIds.length} atribute au fost asignate grupului.`,
+    });
   } catch (error) {
     res.status(500).json({ message: "Eroare la asignarea atributelor." });
   }
@@ -104,4 +102,12 @@ exports.deleteGroup = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Eroare la ștergerea grupului." });
   }
+};
+
+module.exports = {
+  createGroup,
+  getGroups,
+  updateGroup,
+  deleteGroup,
+  assignAttributesToGroup, // <-- ADAUGĂ ACEASTĂ LINIE
 };
