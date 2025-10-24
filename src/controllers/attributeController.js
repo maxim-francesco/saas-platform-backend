@@ -4,7 +4,7 @@ const prisma = require("../config/prismaClient");
 // Funcția pentru a crea un atribut nou pentru o categorie specifică
 const createAttribute = async (req, res) => {
   const { categoryId } = req.params; // Preluăm ID-ul categoriei din URL
-  const { name, type } = req.body; // Preluăm numele și tipul atributului din body
+  const { name, type, attributeGroupId } = req.body; // Preluăm numele și tipul atributului din body
   const { businessId } = req.user; // Preluăm businessId din token
 
   // Validăm tipul de atribut. Trebuie să fie una din valorile definite în schema Prisma
@@ -39,6 +39,7 @@ const createAttribute = async (req, res) => {
         name,
         type,
         categoryId: categoryId,
+        attributeGroupId,
       },
     });
 
@@ -50,12 +51,12 @@ const createAttribute = async (req, res) => {
 };
 
 // Funcția pentru a lista toate atributele unei categorii
+// Înlocuiește funcția getAttributesForCategory
 const getAttributesForCategory = async (req, res) => {
   const { categoryId } = req.params;
   const { businessId } = req.user;
 
   try {
-    // Facem aceeași verificare de securitate și aici
     const category = await prisma.category.findFirst({
       where: { id: categoryId, businessId: businessId },
     });
@@ -67,21 +68,29 @@ const getAttributesForCategory = async (req, res) => {
     }
 
     const attributes = await prisma.attribute.findMany({
-      where: {
-        categoryId: categoryId,
-      },
+      where: { categoryId: categoryId },
+      include: { attributeGroup: { select: { name: true } } }, // Includem numele grupului
     });
-    res.status(200).json(attributes);
+
+    // Grupăm atributele
+    const grouped = attributes.reduce((acc, attr) => {
+      const groupName = attr.attributeGroup?.name || "Atribute Negrupate";
+      if (!acc[groupName]) {
+        acc[groupName] = [];
+      }
+      acc[groupName].push(attr);
+      return acc;
+    }, {});
+
+    res.status(200).json(grouped);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Eroare la preluarea atributelor.", error });
+    res.status(500).json({ message: "Eroare la preluarea atributelor." });
   }
 };
 
 const updateAttribute = async (req, res) => {
   const { categoryId, attributeId } = req.params;
-  const { name, type } = req.body;
+  const { name, type, attributeGroupId } = req.body;
   const { businessId } = req.user;
 
   // Validare
@@ -113,7 +122,7 @@ const updateAttribute = async (req, res) => {
 
     const updatedAttribute = await prisma.attribute.update({
       where: { id: attributeId },
-      data: { name, type },
+      data: { name, type, attributeGroupId },
     });
 
     res.status(200).json(updatedAttribute);
@@ -159,12 +168,10 @@ const deleteAttribute = async (req, res) => {
     // Prindem eroarea în caz că atributul este folosit în anunțuri
     if (error.code === "P2003") {
       // Cod specific Prisma pentru foreign key constraint
-      return res
-        .status(409)
-        .json({
-          message:
-            "Acest atribut nu poate fi șters deoarece este folosit de unul sau mai multe anunțuri.",
-        });
+      return res.status(409).json({
+        message:
+          "Acest atribut nu poate fi șters deoarece este folosit de unul sau mai multe anunțuri.",
+      });
     }
     res
       .status(500)

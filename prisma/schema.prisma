@@ -14,16 +14,19 @@ datasource db {
 // Modelul pentru Business (Tenant) - fiecare dealer auto sau agenție imobiliară
 model Business {
   id          String    @id @default(cuid())
-  name        String    @unique // Numele afacerii
+  name        String    @unique
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   // Relații
-  users       User[]    // Un business are mai mulți utilizatori (administratori)
-  categories  Category[]// Un business își poate defini propriile categorii
-  listings    Listing[] // Un business are mai multe anunțuri
+  users       User[]
+  categories  Category[]
+  listings    Listing[]
   messages    Message[]
   bannerUrl   String?
+
+  // --- ADAUGĂ LINIA ASTA AICI ---
+  attributeGroups AttributeGroup[]
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)
@@ -64,18 +67,40 @@ model Category {
   listings    Listing[]   // O categorie are mai multe anunțuri
 }
 
+// Model pentru a grupa atributele (ex: "Confort", "Siguranță", "Multimedia")
+model AttributeGroup {
+  id          String   @id @default(cuid())
+  name        String   // Numele grupului
+
+  // Relație: Un grup de atribute aparține unui Business
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+
+  // Relație: Un grup are mai multe atribute
+  attributes  Attribute[]
+
+  // Un business nu poate avea două grupuri cu același nume
+  @@unique([name, businessId])
+}
+
 // Modelul pentru Atribute (ex: "Kilometraj", "An fabricație", "Suprafață utilă")
+// Găsește modelul Attribute și adaugă cele două linii de la final
 model Attribute {
   id          String   @id @default(cuid())
-  name        String   // Numele atributului (ex: "Culoare")
-  type        AttributeType // Tipul de dată (text, număr, etc.)
+  name        String
+  type        AttributeType
 
   // Relație: Un atribut aparține unei singure Categorii
   categoryId  String
   category    Category @relation(fields: [categoryId], references: [id])
 
   // Relație
-  values      AttributeValue[] // Un atribut poate avea mai multe valori (una per anunț)
+  values      AttributeValue[]
+
+  // --- LINII NOI ADĂUGATE ---
+  // Un atribut poate aparține opțional unui grup
+  attributeGroupId String?
+  attributeGroup   AttributeGroup? @relation(fields: [attributeGroupId], references: [id], onDelete: SetNull)
 }
 
 enum AttributeType {
