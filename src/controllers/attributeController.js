@@ -51,18 +51,18 @@ const createAttribute = async (req, res) => {
 };
 
 // Adaugă această funcție nouă
-exports.getUngroupedAttributes = async (req, res) => {
+const getUngroupedAttributes = async (req, res) => {
   const { businessId } = req.user;
   try {
     const attributes = await prisma.attribute.findMany({
       where: {
         category: {
-          businessId: businessId, // Ne asigurăm că luăm atributele business-ului corect
+          businessId: businessId,
         },
-        attributeGroupId: null, // Condiția cheie: doar cele ne-grupate
+        attributeGroupId: null,
       },
       include: {
-        category: { select: { name: true } }, // Includem numele categoriei pentru context
+        category: { select: { name: true } },
       },
       orderBy: {
         name: "asc",

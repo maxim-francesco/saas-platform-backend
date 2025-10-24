@@ -50,9 +50,9 @@ exports.updateGroup = async (req, res) => {
 };
 
 // Adaugă această funcție nouă în controller
-exports.assignAttributesToGroup = async (req, res) => {
+const assignAttributesToGroup = async (req, res) => {
   const { groupId } = req.params;
-  const { attributeIds } = req.body; // Așteptăm un array de ID-uri
+  const { attributeIds } = req.body;
   const { businessId } = req.user;
 
   if (!Array.isArray(attributeIds)) {
@@ -62,7 +62,6 @@ exports.assignAttributesToGroup = async (req, res) => {
   }
 
   try {
-    // Verificăm dacă grupul aparține business-ului
     const group = await prisma.attributeGroup.findFirst({
       where: { id: groupId, businessId },
     });
@@ -70,10 +69,11 @@ exports.assignAttributesToGroup = async (req, res) => {
       return res.status(404).json({ message: "Grupul nu a fost găsit." });
     }
 
-    // Actualizăm toate atributele dintr-o singură comandă
     await prisma.attribute.updateMany({
       where: {
         id: { in: attributeIds },
+        // Adaugă o verificare de securitate suplimentară
+        category: { businessId },
       },
       data: {
         attributeGroupId: groupId,
@@ -87,7 +87,6 @@ exports.assignAttributesToGroup = async (req, res) => {
     res.status(500).json({ message: "Eroare la asignarea atributelor." });
   }
 };
-
 // Ștergere grup
 exports.deleteGroup = async (req, res) => {
   const { groupId } = req.params;
