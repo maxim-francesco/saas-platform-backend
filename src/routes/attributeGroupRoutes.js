@@ -13,5 +13,6 @@ router.use(isAuthenticated);
 
 router.route("/").post(createGroup).get(getGroups);
 router.route("/:groupId").put(updateGroup).delete(deleteGroup);
+router.put("/:groupId/assign-attributes", assignAttributesToGroup);
 
 module.exports = router;

@@ -50,6 +50,32 @@ const createAttribute = async (req, res) => {
   }
 };
 
+// Adaugă această funcție nouă
+exports.getUngroupedAttributes = async (req, res) => {
+  const { businessId } = req.user;
+  try {
+    const attributes = await prisma.attribute.findMany({
+      where: {
+        category: {
+          businessId: businessId, // Ne asigurăm că luăm atributele business-ului corect
+        },
+        attributeGroupId: null, // Condiția cheie: doar cele ne-grupate
+      },
+      include: {
+        category: { select: { name: true } }, // Includem numele categoriei pentru context
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+    res.status(200).json(attributes);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Eroare la preluarea atributelor ne-grupate." });
+  }
+};
+
 // Funcția pentru a lista toate atributele unei categorii
 const getAttributesForCategory = async (req, res) => {
   const { categoryId } = req.params;

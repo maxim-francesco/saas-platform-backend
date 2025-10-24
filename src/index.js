@@ -11,6 +11,7 @@ const dashboardRoutes = require("./routes/dashboardRoutes");
 const businessRoutes = require("./routes/businessRoutes");
 const imageRoutes = require("./routes/imageRoutes");
 const attributeGroupRoutes = require("./routes/attributeGroupRoutes"); // Asigură-te că este importat
+const attributesRootRoutes = require("./routes/attributesRootRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -40,6 +41,7 @@ app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/images", imageRoutes);
 app.use("/api/attribute-groups", attributeGroupRoutes);
+app.use("/api/attributes", attributesRootRoutes); // Adaugă această linie
 
 // --- ✅ PLASA DE SIGURANȚĂ #2: GESTIONAR GLOBAL DE ERORI ---
 // Acest middleware se va executa la final DOAR dacă o eroare a fost aruncată ("thrown")
