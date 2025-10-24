@@ -11,6 +11,7 @@ datasource db {
 
 // --- MODELE CENTRALE PENTRU MULTI-TENANCY ---
 
+
 // Modelul pentru Business (Tenant) - fiecare dealer auto sau agenție imobiliară
 model Business {
   id          String    @id @default(cuid())
@@ -27,6 +28,7 @@ model Business {
 
   // --- ADAUGĂ LINIA ASTA AICI ---
   attributeGroups AttributeGroup[]
+  views           View[]
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)
@@ -146,6 +148,7 @@ model Listing {
 
   attributeValues AttributeValue[]
   images      ListingImage[]
+  views           View[]
   
   // INDEX NOU PENTRU PERFORMANȚĂ
   @@index([price])
@@ -180,4 +183,18 @@ model ListingImage {
   order     Int     @default(0)
   listingId String
   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+// Model pentru a înregistra vizualizările
+model View {
+  id        String   @id @default(cuid())
+  viewedAt  DateTime @default(now())
+
+  // Relație: O vizualizare aparține unui Business
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  // Relație: O vizualizare poate aparține opțional unui Anunț
+  listingId String?
+  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }

@@ -12,6 +12,11 @@ const getStats = async (req, res) => {
         prisma.category.count({ where: { businessId } }),
         prisma.message.count({ where: { businessId } }),
         prisma.message.count({ where: { businessId, isRead: false } }), // Bonus: numărăm și mesajele necitite
+        // --- ✅ INTEROGĂRI NOI ADĂUGATE ---
+        prisma.view.count({ where: { businessId } }), // Număr total de vizualizări
+        prisma.view.count({
+          where: { businessId, viewedAt: { gte: date30DaysAgo } },
+        }), // Vizualizări în ultimele 30 de zile
       ]);
 
     res.status(200).json({
@@ -19,8 +24,8 @@ const getStats = async (req, res) => {
       totalCategories: categoryCount,
       totalMessages: totalMessageCount,
       unreadMessages: unreadMessageCount,
-      // Momentan, datele pentru grafic și vizualizări sunt statice
-      listingViews: 8910,
+      totalViews: totalViews, // <-- Adaugă câmpul nou
+      viewsLast30Days: viewsLast30Days, // <-- Adaugă câmpul nou
     });
   } catch (error) {
     console.error("Failed to fetch dashboard stats:", error);

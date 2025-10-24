@@ -205,6 +205,19 @@ const getPublicListingById = async (req, res) => {
     if (!listing) {
       return res.status(404).json({ message: "Anunțul nu a fost găsit." });
     }
+
+    // --- ✅ LOGICĂ NOUĂ ADĂUGATĂ ---
+    // Înregistrăm vizualizarea în fundal, fără a bloca răspunsul principal
+    prisma.view
+      .create({
+        data: {
+          businessId: listing.businessId,
+          listingId: listing.id,
+        },
+      })
+      .catch((err) => console.error("Failed to record view:", err)); // Prindem orice eroare ca să nu crape request-ul
+    // --- SFÂRȘIT LOGICĂ NOUĂ ---
+
     res.status(200).json(listing);
   } catch (error) {
     res.status(500).json({ message: "Eroare la preluarea anunțului." });
