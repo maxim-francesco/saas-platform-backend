@@ -2,7 +2,7 @@
 const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
-const authRoutes = require("./routes/authRoutes"); // Importă rutele
+const authRoutes = require("./routes/authRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const publicRoutes = require("./routes/publicRoutes");
@@ -10,37 +10,51 @@ const messageRoutes = require("./routes/messageRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const businessRoutes = require("./routes/businessRoutes");
 const imageRoutes = require("./routes/imageRoutes");
-const attributeGroupRoutes = require("./routes/attributeGroupRoutes"); // Importă rutele noi
+const attributeGroupRoutes = require("./routes/attributeGroupRoutes"); // Asigură-te că este importat
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// // 2. Configurează CORS pentru a permite cereri DOAR de la adresa frontend-ului tău
-// const corsOptions = {
-//   origin:
-//     "https://6000-firebase-studio-1758560203835.cluster-axf5tvtfjjfekvhwxwkkkzsk2y.cloudworkstations.dev",
-// };
-// app.use(cors(corsOptions));
-
 app.use(cors());
-
-// Middleware pentru a putea parsa body-ul request-urilor JSON
 app.use(express.json());
+
+// --- ✅ PLASA DE SIGURANȚĂ #1: LOGGER PENTRU TOATE CERERILE ---
+// Acest middleware se va executa primul pentru ORICE cerere și ne va confirma că a ajuns la server.
+app.use((req, res, next) => {
+  console.log(`[GLOBAL LOG] Primit: ${req.method} ${req.originalUrl}`);
+  next(); // Trimite cererea mai departe
+});
+// --- SFÂRȘIT BLOC NOU ---
 
 app.get("/", (req, res) => {
   res.json({ message: "Bun venit pe API-ul platformei SaaS!" });
 });
 
-// Folosește rutele de autentificare sub prefixul /api/auth
+// Folosește rutele
 app.use("/api/auth", authRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/public", publicRoutes);
-app.use("/api/messages", messageRoutes); // Adaugă rutele de mesaje
-app.use("/api/dashboard", dashboardRoutes); // Adaugă rutele de dashboard
+app.use("/api/messages", messageRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/images", imageRoutes);
-app.use("/api/attribute-groups", attributeGroupRoutes); // Adaugă linia asta
+app.use("/api/attribute-groups", attributeGroupRoutes);
+
+// --- ✅ PLASA DE SIGURANȚĂ #2: GESTIONAR GLOBAL DE ERORI ---
+// Acest middleware se va executa la final DOAR dacă o eroare a fost aruncată ("thrown")
+// de oriunde din cod (inclusiv din middleware-uri) și nu a fost prinsă de un `try...catch`.
+app.use((err, req, res, next) => {
+  console.error("[GLOBAL ERROR HANDLER] A fost prinsă o eroare necunoscută!");
+  console.error(err); // Logăm întreaga eroare, cu tot cu stack trace
+
+  // Trimitem un răspuns de eroare generic pentru a nu expune detalii
+  res.status(500).json({
+    message: "A apărut o eroare neașteptată pe server.",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
+});
+// --- SFÂRȘIT BLOC NOU ---
 
 app.listen(PORT, () => {
   console.log(`🚀 Serverul rulează la adresa http://localhost:${PORT}`);
