@@ -1,8 +1,9 @@
 // src/controllers/attributeGroupController.js
 const prisma = require("../config/prismaClient");
 
-// Creare grup
-exports.createGroup = async (req, res) => {
+// --- Toate funcțiile sunt declarate ca 'const' ---
+
+const createGroup = async (req, res) => {
   const { name } = req.body;
   const { businessId } = req.user;
   if (!name)
@@ -17,8 +18,7 @@ exports.createGroup = async (req, res) => {
   }
 };
 
-// Preluare grupuri
-exports.getGroups = async (req, res) => {
+const getGroups = async (req, res) => {
   const { businessId } = req.user;
   try {
     const groups = await prisma.attributeGroup.findMany({
@@ -31,8 +31,7 @@ exports.getGroups = async (req, res) => {
   }
 };
 
-// Actualizare grup
-exports.updateGroup = async (req, res) => {
+const updateGroup = async (req, res) => {
   const { groupId } = req.params;
   const { name } = req.body;
   const { businessId } = req.user;
@@ -49,7 +48,21 @@ exports.updateGroup = async (req, res) => {
   }
 };
 
-// Adaugă această funcție nouă în controller
+const deleteGroup = async (req, res) => {
+  const { groupId } = req.params;
+  const { businessId } = req.user;
+  try {
+    const result = await prisma.attributeGroup.deleteMany({
+      where: { id: groupId, businessId },
+    });
+    if (result.count === 0)
+      return res.status(404).json({ message: "Grup negăsit." });
+    res.status(200).json({ message: "Grup șters." });
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la ștergerea grupului." });
+  }
+};
+
 const assignAttributesToGroup = async (req, res) => {
   const { groupId } = req.params;
   const { attributeIds } = req.body;
@@ -72,8 +85,7 @@ const assignAttributesToGroup = async (req, res) => {
     await prisma.attribute.updateMany({
       where: {
         id: { in: attributeIds },
-        // Adaugă o verificare de securitate suplimentară
-        category: { businessId },
+        category: { businessId }, // Securitate adăugată
       },
       data: {
         attributeGroupId: groupId,
@@ -87,26 +99,12 @@ const assignAttributesToGroup = async (req, res) => {
     res.status(500).json({ message: "Eroare la asignarea atributelor." });
   }
 };
-// Ștergere grup
-exports.deleteGroup = async (req, res) => {
-  const { groupId } = req.params;
-  const { businessId } = req.user;
-  try {
-    const result = await prisma.attributeGroup.deleteMany({
-      where: { id: groupId, businessId },
-    });
-    if (result.count === 0)
-      return res.status(404).json({ message: "Grup negăsit." });
-    res.status(200).json({ message: "Grup șters." });
-  } catch (error) {
-    res.status(500).json({ message: "Eroare la ștergerea grupului." });
-  }
-};
 
+// --- Un singur bloc de export la final ---
 module.exports = {
   createGroup,
   getGroups,
   updateGroup,
   deleteGroup,
-  assignAttributesToGroup, // <-- ADAUGĂ ACEASTĂ LINIE
+  assignAttributesToGroup,
 };
