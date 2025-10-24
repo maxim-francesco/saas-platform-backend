@@ -172,6 +172,10 @@ const getListings = async (req, res) => {
         include: { attribute: { select: { name: true, type: true } } },
       },
       images: { orderBy: { order: "asc" } },
+      _count: {
+        // ✅ Adaugă acest bloc
+        select: { views: true },
+      },
     },
   });
   res.status(200).json(listings);
