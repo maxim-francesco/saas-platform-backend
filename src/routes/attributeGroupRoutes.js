@@ -5,6 +5,7 @@ const {
   getGroups,
   updateGroup,
   deleteGroup,
+  assignAttributesToGroup,
 } = require("../controllers/attributeGroupController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
