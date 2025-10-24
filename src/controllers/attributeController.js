@@ -51,17 +51,18 @@ const createAttribute = async (req, res) => {
 };
 
 // Funcția pentru a lista toate atributele unei categorii
-// Înlocuiește funcția getAttributesForCategory
 const getAttributesForCategory = async (req, res) => {
   const { categoryId } = req.params;
   const { businessId } = req.user;
 
+  // ✅ Plasa de siguranță pentru a prinde orice eroare internă
   try {
     const category = await prisma.category.findFirst({
       where: { id: categoryId, businessId: businessId },
     });
 
     if (!category) {
+      // Aceasta este o eroare controlată, nu un crash
       return res.status(404).json({
         message: "Categoria nu a fost găsită sau nu aveți acces la ea.",
       });
@@ -74,6 +75,7 @@ const getAttributesForCategory = async (req, res) => {
 
     // Grupăm atributele
     const grouped = attributes.reduce((acc, attr) => {
+      // Folosim optional chaining (?.) pentru siguranță, în caz că un atribut nu are grup
       const groupName = attr.attributeGroup?.name || "Atribute Negrupate";
       if (!acc[groupName]) {
         acc[groupName] = [];
@@ -82,12 +84,20 @@ const getAttributesForCategory = async (req, res) => {
       return acc;
     }, {});
 
+    // Trimitem răspunsul de succes
     res.status(200).json(grouped);
   } catch (error) {
-    res.status(500).json({ message: "Eroare la preluarea atributelor." });
+    // Aici vom prinde eroarea care cauza crash-ul silențios
+    console.error(
+      `[CRASH CAUGHT in getAttributesForCategory] Eroare la preluarea atributelor pentru categoria ${categoryId}:`
+    );
+    console.error(error); // Logăm întreaga eroare pentru a o putea analiza
+
+    res
+      .status(500)
+      .json({ message: "Eroare internă la preluarea atributelor." });
   }
 };
-
 const updateAttribute = async (req, res) => {
   const { categoryId, attributeId } = req.params;
   const { name, type, attributeGroupId } = req.body;
