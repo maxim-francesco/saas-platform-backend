@@ -20,12 +20,14 @@ model Business {
   updatedAt   DateTime  @updatedAt
 
   // Relații
-  users       User[]
-  categories  Category[]
-  listings    Listing[]
-  messages    Message[]
-  reviews     Review[] // <--- ADAUGĂ ACEASTĂ LINIE
-  bannerUrl   String?
+  users           User[]
+  categories      Category[]
+  listings        Listing[]
+  messages        Message[]
+  reviews         Review[]
+  attributeGroups AttributeGroup[] // <--- ADAUGĂ ACEASTĂ LINIE
+  views           View[]           // <--- ADAUGĂ ACEASTĂ LINIE
+  bannerUrl       String?
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)
