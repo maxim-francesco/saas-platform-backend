@@ -24,11 +24,8 @@ model Business {
   categories  Category[]
   listings    Listing[]
   messages    Message[]
+  reviews     Review[] // <--- ADAUGĂ ACEASTĂ LINIE
   bannerUrl   String?
-
-  // --- ADAUGĂ LINIA ASTA AICI ---
-  attributeGroups AttributeGroup[]
-  views           View[]
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)
