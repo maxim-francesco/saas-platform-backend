@@ -198,3 +198,17 @@ model View {
   listingId String?
   listing   Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
+
+model Review {
+  id          String   @id @default(cuid())
+  name        String
+  rating      Int
+  text        String   @db.Text
+  isApproved  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId, isApproved]) // Index pentru performanță
+}
