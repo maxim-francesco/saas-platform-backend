@@ -388,6 +388,9 @@ const deleteImage = async (req, res) => {
 };
 
 const updateImageOrder = async (req, res) => {
+  console.log(
+    `[SPION] S-a primit o cerere de re-ordonare pentru anunțul ${req.params.listingId}`
+  );
   const { listingId } = req.params;
   const { imageIds } = req.body;
   const { businessId } = req.user;
