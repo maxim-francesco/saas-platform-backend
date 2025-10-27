@@ -23,14 +23,11 @@ const uploadImages = async (req, res) => {
 
     let imageBuffer = req.file.buffer;
 
-    const mainImage = sharp(req.file.buffer)
-      .rotate() // Rotație automată EXIF
-      .rotate(rotation) // Rotație manuală
-      .resize({
-        width: 800,
-        height: 600,
-        fit: "cover",
-      });
+    const mainImage = sharp(req.file.buffer).rotate().rotate(rotation).resize({
+      width: 800,
+      height: 600,
+      fit: "cover",
+    });
 
     if (business.bannerUrl) {
       const bannerResponse = await axios({
@@ -64,9 +61,23 @@ const uploadImages = async (req, res) => {
           return res
             .status(500)
             .json({ message: "Eroare la upload Cloudinary." });
-        const image = await prisma.listingImage.create({
-          data: { url: result.secure_url, listingId: listingId },
+
+        // --- ✅ AICI ESTE MODIFICAREA CHEIE ---
+        // 1. Contorizăm câte imagini există deja pentru acest anunț
+        const imageCount = await prisma.listingImage.count({
+          where: { listingId: listingId },
         });
+
+        // 2. Creăm noua imagine, setând 'order' la valoarea contorizată
+        const image = await prisma.listingImage.create({
+          data: {
+            url: result.secure_url,
+            listingId: listingId,
+            order: imageCount, // Prima imagine va avea order=0, a doua order=1, etc.
+          },
+        });
+        // --- SFÂRȘIT MODIFICARE ---
+
         res.status(201).json(image);
       }
     );
