@@ -173,6 +173,7 @@ const createListing = async (req, res) => {
 };
 
 // Funcția de a prelua toate anunțurile unui business
+// Asigură-te că funcția getListings arată așa:
 const getListings = async (req, res) => {
   const { businessId } = req.user;
   const listings = await prisma.listing.findMany({
@@ -182,9 +183,10 @@ const getListings = async (req, res) => {
       attributeValues: {
         include: { attribute: { select: { name: true, type: true } } },
       },
-      images: { orderBy: { order: "asc" } },
+      images: {
+        orderBy: { order: "asc" }, // <-- ✅ ACEASTĂ LINIE ESTE CRUCIALĂ
+      },
       _count: {
-        // ✅ Adaugă acest bloc
         select: { views: true },
       },
     },
@@ -313,7 +315,9 @@ const getListingById = async (req, res) => {
       where: { id: listingId, businessId: businessId },
       include: {
         attributeValues: true,
-        images: { orderBy: { order: "asc" } }, // <-- LINIA CHEIE ADĂUGATĂ
+        images: {
+          orderBy: { order: "asc" }, // <-- ✅ ȘI ACEASTĂ LINIE ESTE CRUCIALĂ
+        },
       },
     });
     if (!listing)
