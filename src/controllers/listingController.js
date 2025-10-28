@@ -501,6 +501,35 @@ const updateImageOrder = async (req, res) => {
   }
 };
 
+const reactivateListing = async (req, res) => {
+  const { listingId } = req.params;
+  const { businessId } = req.user;
+
+  try {
+    const result = await prisma.listing.updateMany({
+      where: { id: listingId, businessId },
+      data: {
+        status: "AVAILABLE",
+        // Resetăm datele de vânzare pentru curățenia datelor
+        soldAt: null,
+        sellingPrice: null,
+      },
+    });
+
+    if (result.count === 0) {
+      return res
+        .status(404)
+        .json({ message: "Anunțul vândut nu a fost găsit." });
+    }
+
+    res.status(200).json({
+      message: "Anunțul a fost reactivat și mutat înapoi la vânzare.",
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la reactivarea anunțului." });
+  }
+};
+
 // Nu uita să o exporți la final!
 module.exports = {
   createListing,
@@ -513,4 +542,5 @@ module.exports = {
   updateImageOrder,
   getSoldListings,
   markAsSold,
+  reactivateListing,
 };
