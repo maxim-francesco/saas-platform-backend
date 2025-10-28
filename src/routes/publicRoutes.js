@@ -8,6 +8,7 @@ const {
   getAttributeStats,
   submitContactForm,
 } = require("../controllers/publicController");
+const { getSoldListings } = require("../controllers/listingController");
 const router = express.Router();
 
 // Acest endpoint nu folosește middleware-ul `isAuthenticated`
@@ -20,5 +21,6 @@ router.get(
 router.get("/attributes/:attributeId/unique-values", getUniqueAttributeValues); // ADAUGĂ ACEASTĂ LINIE NOUĂ
 router.get("/attributes/:attributeId/stats", getAttributeStats); // ADAUGĂ ACEASTĂ LINIE NOUĂ
 router.post("/contact", submitContactForm); // ADAUGĂ ACEASTĂ LINIE NOUĂ
+router.get("/listings/status/sold", getSoldListings);
 
 module.exports = router;
