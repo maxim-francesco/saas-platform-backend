@@ -49,6 +49,10 @@ enum Role {
   ADMIN       // Administratorul unui tenant
 }
 
+enum ListingStatus {
+  AVAILABLE
+  SOLD
+}
 
 // --- MODELE PENTRU SISTEMUL DE ANUNȚURI DINAMICE ---
 
@@ -148,6 +152,15 @@ model Listing {
   attributeValues AttributeValue[]
   images      ListingImage[]
   views           View[]
+
+  // --- CÂMPURI NOI ADĂUGATE ---
+  status         ListingStatus @default(AVAILABLE)
+  soldAt         DateTime?
+  sellingPrice   Float?
+
+  // Câmpuri opționale pentru viitorul calcul de profitabilitate
+  purchasePrice  Float?
+  otherCosts     Float?
   
   // INDEX NOU PENTRU PERFORMANȚĂ
   @@index([price])

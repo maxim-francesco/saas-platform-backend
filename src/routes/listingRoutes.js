@@ -9,6 +9,8 @@ const {
   uploadImages,
   updateImageOrder,
   deleteImage,
+  getSoldListings,
+  markAsSold,
 } = require("../controllers/listingController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -25,5 +27,7 @@ router.delete("/:listingId", deleteListing);
 router.post("/:listingId/images", upload.single("image"), uploadImages);
 router.delete("/:listingId/images/:imageId", deleteImage); // <-- ADAUGĂ ACEASTĂ LINIE NOUĂ
 router.post("/:listingId/reorder-images", updateImageOrder);
+router.get("/status/sold", getSoldListings); // Rută pentru anunturi vândute
+router.put("/:listingId/sell", markAsSold); // Rută pentru a marca un anunt ca vândut
 
 module.exports = router;

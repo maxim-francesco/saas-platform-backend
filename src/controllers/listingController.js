@@ -180,7 +180,10 @@ const createListing = async (req, res) => {
 const getListings = async (req, res) => {
   const { businessId } = req.user;
   const listings = await prisma.listing.findMany({
-    where: { businessId },
+    where: {
+      businessId,
+      status: "AVAILABLE", // <-- Condiția cheie adăugată
+    },
     include: {
       category: { select: { name: true } },
       attributeValues: {
@@ -195,6 +198,54 @@ const getListings = async (req, res) => {
     },
   });
   res.status(200).json(listings);
+};
+
+// Adaugă această funcție nouă
+const getSoldListings = async (req, res) => {
+  const { businessId } = req.user;
+  const listings = await prisma.listing.findMany({
+    where: {
+      businessId,
+      status: "SOLD", // <-- Condiția cheie
+    },
+    include: {
+      category: { select: { name: true } },
+      images: { orderBy: { order: "asc" }, take: 1 }, // Luăm doar prima imagine
+    },
+    orderBy: {
+      soldAt: "desc", // Afișăm cele mai recente vânzări primele
+    },
+  });
+  res.status(200).json(listings);
+};
+
+// Adaugă și această funcție
+const markAsSold = async (req, res) => {
+  const { listingId } = req.params;
+  const { sellingPrice, soldAt } = req.body;
+  const { businessId } = req.user;
+
+  if (!sellingPrice || !soldAt) {
+    return res
+      .status(400)
+      .json({ message: "Prețul de vânzare și data sunt obligatorii." });
+  }
+
+  try {
+    await prisma.listing.updateMany({
+      where: { id: listingId, businessId },
+      data: {
+        status: "SOLD",
+        sellingPrice: parseFloat(sellingPrice),
+        soldAt: new Date(soldAt),
+      },
+    });
+    res.status(200).json({ message: "Anunțul a fost marcat ca vândut." });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Eroare la marcarea anunțului ca vândut." });
+  }
 };
 
 // Funcția de a actualiza un anunț
@@ -460,4 +511,6 @@ module.exports = {
   deleteImage,
   uploadImages,
   updateImageOrder,
+  getSoldListings,
+  markAsSold,
 };
