@@ -202,19 +202,28 @@ const getListings = async (req, res) => {
 
 // Adaugă această funcție nouă
 const getSoldListings = async (req, res) => {
-  const { businessId } = req.user;
+  // NEW: Get businessId from either the authenticated user OR the query params
+  const businessId = req.user?.businessId || req.query.businessId;
+
+  // Add a check to ensure we have a businessId
+  if (!businessId) {
+    return res.status(400).json({ message: "Business ID is required." });
+  }
+
   const listings = await prisma.listing.findMany({
     where: {
-      businessId,
-      status: "SOLD", // <-- Condiția cheie
+      businessId, // Use the dynamically found businessId
+      status: "SOLD",
     },
     include: {
       category: { select: { name: true } },
-      images: { orderBy: { order: "asc" }, take: 1 }, // Luăm doar prima imagine
+      images: { orderBy: { order: "asc" }, take: 1 },
     },
     orderBy: {
-      soldAt: "desc", // Afișăm cele mai recente vânzări primele
+      soldAt: "desc",
     },
+    // Add a limit for public requests to avoid fetching too much data
+    take: req.query.limit ? parseInt(req.query.limit) : undefined,
   });
   res.status(200).json(listings);
 };
