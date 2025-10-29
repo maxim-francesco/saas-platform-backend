@@ -14,6 +14,7 @@ const attributeGroupRoutes = require("./routes/attributeGroupRoutes"); // Asigur
 const attributesRootRoutes = require("./routes/attributesRootRoutes");
 const publicReviewRoutes = require("./routes/publicReviewRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
+const viewRoutes = require("./routes/viewRoutes");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +47,7 @@ app.use("/api/attribute-groups", attributeGroupRoutes);
 app.use("/api/attributes", attributesRootRoutes); // Adaugă această linie
 app.use("/api/public/reviews", publicReviewRoutes);
 app.use("/api/reviews", reviewRoutes);
+app.use("/api/views", viewRoutes);
 
 // --- ✅ PLASA DE SIGURANȚĂ #2: GESTIONAR GLOBAL DE ERORI ---
 // Acest middleware se va executa la final DOAR dacă o eroare a fost aruncată ("thrown")
