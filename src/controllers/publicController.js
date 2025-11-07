@@ -41,6 +41,8 @@ const searchListings = async (req, res) => {
 
     const whereConditions = [];
 
+    whereConditions.push({ status: "AVAILABLE" });
+
     if (businessId) {
       whereConditions.push({ businessId: businessId });
     }
