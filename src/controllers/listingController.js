@@ -94,7 +94,14 @@ const uploadImages = async (req, res) => {
 
 // Funcția de creare a unui nou anunț
 const createListing = async (req, res) => {
-  const { title, description, categoryId, attributes } = req.body;
+  const {
+    title,
+    description,
+    categoryId,
+    attributes,
+    purchasePrice,
+    otherCosts,
+  } = req.body;
   const { businessId } = req.user;
 
   try {
@@ -136,8 +143,12 @@ const createListing = async (req, res) => {
           description,
           businessId,
           categoryId,
-          price: priceValue, // Salvăm prețul în coloana dedicată
-          mileage: mileageValue, // Salvăm kilometrajul în coloana dedicată
+          price: priceValue,
+          mileage: mileageValue,
+          // --- LINII NOI ADĂUGATE ---
+          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
+          otherCosts: otherCosts ? parseFloat(otherCosts) : null,
+          // --- SFÂRȘIT LINII NOI ---
         },
       });
 
@@ -261,7 +272,8 @@ const markAsSold = async (req, res) => {
 // Înlocuiește funcția existentă cu aceasta
 const updateListing = async (req, res) => {
   const { listingId } = req.params;
-  const { title, description, attributes } = req.body;
+  const { title, description, attributes, purchasePrice, otherCosts } =
+    req.body;
   const { businessId } = req.user;
 
   try {
@@ -302,6 +314,10 @@ const updateListing = async (req, res) => {
           description,
           price: priceValue,
           mileage: mileageValue,
+          // --- LINII NOI ADĂUGATE ---
+          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
+          otherCosts: otherCosts ? parseFloat(otherCosts) : null,
+          // --- SFÂRȘIT LINII NOI ---
         },
       });
 
