@@ -393,9 +393,16 @@ const getListingById = async (req, res) => {
     const listing = await prisma.listing.findFirst({
       where: { id: listingId, businessId: businessId },
       include: {
-        attributeValues: true,
+        attributeValues: {
+          // <--- ÎNLOCUIEȘTE AICI
+          include: {
+            attribute: {
+              select: { name: true }, // Asigură-te că includem numele atributului
+            },
+          },
+        },
         images: {
-          orderBy: { order: "asc" }, // <-- ✅ ȘI ACEASTĂ LINIE ESTE CRUCIALĂ
+          orderBy: { order: "asc" },
         },
       },
     });
