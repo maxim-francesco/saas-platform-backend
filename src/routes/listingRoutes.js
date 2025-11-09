@@ -12,6 +12,7 @@ const {
   getSoldListings,
   markAsSold,
   reactivateListing,
+  cloneListing,
 } = require("../controllers/listingController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -31,5 +32,6 @@ router.post("/:listingId/reorder-images", updateImageOrder);
 router.get("/status/sold", getSoldListings); // Rută pentru anunturi vândute
 router.put("/:listingId/sell", markAsSold); // Rută pentru a marca un anunt ca vândut
 router.put("/:listingId/reactivate", reactivateListing);
+router.post("/:listingId/clone", cloneListing);
 
 module.exports = router;

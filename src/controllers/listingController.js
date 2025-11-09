@@ -526,6 +526,81 @@ const updateImageOrder = async (req, res) => {
   }
 };
 
+const cloneListing = async (req, res) => {
+  const { listingId } = req.params;
+  const { businessId } = req.user;
+
+  try {
+    const newClonedListing = await prisma.$transaction(async (tx) => {
+      // 1. Găsim anunțul original și ne asigurăm că aparține acestui business
+      const originalListing = await tx.listing.findFirst({
+        where: {
+          id: listingId,
+          businessId: businessId,
+        },
+        include: {
+          attributeValues: true, // Includem toate valorile atributelor
+        },
+      });
+
+      if (!originalListing) {
+        throw new Error("Anunțul original nu a fost găsit sau nu aveți acces.");
+      }
+
+      // 2. Creăm noul anunț (clona)
+      // Adăugăm "[CLONĂ]" în titlu pentru a-l diferenția
+      // Resetăm statusul la "AVAILABLE" și ștergem datele de vânzare
+      const newListing = await tx.listing.create({
+        data: {
+          title: `${originalListing.title} [CLONĂ]`,
+          description: originalListing.description,
+          price: originalListing.price,
+          mileage: originalListing.mileage,
+          purchasePrice: originalListing.purchasePrice,
+          otherCosts: originalListing.otherCosts,
+          status: "AVAILABLE", // O clonă este mereu disponibilă
+          soldAt: null,
+          sellingPrice: null,
+
+          // Legăturile
+          businessId: originalListing.businessId,
+          categoryId: originalListing.categoryId,
+        },
+      });
+
+      // 3. Copiem toate valorile atributelor
+      if (originalListing.attributeValues.length > 0) {
+        // Pregătim datele pentru creare în masă
+        const attributeValuesToCreate = originalListing.attributeValues.map(
+          (attr) => ({
+            stringValue: attr.stringValue,
+            numberValue: attr.numberValue,
+            booleanValue: attr.booleanValue,
+            attributeId: attr.attributeId,
+            listingId: newListing.id, // Legăm de ID-ul NOULUI anunț
+          })
+        );
+
+        // Folosim createMany pentru performanță
+        await tx.attributeValue.createMany({
+          data: attributeValuesToCreate,
+        });
+      }
+
+      // 4. Returnăm noul anunț. NU copiem imaginile sau vizualizările.
+      return newListing;
+    });
+
+    // Trimitem înapoi anunțul nou creat
+    res.status(201).json(newClonedListing);
+  } catch (error) {
+    console.error("[DEBUG] Eroare la clonarea anunțului:", error);
+    res
+      .status(404)
+      .json({ message: error.message || "Eroare la clonarea anunțului." });
+  }
+};
+
 const reactivateListing = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
@@ -568,4 +643,5 @@ module.exports = {
   getSoldListings,
   markAsSold,
   reactivateListing,
+  cloneListing,
 };
