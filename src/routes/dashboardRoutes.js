@@ -1,6 +1,9 @@
 // src/routes/dashboardRoutes.js
 const express = require("express");
-const { getStats } = require("../controllers/dashboardController");
+const {
+  getStats,
+  getListingAnalytics,
+} = require("../controllers/dashboardController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
@@ -9,5 +12,6 @@ router.use(isAuthenticated);
 
 // Definim ruta GET pentru a prelua statisticile
 router.get("/stats", getStats);
+router.get("/listing-analytics", getListingAnalytics);
 
 module.exports = router;

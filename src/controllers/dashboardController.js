@@ -60,4 +60,59 @@ const getStats = async (req, res) => {
   }
 };
 
-module.exports = { getStats };
+// --- FUNCȚIE NOUĂ ADĂUGATĂ ---
+const getListingAnalytics = async (req, res) => {
+  const { businessId } = req.user;
+
+  try {
+    // 1. Găsim Top 5 cele mai vizualizate anunțuri ACTIVE
+    const mostViewed = await prisma.listing.findMany({
+      where: {
+        businessId,
+        status: "AVAILABLE", // Ne interesează doar anunțurile active
+      },
+      include: {
+        _count: { select: { views: true } }, // Numărăm vizualizările
+        images: {
+          // Includem prima imagine pentru afișare în UI
+          select: { url: true },
+          orderBy: { order: "asc" },
+          take: 1,
+        },
+      },
+      orderBy: {
+        views: { _count: "desc" }, // Sortăm descrescător după numărul de vizualizări
+      },
+      take: 5, // Luăm doar primele 5
+    });
+
+    // 2. Găsim Top 5 cele mai PUȚIN vizualizate anunțuri ACTIVE
+    const leastViewed = await prisma.listing.findMany({
+      where: {
+        businessId,
+        status: "AVAILABLE",
+      },
+      include: {
+        _count: { select: { views: true } },
+        images: {
+          select: { url: true },
+          orderBy: { order: "asc" },
+          take: 1,
+        },
+      },
+      orderBy: {
+        views: { _count: "asc" }, // Sortăm crescător
+      },
+      take: 5,
+    });
+
+    res.status(200).json({ mostViewed, leastViewed });
+  } catch (error) {
+    console.error("[DEBUG] A apărut o eroare în getListingAnalytics:", error);
+    res
+      .status(500)
+      .json({ message: "Eroare la preluarea statisticilor pentru anunțuri." });
+  }
+};
+
+module.exports = { getStats, getListingAnalytics };
