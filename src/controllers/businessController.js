@@ -26,6 +26,25 @@ const uploadBanner = async (req, res) => {
   uploadStream.end(req.file.buffer);
 };
 
+// Adaugă o funcție nouă pentru update (sau modific-o pe cea existentă dacă ai una de update settings)
+const updateBusinessSettings = async (req, res) => {
+  const { businessId } = req.user;
+  const { listingUrlPattern } = req.body;
+
+  try {
+    const updatedBusiness = await prisma.business.update({
+      where: { id: businessId },
+      data: {
+        listingUrlPattern,
+      },
+    });
+    res.status(200).json(updatedBusiness);
+  } catch (error) {
+    console.error("Eroare la actualizarea setărilor:", error);
+    res.status(500).json({ message: "Eroare la actualizarea setărilor business." });
+  }
+};
+
 // Funcția pentru a obține detaliile afacerii
 const getMyBusiness = async (req, res) => {
   const { businessId } = req.user;
@@ -122,5 +141,6 @@ module.exports = {
   uploadBanner, 
   getMyBusiness, 
   deleteBanner, 
-  updateBusinessProfile 
+  updateBusinessProfile,
+  updateBusinessSettings
 };

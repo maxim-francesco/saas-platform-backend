@@ -28,6 +28,7 @@ model Business {
   attributeGroups AttributeGroup[] // <--- ADAUGĂ ACEASTĂ LINIE
   views           View[]           // <--- ADAUGĂ ACEASTĂ LINIE
   bannerUrl       String?
+  listingUrlPattern String?
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)

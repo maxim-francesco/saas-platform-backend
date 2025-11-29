@@ -5,6 +5,7 @@ const {
   uploadBanner,
   getMyBusiness,
   deleteBanner, 
+  updateBusinessSettings,
   updateBusinessProfile
 } = require("../controllers/businessController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
@@ -17,5 +18,6 @@ router.get("/me", getMyBusiness);
 router.post("/upload-banner", upload.single("banner"), uploadBanner);
 router.delete("/banner", deleteBanner); 
 router.put("/profile", updateBusinessProfile);
+router.put("/settings", updateBusinessSettings); // Rută nouă: PUT /api/business/settings
 
 module.exports = router;
