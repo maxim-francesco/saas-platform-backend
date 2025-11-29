@@ -115,4 +115,64 @@ const getListingAnalytics = async (req, res) => {
   }
 };
 
-module.exports = { getStats, getListingAnalytics };
+// --- FUNCȚIE NOUĂ: Date pentru Grafic ---
+const getViewsChart = async (req, res) => {
+  const { businessId } = req.user;
+
+  try {
+    // 1. Calculăm data de acum 7 zile
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 6); // Luăm ultimele 7 zile (inclusiv azi)
+    sevenDaysAgo.setHours(0, 0, 0, 0); // Resetăm ora la începutul zilei
+
+    // 2. Extragem vizualizările brute din baza de date
+    const views = await prisma.view.findMany({
+      where: {
+        businessId: businessId,
+        viewedAt: {
+          gte: sevenDaysAgo,
+        },
+      },
+      select: {
+        viewedAt: true,
+      },
+    });
+
+    // 3. Procesăm datele în JavaScript pentru a umple zilele lipsă (cu 0)
+    // Creăm un map pentru ultimele 7 zile, inițializat cu 0
+    const statsMap = new Map();
+    const displayData = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const dateKey = d.toISOString().split("T")[0]; // Format YYYY-MM-DD
+      statsMap.set(dateKey, 0);
+    }
+
+    // Numărăm vizualizările reale
+    views.forEach((view) => {
+      const dateKey = view.viewedAt.toISOString().split("T")[0];
+      if (statsMap.has(dateKey)) {
+        statsMap.set(dateKey, statsMap.get(dateKey) + 1);
+      }
+    });
+
+    // Transformăm Map-ul în array-ul final pentru Recharts
+    // Vom trimite data ca timestamp sau string ISO, frontend-ul o va formata (Luni, Marți etc.)
+    statsMap.forEach((count, date) => {
+      displayData.push({
+        date: date, // YYYY-MM-DD
+        views: count,
+      });
+    });
+
+    res.status(200).json(displayData);
+  } catch (error) {
+    console.error("Eroare la generarea graficului:", error);
+    res.status(500).json({ message: "Eroare la preluarea datelor pentru grafic." });
+  }
+};
+
+module.exports = { getStats, getListingAnalytics,getViewsChart };
