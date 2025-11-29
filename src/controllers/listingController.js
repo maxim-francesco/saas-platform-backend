@@ -4,6 +4,17 @@ const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
 
+// Adaugă această funcție la începutul fișierului
+const generateSlug = (text) => {
+  return text
+    .toString()
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-')     // Înlocuiește spațiile cu -
+    .replace(/[^\w\-]+/g, '') // Elimină caracterele non-alfanumerice (ex: puncte, paranteze)
+    .replace(/\-\-+/g, '-');  // Elimină liniuțele duble
+};
+
 const uploadImages = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
@@ -149,6 +160,7 @@ const createListing = async (req, res) => {
           purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
           otherCosts: otherCosts ? parseFloat(otherCosts) : null,
           // --- SFÂRȘIT LINII NOI ---
+          slug: generateSlug(title),
         },
       });
 
@@ -318,6 +330,7 @@ const updateListing = async (req, res) => {
           purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
           otherCosts: otherCosts ? parseFloat(otherCosts) : null,
           // --- SFÂRȘIT LINII NOI ---
+          slug: generateSlug(title),
         },
       });
 
@@ -384,6 +397,8 @@ const deleteListing = async (req, res) => {
       .json({ message: error.message || "Eroare la ștergerea anunțului." });
   }
 };
+
+
 
 // Înlocuiește funcția getListingById existentă cu aceasta:
 const getListingById = async (req, res) => {

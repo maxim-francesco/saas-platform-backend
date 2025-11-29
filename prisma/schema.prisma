@@ -162,6 +162,8 @@ model Listing {
   // Câmpuri opționale pentru viitorul calcul de profitabilitate
   purchasePrice  Float?
   otherCosts     Float?
+
+  slug        String?
   
   // INDEX NOU PENTRU PERFORMANȚĂ
   @@index([price])
