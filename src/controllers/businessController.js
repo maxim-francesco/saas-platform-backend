@@ -1,5 +1,6 @@
 const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
+const bcrypt = require("bcryptjs"); // <--- ACEASTA ESTE LINIA CARE LIPSEA
 
 // Funcția pentru a încărca un banner
 const uploadBanner = async (req, res) => {
@@ -25,7 +26,7 @@ const uploadBanner = async (req, res) => {
   uploadStream.end(req.file.buffer);
 };
 
-// Funcția pentru a obține detaliile afacerii (inclusiv banner-ul)
+// Funcția pentru a obține detaliile afacerii
 const getMyBusiness = async (req, res) => {
   const { businessId } = req.user;
   const business = await prisma.business.findUnique({
@@ -38,36 +39,26 @@ const deleteBanner = async (req, res) => {
   const { businessId } = req.user;
 
   try {
-    // 1. Găsim afacerea pentru a obține URL-ul banner-ului curent
     const business = await prisma.business.findUnique({
       where: { id: businessId },
-      select: { bannerUrl: true }, // Selectăm doar câmpul de care avem nevoie
+      select: { bannerUrl: true }, 
     });
 
-    // Verificăm dacă există un banner de șters
     if (!business || !business.bannerUrl) {
       return res
         .status(404)
         .json({ message: "Niciun banner de șters nu a fost găsit." });
     }
 
-    // 2. Extragem ID-ul public din URL-ul de pe Cloudinary pentru a-l șterge
     const publicIdMatch = business.bannerUrl.match(
       /upload\/(?:v\d+\/)?(.+?)\./
     );
 
     if (publicIdMatch && publicIdMatch[1]) {
       const publicId = publicIdMatch[1];
-      // Trimitem comanda de ștergere către Cloudinary
       await cloudinary.uploader.destroy(publicId);
-    } else {
-      console.error(
-        "Nu s-a putut extrage ID-ul public din URL-ul banner-ului:",
-        business.bannerUrl
-      );
-    }
+    } 
 
-    // 3. Actualizăm în baza de date, setând bannerUrl la null
     await prisma.business.update({
       where: { id: businessId },
       data: { bannerUrl: null },
@@ -120,7 +111,6 @@ const updateBusinessProfile = async (req, res) => {
     res.status(200).json({ message: "Profilul a fost actualizat cu succes!" });
   } catch (error) {
     console.error("Eroare la actualizarea profilului:", error);
-    // Gestionăm eroarea de email duplicat (P2002 este codul Prisma pentru Unique Constraint)
     if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
         return res.status(409).json({ message: "Acest email este deja folosit de altcineva." });
     }
@@ -128,4 +118,9 @@ const updateBusinessProfile = async (req, res) => {
   }
 };
 
-module.exports = { uploadBanner, getMyBusiness, deleteBanner,updateBusinessProfile };
+module.exports = { 
+  uploadBanner, 
+  getMyBusiness, 
+  deleteBanner, 
+  updateBusinessProfile 
+};
