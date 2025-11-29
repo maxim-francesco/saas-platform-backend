@@ -82,4 +82,50 @@ const deleteBanner = async (req, res) => {
   }
 };
 
-module.exports = { uploadBanner, getMyBusiness, deleteBanner };
+// --- FUNCȚIE NOUĂ: ACTUALIZARE PROFIL ---
+const updateBusinessProfile = async (req, res) => {
+  const { businessName, email, password } = req.body;
+  const { businessId, userId } = req.user;
+
+  try {
+    // Folosim o tranzacție pentru a actualiza ambele tabele simultan
+    await prisma.$transaction(async (prisma) => {
+      // 1. Actualizăm numele afacerii (dacă este furnizat)
+      if (businessName) {
+        await prisma.business.update({
+          where: { id: businessId },
+          data: { name: businessName },
+        });
+      }
+
+      // 2. Pregătim datele pentru user
+      const userData = {};
+      if (email) userData.email = email;
+      
+      if (password) {
+        // Dacă se schimbă parola, o criptăm
+        const hashedPassword = await bcrypt.hash(password, 10);
+        userData.password = hashedPassword;
+      }
+
+      // 3. Actualizăm user-ul doar dacă avem date noi
+      if (Object.keys(userData).length > 0) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: userData,
+        });
+      }
+    });
+
+    res.status(200).json({ message: "Profilul a fost actualizat cu succes!" });
+  } catch (error) {
+    console.error("Eroare la actualizarea profilului:", error);
+    // Gestionăm eroarea de email duplicat (P2002 este codul Prisma pentru Unique Constraint)
+    if (error.code === 'P2002' && error.meta?.target?.includes('email')) {
+        return res.status(409).json({ message: "Acest email este deja folosit de altcineva." });
+    }
+    res.status(500).json({ message: "Eroare internă la actualizarea profilului." });
+  }
+};
+
+module.exports = { uploadBanner, getMyBusiness, deleteBanner,updateBusinessProfile };

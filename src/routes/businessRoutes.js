@@ -4,7 +4,8 @@ const express = require("express");
 const {
   uploadBanner,
   getMyBusiness,
-  deleteBanner, // 1. Importă noua funcție
+  deleteBanner, 
+  updateBusinessProfile
 } = require("../controllers/businessController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const upload = require("../middlewares/multer");
@@ -14,6 +15,7 @@ router.use(isAuthenticated);
 
 router.get("/me", getMyBusiness);
 router.post("/upload-banner", upload.single("banner"), uploadBanner);
-router.delete("/banner", deleteBanner); // 2. Adaugă această nouă rută
+router.delete("/banner", deleteBanner); 
+router.put("/profile", updateBusinessProfile);
 
 module.exports = router;
