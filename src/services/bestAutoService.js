@@ -136,9 +136,12 @@ const publishListing = async (listing, apiKey) => {
     const token = await getAccessToken(apiKey);
     const payload = mapListingToPayload(listing, listing.business);
 
+    // --- DEBUGGING CRITIC ---
+    console.log(`[BestAuto] Payload care va fi trimis:`, JSON.stringify(payload, null, 2));
+    // ------------------------
+
     console.log(`[BestAuto] Trimitere anunț ${listing.id}...`);
     
-    // POST /Article (Insert sau Update)
     await axios.post(`${BASE_URL}/Article`, payload, {
       headers: {
         "x-api-version": "1",
@@ -150,8 +153,10 @@ const publishListing = async (listing, apiKey) => {
     console.log(`[BestAuto] Anunț ${listing.id} sincronizat cu succes!`);
     return true;
   } catch (error) {
-    console.error(`[BestAuto] Eroare la sincronizare anunț ${listing.id}:`, error.response?.data || error.message);
-    // Nu aruncăm eroarea mai departe pentru a nu bloca salvarea în DB-ul nostru
+    // Logăm eroarea completă de la server
+    console.error(`[BestAuto] Eroare la sincronizare anunț ${listing.id}:`, 
+      JSON.stringify(error.response?.data || error.message, null, 2)
+    );
     return false;
   }
 };
