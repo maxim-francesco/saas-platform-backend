@@ -39,6 +39,16 @@ const getAccessToken = async (apiKey) => {
 
 // 2. Maparea datelor din DB-ul tău în formatul BestAuto
 const mapListingToPayload = (listing, business) => {
+
+
+  // --- ASIGURĂ-TE CĂ ACEST BLOC ESTE AICI, LA ÎNCEPUTUL FUNCȚIEI ---
+  const now = new Date();
+  const validFrom = now.toISOString(); // Definim validFrom AICI
+  
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + 30);
+  const validTo = futureDate.toISOString(); // Definim validTo AICI
+  // ------------------------------------------------------------------
   // Mapare simplă a atributelor (trebuie ajustată în funcție de numele exacte din DB-ul tău)
   // Cheile din stânga sunt numele atributelor tale din baza de date
   // Cheile din dreapta sunt ce așteaptă BestAuto
@@ -106,8 +116,10 @@ const mapListingToPayload = (listing, business) => {
         cityName: "Cluj-Napoca"
       },
       // --- CÂMPURI NOI ADĂUGATE ---
-      validFrom: validFrom,
+      // --- FOLOSIM VARIABILELE DEFINITE MAI SUS ---
+      validFrom: validFrom,  // Aici crăpa înainte
       validTo: validTo,
+      // -------------------------------------------
       // ----------------------------
       properties: properties,
       pictures: listing.images.map((img, index) => ({
