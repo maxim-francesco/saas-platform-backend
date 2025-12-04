@@ -3,6 +3,7 @@ const sharp = require("sharp");
 const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
+const bestAutoService = require("../services/bestAutoService");
 
 // Adaugă această funcție la începutul fișierului
 const generateSlug = (text) => {
@@ -190,6 +191,36 @@ const createListing = async (req, res) => {
 
       return listing;
     });
+
+    // --- INTEGRATION BESTAUTO START ---
+    // Sincronizăm asincron (fără await) pentru a nu bloca răspunsul către frontend
+    const newListingId = newListing.id;
+    (async () => {
+      try {
+        // 1. Căutăm anunțul complet (inclusiv imagini și business pentru cheia API)
+        const fullListing = await prisma.listing.findUnique({
+          where: { id: newListingId },
+          include: {
+            business: true,
+            attributeValues: { include: { attribute: true } },
+            images: true,
+          },
+        });
+
+        // 2. Verificăm dacă business-ul are cheia API setată
+        if (fullListing?.business?.bestAutoApiKey) {
+          await bestAutoService.publishListing(
+            fullListing,
+            fullListing.business.bestAutoApiKey
+          );
+        }
+      } catch (err) {
+        console.error("[BestAuto] Eroare la sincronizare (create):", err.message);
+      }
+    })();
+    // --- INTEGRATION BESTAUTO END ---
+
+
     res.status(201).json(newListing);
   } catch (error) {
     res
@@ -360,6 +391,32 @@ const updateListing = async (req, res) => {
       }
     });
 
+    // --- INTEGRATION BESTAUTO START ---
+    (async () => {
+      try {
+        // 1. Luăm datele actualizate
+        const fullListing = await prisma.listing.findUnique({
+          where: { id: listingId },
+          include: {
+            business: true,
+            attributeValues: { include: { attribute: true } },
+            images: true,
+          },
+        });
+
+        // 2. Trimitem update-ul
+        if (fullListing?.business?.bestAutoApiKey) {
+          await bestAutoService.publishListing(
+            fullListing,
+            fullListing.business.bestAutoApiKey
+          );
+        }
+      } catch (err) {
+        console.error("[BestAuto] Eroare la sincronizare (update):", err.message);
+      }
+    })();
+    // --- INTEGRATION BESTAUTO END ---
+
     res.status(200).json({ message: "Anunțul a fost actualizat cu succes." });
   } catch (error) {
     res
@@ -372,6 +429,20 @@ const updateListing = async (req, res) => {
 const deleteListing = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
+
+  // --- INTEGRATION BESTAUTO PART 1 ---
+  // Căutăm cheia API înainte să ștergem anunțul/business-ul, ca să o avem pregătită
+  let bestAutoApiKey = null;
+  try {
+    const businessData = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: { bestAutoApiKey: true },
+    });
+    bestAutoApiKey = businessData?.bestAutoApiKey;
+  } catch (e) {
+    console.error("Eroare la preluare cheie API pentru delete:", e);
+  }
+  // -----------------------------------
 
   try {
     await prisma.$transaction(async (prisma) => {
@@ -389,6 +460,15 @@ const deleteListing = async (req, res) => {
       // 2. Ștergem anunțul
       await prisma.listing.delete({ where: { id: listingId } });
     });
+
+    // --- INTEGRATION BESTAUTO PART 2 ---
+    if (bestAutoApiKey) {
+      // Apelăm ștergerea asincron
+      bestAutoService
+        .deleteListing(listingId, bestAutoApiKey)
+        .catch((err) => console.error("[BestAuto] Eroare la ștergere:", err.message));
+    }
+    // -----------------------------------
 
     res.status(200).json({ message: "Anunțul a fost șters." });
   } catch (error) {

@@ -29,6 +29,8 @@ model Business {
   views           View[]           // <--- ADAUGĂ ACEASTĂ LINIE
   bannerUrl       String?
   listingUrlPattern String?
+
+  bestAutoApiKey String?  // Cheia API BestAuto (opțională)
 }
 
 // Modelul pentru Utilizatori (Administratorii care se loghează în panou)
