@@ -47,112 +47,39 @@ const mapListingToPayload = (listing, business) => {
   futureDate.setDate(futureDate.getDate() + 30);
   const validTo = futureDate.toISOString().split('.')[0]; 
 
-  const attributesMap = {
-    "marca": "make",
-    "model": "model",
-    "an": "carregistrationdate",
-    "combustibil": "carfueltype",
-    "caroserie": "carbody",
-    "putere": "carpower",
-    "putere (cp)": "carpower",
-    "capacitate cilindrica": "carcmc",
-    "cutie de viteze": "gearbxtype",
-    "transmisie": "gearbxtype"
-  };
-
-  const properties = [];
-
-  if (listing.mileage) {
-    properties.push({ key: "km", value: listing.mileage.toString() });
-  }
-
-  if (listing.attributeValues) {
-    listing.attributeValues.forEach((av) => {
-      const dbAttrName = av.attribute.name.toLowerCase().trim()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
-
-      const bestAutoKey = Object.keys(attributesMap).find(key => 
-        dbAttrName.includes(key)
-      );
-
-      if (bestAutoKey) {
-        let val = "";
-        if (av.stringValue) val = av.stringValue;
-        else if (av.numberValue !== null) val = av.numberValue.toString();
-        else if (av.booleanValue !== null) val = av.booleanValue ? "Da" : "Nu";
-
-        if (val && val !== "null") {
-           properties.push({
-             key: attributesMap[bestAutoKey],
-             value: val
-           });
-        }
-      }
-    });
-  }
-
-  // Make/Model fallback
-  let makeValue = properties.find(p => p.key === 'make')?.value;
-  let modelValue = properties.find(p => p.key === 'model')?.value;
-
-  if (!makeValue) {
-    let titleMake = listing.title.split(' ')[0] || "Altele";
-    if (titleMake.toLowerCase() === "mercedes") titleMake = "Mercedes-Benz";
-    properties.push({ key: 'make', value: titleMake });
-  }
-  if (!modelValue) {
-    const titleModel = listing.title.split(' ')[1] || "Altele";
-    properties.push({ key: 'model', value: titleModel });
-  }
-
-  // Descriere validă
-  let description = listing.description || "";
-  if (description.length < 20) {
-    description += "\n Detalii complete disponibile la telefon.";
-  }
-
-  // Construim obiectul ad
-  const adObject = {
-      active: true,
-      promoted: false,
-      externalid: listing.id,
-      category: 21,
-      price: listing.price || 1,
-      currency: "EUR",
-      title: listing.title.substring(0, 100),
-      text: description,
-      validFrom: validFrom,
-      validTo: validTo,
-      
-      contact: {
-        contactName: business.name || "AWD Auto",
-        contactEmail: "contact@awdauto.ro",
-        contactPhone: "0752228593"
-      },
-      location: {
-        countyName: "Cluj",
-        cityName: "Cluj-Napoca"
-      }
-  };
-
-  // Adăugăm properties doar dacă există
-  if (properties.length > 0) {
-    adObject.properties = properties;
-  }
-
-  // Adăugăm pictures doar dacă există
-  if (listing.images && listing.images.length > 0) {
-    adObject.pictures = listing.images.map((img, index) => ({
-      url: img.url,
-      rank: index + 1
-    }));
-  }
-
+  // TEST: Cheia 'Ad' cu literă mare și structura standard
   return {
-    user: {
-      email: "contact@awdauto.ro"
+    "User": {
+      "Email": "contact@awdauto.ro"
     },
-    ad: adObject
+    "Ad": { // A mare
+      "Active": true,
+      "Promoted": false,
+      "ExternalId": listing.id,
+      "Category": 21,
+      "Price": 20000,
+      "Currency": "EUR",
+      "Title": "Audi A6 Test Integrare Pascal",
+      "Text": "Audi A6 Quattro Berlina 2.0 tdi Ultra 190 cp S Tronic Navy Piele. Test integrare API.",
+      "ValidFrom": validFrom,
+      "ValidTo": validTo,
+      
+      "Contact": {
+        "ContactName": "AWD Auto",
+        "ContactEmail": "contact@awdauto.ro",
+        "ContactPhone": "0752228593"
+      },
+      "Location": {
+        "CountyName": "Cluj",
+        "CityName": "Cluj-Napoca"
+      },
+      "Properties": [
+        { "Key": "make", "Value": "Audi" },
+        { "Key": "model", "Value": "A6" },
+        // ... restul
+      ],
+      "Pictures": []
+    }
   };
 };
 
