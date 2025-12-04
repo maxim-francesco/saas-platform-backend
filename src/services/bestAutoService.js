@@ -105,6 +105,10 @@ const mapListingToPayload = (listing, business) => {
         countyName: "Cluj", // Hardcodat momentan sau luat din atribute
         cityName: "Cluj-Napoca"
       },
+      // --- CÂMPURI NOI ADĂUGATE ---
+      validFrom: validFrom,
+      validTo: validTo,
+      // ----------------------------
       properties: properties,
       pictures: listing.images.map((img, index) => ({
         url: img.url,
