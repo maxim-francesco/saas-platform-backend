@@ -41,114 +41,51 @@ const getAccessToken = async (apiKey) => {
 // ... restul codului ...
 
 const mapListingToPayload = (listing, business) => {
-  // 1. Data: Format simplificat (fără milisecunde)
   const now = new Date();
-  const validFrom = now.toISOString().split('.')[0]; 
+  // Formatul datei din PDF este cu milisecunde: 2019-06-10T07:58:34.207
+  // Hai să încercăm exact formatul ISO complet
+  const validFrom = now.toISOString(); 
   
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + 30);
-  const validTo = futureDate.toISOString().split('.')[0]; 
+  const validTo = futureDate.toISOString();
 
-  const attributesMap = {
-    "marca": "make",
-    "model": "model",
-    "an": "carregistrationdate",
-    "combustibil": "carfueltype",
-    "caroserie": "carbody",
-    "putere": "carpower",
-    "putere (cp)": "carpower",
-    "capacitate cilindrica": "carcmc",
-    "cutie de viteze": "gearbxtype",
-    "transmisie": "gearbxtype"
-  };
-
-  const properties = [];
-
-  // Km
-  if (listing.mileage) {
-    properties.push({ key: "km", value: listing.mileage.toString() });
-  }
-
-  // Atribute dinamice
-  if (listing.attributeValues) {
-    listing.attributeValues.forEach((av) => {
-      const dbAttrName = av.attribute.name.toLowerCase().trim()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
-
-      const bestAutoKey = Object.keys(attributesMap).find(key => 
-        dbAttrName.includes(key)
-      );
-
-      if (bestAutoKey) {
-        let val = "";
-        if (av.stringValue) val = av.stringValue;
-        else if (av.numberValue !== null) val = av.numberValue.toString();
-        else if (av.booleanValue !== null) val = av.booleanValue ? "Da" : "Nu";
-
-        // Filtru important: Nu trimitem valori goale sau "null"
-        if (val && val !== "null") {
-           properties.push({
-             key: attributesMap[bestAutoKey],
-             value: val
-           });
-        }
-      }
-    });
-  }
-
-  // Plasa de siguranță pentru Make/Model
-  let makeValue = properties.find(p => p.key === 'make')?.value;
-  let modelValue = properties.find(p => p.key === 'model')?.value;
-
-  if (!makeValue) {
-    // Dacă lipsește marca, o luăm din titlu.
-    // Important: BestAuto poate cere "Mercedes-Benz" în loc de "Mercedes".
-    let titleMake = listing.title.split(' ')[0] || "Altele";
-    if (titleMake.toLowerCase() === "mercedes") titleMake = "Mercedes-Benz"; // Mic fix comun
-    properties.push({ key: 'make', value: titleMake });
-  }
-  if (!modelValue) {
-    const titleModel = listing.title.split(' ')[1] || "Altele";
-    properties.push({ key: 'model', value: titleModel });
-  }
-
-  // Validare lungime descriere (minim 20 caractere pentru siguranță)
-  let description = listing.description || "";
-  if (description.length < 20) {
-    description += "\n Detalii complete disponibile la telefon.";
-  }
-
+  // PAYLOAD HARDCODAT DIN PDF (AUDI A6)
   return {
-    user: {
-      email: "contact@awdauto.ro"
+    "user": {
+      "email": "contact@awdauto.ro"
     },
-    ad: {
-      active: true,
-      promoted: false,
-      externalid: listing.id,
-      category: 21,
-      price: listing.price || 1, // Preț minim 1
-      currency: "EUR",
-      title: listing.title.substring(0, 100), // Limităm titlul
-      text: description,
-      
-      validFrom: validFrom,
-      validTo: validTo,
-
-      contact: {
-        contactName: business.name || "AWD Auto",
-        contactEmail: "contact@awdauto.ro",
-        contactPhone: "0752228593"
+    "ad": {
+      "active": true,
+      "promoted": false,
+      "externalid": listing.id, // Singurul lucru dinamic
+      "category": 21,
+      "price": 20000,
+      "currency": "EUR",
+      "title": "Audi A6 Test Integrare",
+      "text": "Audi A6 Quattro Berlina 2.0 tdi Ultra 190 cp S Tronic Navy Piele. Test integrare API.",
+      "validFrom": validFrom,
+      "validTo": validTo,
+      "contact": {
+        "contactName": "AWD Auto",
+        "contactEmail": "contact@awdauto.ro",
+        "contactPhone": "0752228593"
       },
-      location: {
-        countyName: "Cluj",
-        cityName: "Cluj-Napoca"
+      "location": {
+        "countyName": "Cluj",
+        "cityName": "Cluj-Napoca"
       },
-      properties: properties,
-      pictures: listing.images.map((img, index) => ({
-        url: img.url,
-        rank: index + 1
-      }))
+      "properties": [
+        { "key": "make", "value": "Audi" },
+        { "key": "model", "value": "A6" },
+        { "key": "carbody", "value": "berlina" }, // Observă litere mici
+        { "key": "carfueltype", "value": "Benzina" }, // Benzina, nu Diesel
+        { "key": "carregistrationdate", "value": "2016" },
+        { "key": "km", "value": "200000" },
+        { "key": "carcmc", "value": "1968" },
+        { "key": "carpower", "value": "190" }
+      ],
+      "pictures": [] // Fără poze momentan
     }
   };
 };
