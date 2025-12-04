@@ -41,31 +41,109 @@ const getAccessToken = async (apiKey) => {
 // ... restul codului ...
 
 const mapListingToPayload = (listing, business) => {
+  // 1. Calculăm datele (fără milisecunde pentru siguranță)
   const now = new Date();
   const validFrom = now.toISOString().split('.')[0]; 
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + 30);
   const validTo = futureDate.toISOString().split('.')[0]; 
 
-  // TEST: Cheia 'Ad' cu literă mare și structura standard
+  // 2. Maparea numelor atributelor (interne -> externe)
+  const attributesMap = {
+    "marca": "make",
+    "model": "model",
+    "an": "carregistrationdate",
+    "combustibil": "carfueltype",
+    "caroserie": "carbody",
+    "putere": "carpower",
+    "putere (cp)": "carpower",
+    "capacitate cilindrica": "carcmc",
+    "cutie de viteze": "gearbxtype",
+    "transmisie": "gearbxtype"
+  };
+
+  const properties = [];
+
+  // 3. Adăugăm Kilometrajul (Dacă există)
+  if (listing.mileage) {
+    properties.push({ Key: "km", Value: listing.mileage.toString() });
+  }
+
+  // 4. Procesăm atributele dinamice
+  if (listing.attributeValues) {
+    listing.attributeValues.forEach((av) => {
+      const dbAttrName = av.attribute.name.toLowerCase().trim()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+
+      const bestAutoKey = Object.keys(attributesMap).find(key => 
+        dbAttrName.includes(key)
+      );
+
+      if (bestAutoKey) {
+        let val = "";
+        if (av.stringValue) val = av.stringValue;
+        else if (av.numberValue !== null) val = av.numberValue.toString();
+        else if (av.booleanValue !== null) val = av.booleanValue ? "Da" : "Nu";
+
+        if (val && val !== "null") {
+           // Atenție: Folosim "Key" și "Value" cu litere mari
+           properties.push({
+             Key: attributesMap[bestAutoKey],
+             Value: val
+           });
+        }
+      }
+    });
+  }
+
+  // 5. Plasa de siguranță pentru Make/Model (Obligatorii)
+  // Verificăm dacă există deja, folosind cheia cu literă mare 'Key'
+  let makeValue = properties.find(p => p.Key === 'make')?.Value;
+  let modelValue = properties.find(p => p.Key === 'model')?.Value;
+
+  if (!makeValue) {
+    let titleMake = listing.title.split(' ')[0] || "Altele";
+    if (titleMake.toLowerCase() === "mercedes") titleMake = "Mercedes-Benz";
+    properties.push({ Key: 'make', Value: titleMake });
+  }
+  if (!modelValue) {
+    const titleModel = listing.title.split(' ')[1] || "Altele";
+    properties.push({ Key: 'model', Value: titleModel });
+  }
+
+  // 6. Descriere validă (Minim 20 caractere)
+  let description = listing.description || "";
+  if (description.length < 20) {
+    description += "\n Detalii complete disponibile la telefon pentru acest autoturism.";
+  }
+
+  // 7. Pregătim imaginile (PascalCase)
+  const pictures = listing.images && listing.images.length > 0 
+    ? listing.images.map((img, index) => ({
+        Url: img.url,
+        Rank: index + 1
+      }))
+    : [];
+
+  // 8. Returnăm obiectul cu structura PascalCase
   return {
     "User": {
       "Email": "contact@awdauto.ro"
     },
-    "Ad": { // A mare
+    "Ad": {
       "Active": true,
       "Promoted": false,
       "ExternalId": listing.id,
       "Category": 21,
-      "Price": 20000,
+      "Price": listing.price || 1,
       "Currency": "EUR",
-      "Title": "Audi A6 Test Integrare Pascal",
-      "Text": "Audi A6 Quattro Berlina 2.0 tdi Ultra 190 cp S Tronic Navy Piele. Test integrare API.",
+      "Title": listing.title.substring(0, 100),
+      "Text": description,
       "ValidFrom": validFrom,
       "ValidTo": validTo,
       
       "Contact": {
-        "ContactName": "AWD Auto",
+        "ContactName": business.name || "AWD Auto",
         "ContactEmail": "contact@awdauto.ro",
         "ContactPhone": "0752228593"
       },
@@ -73,12 +151,8 @@ const mapListingToPayload = (listing, business) => {
         "CountyName": "Cluj",
         "CityName": "Cluj-Napoca"
       },
-      "Properties": [
-        { "Key": "make", "Value": "Audi" },
-        { "Key": "model", "Value": "A6" },
-        // ... restul
-      ],
-      "Pictures": []
+      "Properties": properties,
+      "Pictures": pictures
     }
   };
 };
