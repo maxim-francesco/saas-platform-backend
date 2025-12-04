@@ -47,7 +47,6 @@ const mapListingToPayload = (listing, business) => {
   futureDate.setDate(futureDate.getDate() + 30);
   const validTo = futureDate.toISOString().split('.')[0]; 
 
-  // TEST PAYLOAD FLAT (PLAT)
   return {
     "user": {
       "email": "contact@awdauto.ro"
@@ -56,23 +55,27 @@ const mapListingToPayload = (listing, business) => {
       "active": true,
       "promoted": false,
       "externalid": listing.id,
-      "category": 21,
-      "price": 20000,
+      "category": 21, // Integer
+      "price": 20000, // Number/Integer (nu float dacă se poate evita)
       "currency": "EUR",
       "title": "Audi A6 Test Integrare",
       "text": "Audi A6 Quattro Berlina 2.0 tdi Ultra 190 cp S Tronic Navy Piele. Test integrare API.",
       "validFrom": validFrom,
       "validTo": validTo,
       
-      // --- SCHIMBARE MAJORĂ: Câmpuri plate ---
-      "contactName": "AWD Auto",
-      "contactEmail": "contact@awdauto.ro",
-      "contactPhone": "0752228593",
-      
-      "countyName": "Cluj",
-      "cityName": "Cluj-Napoca",
-      // "areaName": "", // Opțional
-      // --------------------------------------
+      // REVENIM LA OBIECTE IMBRICATE - E CEL MAI SIGUR
+      "contact": {
+        "contactName": "AWD Auto",
+        "contactEmail": "contact@awdauto.ro",
+        "contactPhone": "0752228593"
+      },
+      "location": {
+        "countyName": "Cluj",
+        "cityName": "Cluj-Napoca",
+        "areaName": "", // Trimitem string gol, nu null
+        "latitude": 0,  // Trimitem 0
+        "longitude": 0  // Trimitem 0
+      },
 
       "properties": [
         { "key": "make", "value": "Audi" },
@@ -83,6 +86,7 @@ const mapListingToPayload = (listing, business) => {
         { "key": "km", "value": "200000" },
         { "key": "carcmc", "value": "1968" },
         { "key": "carpower", "value": "190" }
+        // Scoatem carstatename momentan
       ],
       "pictures": []
     }
