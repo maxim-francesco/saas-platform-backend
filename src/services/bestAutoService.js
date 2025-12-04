@@ -39,50 +39,54 @@ const getAccessToken = async (apiKey) => {
 
 // 2. Maparea datelor din DB-ul tău în formatul BestAuto
 const mapListingToPayload = (listing, business) => {
-
-
-  // --- ASIGURĂ-TE CĂ ACEST BLOC ESTE AICI, LA ÎNCEPUTUL FUNCȚIEI ---
+  // 1. Calculăm datele de valabilitate (OBLIGATORII pentru BestAuto)
   const now = new Date();
-  const validFrom = now.toISOString(); // Definim validFrom AICI
+  const validFrom = now.toISOString(); 
   
   const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + 30);
-  const validTo = futureDate.toISOString(); // Definim validTo AICI
-  // ------------------------------------------------------------------
-  // Mapare simplă a atributelor (trebuie ajustată în funcție de numele exacte din DB-ul tău)
-  // Cheile din stânga sunt numele atributelor tale din baza de date
-  // Cheile din dreapta sunt ce așteaptă BestAuto
+  futureDate.setDate(futureDate.getDate() + 30); // Anunț valabil 30 de zile
+  const validTo = futureDate.toISOString(); 
+
+  // 2. Maparea numelor atributelor
   const attributesMap = {
-    "Marca": "make",
-    "Model": "model",
-    "An": "carregistrationdate",
-    "Combustibil": "carfueltype",
-    "Caroserie": "carbody",
-    "Putere (CP)": "carpower",
-    "Capacitate cilindrică": "carcmc"
+    "marca": "make",        
+    "model": "model",
+    "an": "carregistrationdate",
+    "combustibil": "carfueltype",
+    "caroserie": "carbody",
+    "putere": "carpower",
+    "putere (cp)": "carpower", 
+    "capacitate cilindrica": "carcmc",
+    "cutie de viteze": "gearbxtype",
+    "transmisie": "gearbxtype"
   };
 
   const properties = [];
 
-  // Mapează kilometrajul (câmp nativ la tine)
+  // 3. Adăugăm Kilometrajul (câmp nativ)
   if (listing.mileage) {
     properties.push({ key: "km", value: listing.mileage.toString() });
   }
 
-  // Mapează atributele dinamice
+  // 4. Procesăm atributele dinamice
+  // Logăm pentru debug ce avem în DB
+  console.log("[BestAuto DEBUG] Atribute brute:", 
+    listing.attributeValues?.map(av => `${av.attribute.name}: ${av.stringValue}`)
+  );
+
   if (listing.attributeValues) {
     listing.attributeValues.forEach((av) => {
-      const dbAttrName = av.attribute.name;
-      // Verificăm dacă avem o mapare pentru acest atribut
+      // Normalizăm numele: "Marcă" -> "marca", "Putere (CP)" -> "putere cp"
+      const dbAttrName = av.attribute.name.toLowerCase().trim()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+
+      // Căutăm cheia potrivită
       const bestAutoKey = Object.keys(attributesMap).find(key => 
-        dbAttrName.toLowerCase().includes(key.toLowerCase())
+        dbAttrName.includes(key)
       );
 
       if (bestAutoKey) {
         let val = av.stringValue || av.numberValue?.toString() || (av.booleanValue ? "Da" : "Nu");
-        
-        // Conversie specială pentru Combustibil (BestAuto vrea probabil format specific)
-        // Aici poți adăuga logică extra dacă e nevoie
         
         properties.push({
           key: attributesMap[bestAutoKey],
@@ -92,35 +96,50 @@ const mapListingToPayload = (listing, business) => {
     });
   }
 
-  // Construcția obiectului final conform PDF-ului
+  // 5. PLASĂ DE SIGURANȚĂ: Dacă lipsesc 'make' sau 'model', le ghicim din Titlu
+  // BestAuto respinge anunțul cu "Invalid model!" dacă lipsesc astea.
+  const hasMake = properties.some(p => p.key === 'make');
+  if (!hasMake) {
+    const guessedMake = listing.title.split(' ')[0] || "Other";
+    properties.push({ key: 'make', value: guessedMake });
+    console.log(`[BestAuto WARNING] 'make' lipsă. Adăugat din titlu: ${guessedMake}`);
+  }
+
+  const hasModel = properties.some(p => p.key === 'model');
+  if (!hasModel) {
+     const guessedModel = listing.title.split(' ')[1] || "Other";
+     properties.push({ key: 'model', value: guessedModel });
+     console.log(`[BestAuto WARNING] 'model' lipsă. Adăugat din titlu: ${guessedModel}`);
+  }
+
+  // 6. Construim obiectul final
   return {
     user: {
-      email: "contact@awdauto.ro" // Sau un email din setările business-ului
+      email: "contact@awdauto.ro" 
     },
     ad: {
       active: true,
-      promoted: false, // Default false, poate fi configurabil
-      externalid: listing.id, // ID-ul tău intern
-      category: 21, // 21 = Autoturisme
+      promoted: false,
+      externalid: listing.id,
+      category: 21, 
       price: listing.price || 0,
       currency: "EUR",
       title: listing.title,
-      text: listing.description || "",
+      text: listing.description || "Detalii la telefon.",
+      
+      // Câmpurile de timp obligatorii
+      validFrom: validFrom,
+      validTo: validTo,
+
       contact: {
-        contactName: business.name,
-        contactEmail: "contact@awdauto.ro", // Ar trebui luat din business settings
-        contactPhone: "0752228593" // Ar trebui luat din business settings
+        contactName: business.name || "AWD Auto",
+        contactEmail: "contact@awdauto.ro",
+        contactPhone: "0752228593"
       },
       location: {
-        countyName: "Cluj", // Hardcodat momentan sau luat din atribute
+        countyName: "Cluj",
         cityName: "Cluj-Napoca"
       },
-      // --- CÂMPURI NOI ADĂUGATE ---
-      // --- FOLOSIM VARIABILELE DEFINITE MAI SUS ---
-      validFrom: validFrom,  // Aici crăpa înainte
-      validTo: validTo,
-      // -------------------------------------------
-      // ----------------------------
       properties: properties,
       pictures: listing.images.map((img, index) => ({
         url: img.url,
