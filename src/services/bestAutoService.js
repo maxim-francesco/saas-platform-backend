@@ -47,26 +47,41 @@ const mapListingToPayload = (listing, business) => {
   futureDate.setDate(futureDate.getDate() + 30);
   const validTo = futureDate.toISOString().split('.')[0]; 
 
-  // PAYLOAD MINIMAL PENTRU DEBUG STRUCTURĂ
+  // TEST FINAL: STRUCTURA PLATĂ COMPLETĂ
+  // Unele API-uri .NET acceptă modele "flattened"
   return {
-    "user": {
-      "email": "contact@awdauto.ro"
-    },
-    "ad": {
-      "active": true,
-      "promoted": false,
-      "externalid": listing.id,
-      "category": 21,
-      "price": 20000,
-      "currency": "EUR",
-      "title": "Test Integrare Minimal",
-      "text": "Acesta este un test de integrare API minimal.",
-      "validFrom": validFrom,
-      "validTo": validTo,
+      "Active": true,
+      "Promoted": false,
+      "ExternalId": listing.id,
+      "Category": 21,
+      "Price": 20000,
+      "Currency": "EUR",
+      "Title": "Audi A6 Test Integrare Final",
+      "Text": "Audi A6 Quattro Berlina 2.0 tdi Ultra 190 cp S Tronic Navy Piele. Test integrare API.",
+      "ValidFrom": validFrom,
+      "ValidTo": validTo,
       
-      // Eliminăm complet contact, location, properties și pictures
-      // pentru a vedea dacă structura de bază { user, ad } este acceptată.
-    }
+      // Contact
+      "ContactName": "AWD Auto",
+      "ContactEmail": "contact@awdauto.ro",
+      "ContactPhone": "0752228593",
+      
+      // Location
+      "CountyName": "Cluj",
+      "CityName": "Cluj-Napoca",
+
+      // Properties
+      "Properties": [
+        { "Key": "make", "Value": "Audi" },
+        { "Key": "model", "Value": "A6" },
+        { "Key": "carbody", "Value": "berlina" },
+        { "Key": "carfueltype", "Value": "Benzina" },
+        { "Key": "carregistrationdate", "Value": "2016" },
+        { "Key": "km", "Value": "200000" },
+        { "Key": "carcmc", "Value": "1968" },
+        { "Key": "carpower", "Value": "190" }
+      ],
+      "Pictures": [] 
   };
 };
 
