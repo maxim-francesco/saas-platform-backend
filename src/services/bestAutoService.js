@@ -42,15 +42,12 @@ const getAccessToken = async (apiKey) => {
 
 const mapListingToPayload = (listing, business) => {
   const now = new Date();
-  // Formatul datei din PDF este cu milisecunde: 2019-06-10T07:58:34.207
-  // Hai să încercăm exact formatul ISO complet
-  const validFrom = now.toISOString(); 
-  
+  const validFrom = now.toISOString().split('.')[0]; 
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + 30);
-  const validTo = futureDate.toISOString();
+  const validTo = futureDate.toISOString().split('.')[0]; 
 
-  // PAYLOAD HARDCODAT DIN PDF (AUDI A6)
+  // TEST PAYLOAD FLAT (PLAT)
   return {
     "user": {
       "email": "contact@awdauto.ro"
@@ -58,7 +55,7 @@ const mapListingToPayload = (listing, business) => {
     "ad": {
       "active": true,
       "promoted": false,
-      "externalid": listing.id, // Singurul lucru dinamic
+      "externalid": listing.id,
       "category": 21,
       "price": 20000,
       "currency": "EUR",
@@ -66,26 +63,28 @@ const mapListingToPayload = (listing, business) => {
       "text": "Audi A6 Quattro Berlina 2.0 tdi Ultra 190 cp S Tronic Navy Piele. Test integrare API.",
       "validFrom": validFrom,
       "validTo": validTo,
-      "contact": {
-        "contactName": "AWD Auto",
-        "contactEmail": "contact@awdauto.ro",
-        "contactPhone": "0752228593"
-      },
-      "location": {
-        "countyName": "Cluj",
-        "cityName": "Cluj-Napoca"
-      },
+      
+      // --- SCHIMBARE MAJORĂ: Câmpuri plate ---
+      "contactName": "AWD Auto",
+      "contactEmail": "contact@awdauto.ro",
+      "contactPhone": "0752228593",
+      
+      "countyName": "Cluj",
+      "cityName": "Cluj-Napoca",
+      // "areaName": "", // Opțional
+      // --------------------------------------
+
       "properties": [
         { "key": "make", "value": "Audi" },
         { "key": "model", "value": "A6" },
-        { "key": "carbody", "value": "berlina" }, // Observă litere mici
-        { "key": "carfueltype", "value": "Benzina" }, // Benzina, nu Diesel
+        { "key": "carbody", "value": "berlina" },
+        { "key": "carfueltype", "value": "Benzina" },
         { "key": "carregistrationdate", "value": "2016" },
         { "key": "km", "value": "200000" },
         { "key": "carcmc", "value": "1968" },
         { "key": "carpower", "value": "190" }
       ],
-      "pictures": [] // Fără poze momentan
+      "pictures": []
     }
   };
 };
