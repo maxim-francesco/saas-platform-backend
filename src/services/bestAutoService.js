@@ -38,84 +38,29 @@ const getAccessToken = async (apiKey) => {
 };
 
 // 2. Maparea datelor din DB-ul tău în formatul BestAuto
+// ... restul codului ...
+
 const mapListingToPayload = (listing, business) => {
+  // Formatăm data simplu, fără milisecunde, poate asta e problema
   const now = new Date();
-  const validFrom = now.toISOString();
+  const validFrom = now.toISOString().split('.')[0]; // Scoatem milisecundele și Z-ul
   
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + 30);
-  const validTo = futureDate.toISOString();
+  const validTo = futureDate.toISOString().split('.')[0]; 
 
-  const attributesMap = {
-    "marca": "make",
-    "model": "model",
-    "an": "carregistrationdate",
-    "combustibil": "carfueltype",
-    "caroserie": "carbody",
-    "putere": "carpower",
-    "putere (cp)": "carpower",
-    "capacitate cilindrica": "carcmc",
-    "cutie de viteze": "gearbxtype",
-    "transmisie": "gearbxtype"
-  };
-
-  const properties = [];
-
-  // Km
-  if (listing.mileage !== null && listing.mileage !== undefined) {
-    properties.push({ key: "km", value: listing.mileage.toString() });
-  }
-
-  // Atribute
-  if (listing.attributeValues) {
-    listing.attributeValues.forEach((av) => {
-      const dbAttrName = av.attribute.name.toLowerCase().trim()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
-
-      const bestAutoKey = Object.keys(attributesMap).find(key => 
-        dbAttrName.includes(key)
-      );
-
-      if (bestAutoKey) {
-        // --- CORECTARE CITIRE VALORI ---
-        let val = "";
-        if (av.stringValue) val = av.stringValue;
-        else if (av.numberValue !== null) val = av.numberValue.toString();
-        else if (av.booleanValue !== null) val = av.booleanValue ? "Da" : "Nu";
-        // -------------------------------
-
-        // Filtru pentru valori nule
-        if (val && val !== "null") {
-           properties.push({
-             key: attributesMap[bestAutoKey],
-             value: val
-           });
-        }
-      }
-    });
-  }
-
-  // Logica pentru Make/Model lipsă
-  let makeValue = properties.find(p => p.key === 'make')?.value;
-  let modelValue = properties.find(p => p.key === 'model')?.value;
-
-  if (!makeValue) {
-    makeValue = listing.title.split(' ')[0] || "Altele";
-    properties.push({ key: 'make', value: makeValue });
-  }
-  if (!modelValue) {
-    modelValue = listing.title.split(' ')[1] || "Altele";
-    properties.push({ key: 'model', value: modelValue });
-  }
-
-  // --- HACK TEMPORAR DE VALIDARE (SCOATE-L DUPĂ TEST) ---
-  // Dacă eroarea persistă, decomentează liniile de mai jos pentru a testa cu valori sigure
-  // const pIndexMake = properties.findIndex(p => p.key === 'make');
-  // if (pIndexMake > -1) properties[pIndexMake].value = "Audi";
-  
-  // const pIndexModel = properties.findIndex(p => p.key === 'model');
-  // if (pIndexModel > -1) properties[pIndexModel].value = "A4";
-  // -------------------------------------------------------
+  // Hardcodăm proprietățile critice pentru a testa validarea
+  // Dacă asta merge, înseamnă că una din proprietățile dinamice era de vină
+  const properties = [
+    { key: "make", value: "Mercedes-Benz" }, // Încearcă Mercedes-Benz
+    { key: "model", value: "GLA" },
+    { key: "carregistrationdate", value: "2014" },
+    { key: "km", value: listing.mileage ? listing.mileage.toString() : "100000" },
+    { key: "carfueltype", value: "Diesel" },
+    { key: "carbody", value: "SUV" },
+    { key: "carpower", value: "136" },
+    { key: "carcmc", value: "2143" }
+  ];
 
   return {
     user: {
@@ -126,26 +71,21 @@ const mapListingToPayload = (listing, business) => {
       promoted: false,
       externalid: listing.id,
       category: 21,
-      price: listing.price || 0,
+      price: listing.price || 1, // Asigură-te că nu e 0
       currency: "EUR",
-      title: listing.title,
-      text: listing.description || "Detalii la telefon.",
+      title: listing.title.substring(0, 50), // Limităm lungimea titlului
+      text: "Test integrare", // Text scurt
+      
       validFrom: validFrom,
       validTo: validTo,
-      contact: {
-        contactName: business.name || "AWD Auto",
-        contactEmail: "contact@awdauto.ro",
-        contactPhone: "0752228593"
-      },
-      location: {
-        countyName: "Cluj",
-        cityName: "Cluj-Napoca"
-      },
+
+      // Eliminăm contact și location pentru moment (sunt opționale în unele doc-uri sau au valori default)
+      // Dacă crapă, le punem la loc
+      
       properties: properties,
-      pictures: listing.images.map((img, index) => ({
-        url: img.url,
-        rank: index + 1
-      }))
+      
+      // Trimitem doar o poză de test
+      pictures: listing.images.length > 0 ? [{ url: listing.images[0].url, rank: 1 }] : []
     }
   };
 };
