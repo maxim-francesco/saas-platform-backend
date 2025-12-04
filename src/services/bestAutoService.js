@@ -39,23 +39,21 @@ const getAccessToken = async (apiKey) => {
 
 // 2. Maparea datelor din DB-ul tău în formatul BestAuto
 const mapListingToPayload = (listing, business) => {
-  // 1. Calculăm datele de valabilitate (OBLIGATORII pentru BestAuto)
   const now = new Date();
-  const validFrom = now.toISOString(); 
+  const validFrom = now.toISOString();
   
   const futureDate = new Date();
-  futureDate.setDate(futureDate.getDate() + 30); // Anunț valabil 30 de zile
-  const validTo = futureDate.toISOString(); 
+  futureDate.setDate(futureDate.getDate() + 30);
+  const validTo = futureDate.toISOString();
 
-  // 2. Maparea numelor atributelor
   const attributesMap = {
-    "marca": "make",        
+    "marca": "make",
     "model": "model",
     "an": "carregistrationdate",
     "combustibil": "carfueltype",
     "caroserie": "carbody",
     "putere": "carpower",
-    "putere (cp)": "carpower", 
+    "putere (cp)": "carpower",
     "capacitate cilindrica": "carcmc",
     "cutie de viteze": "gearbxtype",
     "transmisie": "gearbxtype"
@@ -63,74 +61,77 @@ const mapListingToPayload = (listing, business) => {
 
   const properties = [];
 
-  // 3. Adăugăm Kilometrajul (câmp nativ)
-  if (listing.mileage) {
+  // Km
+  if (listing.mileage !== null && listing.mileage !== undefined) {
     properties.push({ key: "km", value: listing.mileage.toString() });
   }
 
-  // 4. Procesăm atributele dinamice
-  // Logăm pentru debug ce avem în DB
-  console.log("[BestAuto DEBUG] Atribute brute:", 
-    listing.attributeValues?.map(av => `${av.attribute.name}: ${av.stringValue}`)
-  );
-
+  // Atribute
   if (listing.attributeValues) {
     listing.attributeValues.forEach((av) => {
-      // Normalizăm numele: "Marcă" -> "marca", "Putere (CP)" -> "putere cp"
       const dbAttrName = av.attribute.name.toLowerCase().trim()
         .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
 
-      // Căutăm cheia potrivită
       const bestAutoKey = Object.keys(attributesMap).find(key => 
         dbAttrName.includes(key)
       );
 
       if (bestAutoKey) {
-        let val = av.stringValue || av.numberValue?.toString() || (av.booleanValue ? "Da" : "Nu");
-        
-        properties.push({
-          key: attributesMap[bestAutoKey],
-          value: val
-        });
+        // --- CORECTARE CITIRE VALORI ---
+        let val = "";
+        if (av.stringValue) val = av.stringValue;
+        else if (av.numberValue !== null) val = av.numberValue.toString();
+        else if (av.booleanValue !== null) val = av.booleanValue ? "Da" : "Nu";
+        // -------------------------------
+
+        // Filtru pentru valori nule
+        if (val && val !== "null") {
+           properties.push({
+             key: attributesMap[bestAutoKey],
+             value: val
+           });
+        }
       }
     });
   }
 
-  // 5. PLASĂ DE SIGURANȚĂ: Dacă lipsesc 'make' sau 'model', le ghicim din Titlu
-  // BestAuto respinge anunțul cu "Invalid model!" dacă lipsesc astea.
-  const hasMake = properties.some(p => p.key === 'make');
-  if (!hasMake) {
-    const guessedMake = listing.title.split(' ')[0] || "Other";
-    properties.push({ key: 'make', value: guessedMake });
-    console.log(`[BestAuto WARNING] 'make' lipsă. Adăugat din titlu: ${guessedMake}`);
+  // Logica pentru Make/Model lipsă
+  let makeValue = properties.find(p => p.key === 'make')?.value;
+  let modelValue = properties.find(p => p.key === 'model')?.value;
+
+  if (!makeValue) {
+    makeValue = listing.title.split(' ')[0] || "Altele";
+    properties.push({ key: 'make', value: makeValue });
+  }
+  if (!modelValue) {
+    modelValue = listing.title.split(' ')[1] || "Altele";
+    properties.push({ key: 'model', value: modelValue });
   }
 
-  const hasModel = properties.some(p => p.key === 'model');
-  if (!hasModel) {
-     const guessedModel = listing.title.split(' ')[1] || "Other";
-     properties.push({ key: 'model', value: guessedModel });
-     console.log(`[BestAuto WARNING] 'model' lipsă. Adăugat din titlu: ${guessedModel}`);
-  }
+  // --- HACK TEMPORAR DE VALIDARE (SCOATE-L DUPĂ TEST) ---
+  // Dacă eroarea persistă, decomentează liniile de mai jos pentru a testa cu valori sigure
+  // const pIndexMake = properties.findIndex(p => p.key === 'make');
+  // if (pIndexMake > -1) properties[pIndexMake].value = "Audi";
+  
+  // const pIndexModel = properties.findIndex(p => p.key === 'model');
+  // if (pIndexModel > -1) properties[pIndexModel].value = "A4";
+  // -------------------------------------------------------
 
-  // 6. Construim obiectul final
   return {
     user: {
-      email: "contact@awdauto.ro" 
+      email: "contact@awdauto.ro"
     },
     ad: {
       active: true,
       promoted: false,
       externalid: listing.id,
-      category: 21, 
+      category: 21,
       price: listing.price || 0,
       currency: "EUR",
       title: listing.title,
       text: listing.description || "Detalii la telefon.",
-      
-      // Câmpurile de timp obligatorii
       validFrom: validFrom,
       validTo: validTo,
-
       contact: {
         contactName: business.name || "AWD Auto",
         contactEmail: "contact@awdauto.ro",
