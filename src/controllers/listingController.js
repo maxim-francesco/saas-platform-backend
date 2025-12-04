@@ -16,10 +16,16 @@ const generateSlug = (text) => {
     .replace(/\-\-+/g, '-');  // Elimină liniuțele duble
 };
 
+// src/controllers/listingController.js
+
 const uploadImages = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
   const rotation = parseInt(req.body.rotation || "0", 10);
+
+  // Setăm o lățime standard mare pentru calitate (Full HD -ish)
+  // Înălțimea va fi calculată automat pentru a nu tăia imaginea.
+  const STANDARD_WIDTH = 1600; 
 
   try {
     if (!req.file)
@@ -33,37 +39,61 @@ const uploadImages = async (req, res) => {
     });
     if (!listing) return res.status(404).json({ message: "Anunț negăsit." });
 
-    let imageBuffer = req.file.buffer;
+    // 1. Procesăm imaginea de bază
+    // Folosim doar 'width', fără 'height', pentru a păstra aspect ratio original
+    let processedImagePipeline = sharp(req.file.buffer)
+      .rotate() // Citește orientarea EXIF originală
+      .rotate(rotation) // Aplică rotația cerută de user
+      .resize({ 
+        width: STANDARD_WIDTH, 
+        withoutEnlargement: false // Permitem mărirea dacă poza e mică, pt consistența bannerului
+      });
 
-    const mainImage = sharp(req.file.buffer)
-      .rotate()
-      .rotate(rotation)
-      .resize({ width: 800, height: 600, fit: "cover" });
-
+    // 2. Obținem buffer-ul și metadatele noii imagini redimensionate
+    let imageBuffer = await processedImagePipeline.toBuffer();
+    const metadata = await sharp(imageBuffer).metadata();
+    
+    // 3. Aplicăm Banner-ul (dacă există)
     if (business.bannerUrl) {
-      const bannerResponse = await axios({
-        url: business.bannerUrl,
-        responseType: "arraybuffer",
-      });
-      const bannerBuffer = Buffer.from(bannerResponse.data, "binary");
-      const bannerImage = sharp(bannerBuffer).resize({
-        width: 800,
-        height: 120,
-        fit: "fill",
-      });
-      const bannerResizedBuffer = await bannerImage.toBuffer();
-      imageBuffer = await mainImage
-        .extend({
-          bottom: 120,
-          background: { r: 255, g: 255, b: 255, alpha: 1 },
-        })
-        .composite([{ input: bannerResizedBuffer, gravity: "south" }])
-        .jpeg()
-        .toBuffer();
+      const BANNER_HEIGHT = 150; // Înălțimea bannerului (o facem puțin mai mare pt rezoluția asta)
+
+      try {
+        const bannerResponse = await axios({
+          url: business.bannerUrl,
+          responseType: "arraybuffer",
+        });
+        const bannerInputBuffer = Buffer.from(bannerResponse.data, "binary");
+
+        // Redimensionăm bannerul să aibă ACEEAȘI lățime cu imaginea
+        const bannerResizedBuffer = await sharp(bannerInputBuffer)
+          .resize({
+            width: metadata.width, // 1600
+            height: BANNER_HEIGHT,
+            fit: "fill", // Forțăm bannerul să umple spațiul
+          })
+          .toBuffer();
+
+        // Extindem imaginea jos și lipim bannerul
+        imageBuffer = await sharp(imageBuffer)
+          .extend({
+            bottom: BANNER_HEIGHT,
+            background: { r: 255, g: 255, b: 255, alpha: 1 },
+          })
+          .composite([{ input: bannerResizedBuffer, gravity: "south" }])
+          .jpeg({ quality: 90 })
+          .toBuffer();
+          
+      } catch (err) {
+        console.error("Eroare la aplicarea bannerului:", err);
+        // Dacă eșuează bannerul, folosim imaginea originală procesată, nu dăm crash
+        imageBuffer = await processedImagePipeline.jpeg({ quality: 90 }).toBuffer();
+      }
     } else {
-      imageBuffer = await mainImage.jpeg().toBuffer();
+      // Dacă nu are banner, doar o convertim în JPEG optimizat
+      imageBuffer = await sharp(imageBuffer).jpeg({ quality: 90 }).toBuffer();
     }
 
+    // 4. Upload pe Cloudinary
     const folderPath = `saas-platform/${businessId}/${listing.id}`;
     const uploadStream = cloudinary.uploader.upload_stream(
       { resource_type: "image", folder: folderPath },
@@ -73,9 +103,6 @@ const uploadImages = async (req, res) => {
             .status(500)
             .json({ message: "Eroare la upload Cloudinary." });
 
-        // --- ✅ AICI ESTE MODIFICAREA CHEIE: Folosim o tranzacție ---
-        // Acest bloc asigură că operațiunile de citire (count) și scriere (create)
-        // se execută ca un singur pas, prevenind "race conditions".
         const image = await prisma.$transaction(async (tx) => {
           const imageCount = await tx.listingImage.count({
             where: { listingId: listingId },
@@ -91,7 +118,6 @@ const uploadImages = async (req, res) => {
 
           return newImage;
         });
-        // --- SFÂRȘIT MODIFICARE ---
 
         res.status(201).json(image);
       }
