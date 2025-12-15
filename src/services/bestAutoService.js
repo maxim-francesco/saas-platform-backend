@@ -25,10 +25,10 @@ const getAccessToken = async (apiKey) => {
     );
 
     const token = response.data; // BestAuto returnează tokenul ca string direct (conform PDF)
-    
+
     // Tokenul e valid 24h. Setăm expirarea la 23h pentru siguranță.
     const expiresAt = now + 23 * 60 * 60 * 1000;
-    
+
     tokenCache.set(apiKey, { token, expiresAt });
     return token;
   } catch (error) {
@@ -41,41 +41,45 @@ const getAccessToken = async (apiKey) => {
 // ... restul codului ...
 
 const mapListingToPayload = (listing, business) => {
-  // 1. Calculăm datele (fără milisecunde pentru siguranță)
+  // 1. Calculăm datele
   const now = new Date();
-  const validFrom = now.toISOString().split('.')[0]; 
+  const validFrom = now.toISOString(); // Swagger arată format ISO complet cu Z
+
   const futureDate = new Date();
   futureDate.setDate(futureDate.getDate() + 30);
-  const validTo = futureDate.toISOString().split('.')[0]; 
+  const validTo = futureDate.toISOString();
 
-  // 2. Maparea numelor atributelor (interne -> externe)
+  // 2. Maparea numelor atributelor
   const attributesMap = {
-    "marca": "make",
-    "model": "model",
-    "an": "carregistrationdate",
-    "combustibil": "carfueltype",
-    "caroserie": "carbody",
-    "putere": "carpower",
+    marca: "make",
+    model: "model",
+    an: "carregistrationdate",
+    combustibil: "carfueltype",
+    caroserie: "carbody",
+    putere: "carpower",
     "putere (cp)": "carpower",
     "capacitate cilindrica": "carcmc",
     "cutie de viteze": "gearbxtype",
-    "transmisie": "gearbxtype"
+    transmisie: "gearbxtype",
   };
 
   const properties = [];
 
-  // 3. Adăugăm Kilometrajul (Dacă există)
+  // 3. Adăugăm Kilometrajul
   if (listing.mileage) {
-    properties.push({ Key: "km", Value: listing.mileage.toString() });
+    properties.push({ key: "km", value: listing.mileage.toString() });
   }
 
   // 4. Procesăm atributele dinamice
   if (listing.attributeValues) {
     listing.attributeValues.forEach((av) => {
-      const dbAttrName = av.attribute.name.toLowerCase().trim()
-        .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); 
+      const dbAttrName = av.attribute.name
+        .toLowerCase()
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
 
-      const bestAutoKey = Object.keys(attributesMap).find(key => 
+      const bestAutoKey = Object.keys(attributesMap).find((key) =>
         dbAttrName.includes(key)
       );
 
@@ -86,74 +90,68 @@ const mapListingToPayload = (listing, business) => {
         else if (av.booleanValue !== null) val = av.booleanValue ? "Da" : "Nu";
 
         if (val && val !== "null") {
-           // Atenție: Folosim "Key" și "Value" cu litere mari
-           properties.push({
-             Key: attributesMap[bestAutoKey],
-             Value: val
-           });
+          properties.push({
+            key: attributesMap[bestAutoKey],
+            value: val,
+          });
         }
       }
     });
   }
 
-  // 5. Plasa de siguranță pentru Make/Model (Obligatorii)
-  // Verificăm dacă există deja, folosind cheia cu literă mare 'Key'
-  let makeValue = properties.find(p => p.Key === 'make')?.Value;
-  let modelValue = properties.find(p => p.Key === 'model')?.Value;
+  // 5. Plasa de siguranță pentru Make/Model (Foarte important)
+  let makeValue = properties.find((p) => p.key === "make")?.value;
+  let modelValue = properties.find((p) => p.key === "model")?.value;
 
   if (!makeValue) {
-    let titleMake = listing.title.split(' ')[0] || "Altele";
+    let titleMake = listing.title.split(" ")[0] || "Altele";
+    // Corecție comună pentru Mercedes
     if (titleMake.toLowerCase() === "mercedes") titleMake = "Mercedes-Benz";
-    properties.push({ Key: 'make', Value: titleMake });
+    properties.push({ key: "make", value: titleMake });
   }
   if (!modelValue) {
-    const titleModel = listing.title.split(' ')[1] || "Altele";
-    properties.push({ Key: 'model', Value: titleModel });
+    const titleModel = listing.title.split(" ")[1] || "Altele";
+    properties.push({ key: "model", value: titleModel });
   }
 
-  // 6. Descriere validă (Minim 20 caractere)
+  // 6. Descriere validă
   let description = listing.description || "";
   if (description.length < 20) {
-    description += "\n Detalii complete disponibile la telefon pentru acest autoturism.";
+    description += "\n Detalii complete disponibile la telefon.";
   }
 
-  // 7. Pregătim imaginile (PascalCase)
-  const pictures = listing.images && listing.images.length > 0 
-    ? listing.images.map((img, index) => ({
-        Url: img.url,
-        Rank: index + 1
-      }))
-    : [];
-
-  // 8. Returnăm obiectul cu structura PascalCase
+  // 7. RETURNĂM STRUCTURA CONFORM SWAGGER (ROOT LEVEL)
   return {
-    "User": {
-      "Email": "contact@awdauto.ro"
+    user: {
+      email: "contact@awdauto.ro",
     },
-    "Ad": {
-      "Active": true,
-      "Promoted": false,
-      "ExternalId": listing.id,
-      "Category": 21,
-      "Price": listing.price || 1,
-      "Currency": "EUR",
-      "Title": listing.title.substring(0, 100),
-      "Text": description,
-      "ValidFrom": validFrom,
-      "ValidTo": validTo,
-      
-      "Contact": {
-        "ContactName": business.name || "AWD Auto",
-        "ContactEmail": "contact@awdauto.ro",
-        "ContactPhone": "0752228593"
-      },
-      "Location": {
-        "CountyName": "Cluj",
-        "CityName": "Cluj-Napoca"
-      },
-      "Properties": properties,
-      "Pictures": pictures
-    }
+    ad: {
+      active: true,
+      promoted: false,
+      externalid: listing.id,
+      category: 21,
+      price: listing.price || 0,
+      currency: "EUR",
+      title: listing.title.substring(0, 100),
+      text: description,
+      validFrom: validFrom,
+      validTo: validTo,
+    },
+    // --- ACUM SUNT SCOASE DIN 'ad' ---
+    contact: {
+      contactName: business.name || "AWD Auto",
+      contactEmail: "contact@awdauto.ro",
+      contactPhone: "0752228593",
+    },
+    location: {
+      countyName: "Cluj",
+      cityName: "Cluj-Napoca",
+    },
+    properties: properties,
+    pictures: listing.images.map((img, index) => ({
+      url: img.url,
+      rank: index, // Swagger arată rank: 0, deci index e ok.
+    })),
   };
 };
 
@@ -164,24 +162,28 @@ const publishListing = async (listing, apiKey) => {
     const payload = mapListingToPayload(listing, listing.business);
 
     // --- DEBUGGING CRITIC ---
-    console.log(`[BestAuto] Payload care va fi trimis:`, JSON.stringify(payload, null, 2));
+    console.log(
+      `[BestAuto] Payload care va fi trimis:`,
+      JSON.stringify(payload, null, 2)
+    );
     // ------------------------
 
     console.log(`[BestAuto] Trimitere anunț ${listing.id}...`);
-    
+
     await axios.post(`${BASE_URL}/Article`, payload, {
       headers: {
         "x-api-version": "1",
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      }
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
     });
 
     console.log(`[BestAuto] Anunț ${listing.id} sincronizat cu succes!`);
     return true;
   } catch (error) {
     // Logăm eroarea completă de la server
-    console.error(`[BestAuto] Eroare la sincronizare anunț ${listing.id}:`, 
+    console.error(
+      `[BestAuto] Eroare la sincronizare anunț ${listing.id}:`,
       JSON.stringify(error.response?.data || error.message, null, 2)
     );
     return false;
@@ -196,12 +198,15 @@ const deleteListing = async (listingId, apiKey) => {
 
     console.log(`[BestAuto] Ștergere anunț ${listingId}...`);
 
-    await axios.delete(`${BASE_URL}/Article?Email=${email}&ExternalId=${listingId}`, {
-      headers: {
-        "x-api-version": "1",
-        "Authorization": `Bearer ${token}`
+    await axios.delete(
+      `${BASE_URL}/Article?Email=${email}&ExternalId=${listingId}`,
+      {
+        headers: {
+          "x-api-version": "1",
+          Authorization: `Bearer ${token}`,
+        },
       }
-    });
+    );
 
     console.log(`[BestAuto] Anunț ${listingId} șters cu succes!`);
   } catch (error) {
