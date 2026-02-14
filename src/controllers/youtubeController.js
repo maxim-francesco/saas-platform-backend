@@ -2,13 +2,20 @@ const prisma = require("../config/prismaClient");
 const youtubeService = require("../services/youtubeService");
 
 const getConnectUrl = (req, res) => {
-  const url = youtubeService.getAuthUrl();
-  res.json({ url });
+  try {
+    const url = youtubeService.getAuthUrl();
+    res.json({ url });
+  } catch (error) {
+    console.error("Eroare detaliată la generare URL Auth:", error);
+    res.status(500).json({ message: "Eroare internă la generarea URL-ului." });
+  }
 };
 
 const handleCallback = async (req, res) => {
   const { code } = req.query;
-  const { businessId } = req.user; // Din middleware-ul de auth
+  // Folosim un ID de test dacă req.user nu e disponibil, 
+  // dar middleware-ul isAuthenticated ar trebui să îl ofere
+  const businessId = req.user?.businessId; 
 
   try {
     const tokens = await youtubeService.getTokensFromCode(code);
@@ -22,11 +29,10 @@ const handleCallback = async (req, res) => {
       },
     });
 
-    // Redirecționăm înapoi în Dashboard-ul de Frontend
     res.redirect(`${process.env.FRONTEND_URL}/dashboard/settings?youtube=success`);
   } catch (error) {
-    console.error("Eroare OAuth YouTube:", error);
-    res.status(500).send("Eroare la conectarea cu Google.");
+    console.error("Eroare OAuth YouTube Callback:", error);
+    res.status(500).send("Eroare la salvarea token-urilor.");
   }
 };
 

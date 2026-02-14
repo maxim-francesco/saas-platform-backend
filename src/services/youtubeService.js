@@ -8,8 +8,19 @@ const oauth2Client = new google.auth.OAuth2(
 
 // 1. Generează URL-ul de logare pentru dealer
 const getAuthUrl = () => {
+  // Verificăm dacă variabilele există în log-uri (doar pentru debugging)
+  if (!process.env.GOOGLE_CLIENT_ID) {
+    throw new Error("GOOGLE_CLIENT_ID lipsește din variabilele de mediu");
+  }
+
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+  );
+
   return oauth2Client.generateAuthUrl({
-    access_type: 'offline', // IMPORTANT: pentru a primi refresh_token
+    access_type: 'offline',
     scope: ['https://www.googleapis.com/auth/youtube.upload'],
     prompt: 'consent'
   });
