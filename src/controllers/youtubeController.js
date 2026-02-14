@@ -30,4 +30,31 @@ const handleCallback = async (req, res) => {
   }
 };
 
-module.exports = { getConnectUrl, handleCallback };
+const getUploadUrl = async (req, res) => {
+  const { businessId } = req.user;
+  const { title, description } = req.body;
+
+  try {
+    const business = await prisma.business.findUnique({
+      where: { id: businessId }
+    });
+
+    if (!business.googleRefreshToken) {
+      return res.status(401).json({ message: "Cont YouTube neconectat." });
+    }
+
+    const auth = youtubeService.getYouTubeClient(
+      business.googleAccessToken, 
+      business.googleRefreshToken
+    );
+
+    const uploadUrl = await youtubeService.getResumableUploadUrl(auth, { title, description });
+
+    res.json({ uploadUrl });
+  } catch (error) {
+    console.error("Eroare la generare URL Upload:", error);
+    res.status(500).json({ message: "Nu s-a putut iniția încărcarea pe YouTube." });
+  }
+};
+
+module.exports = { getConnectUrl, handleCallback,getUploadUrl };

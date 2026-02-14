@@ -32,4 +32,29 @@ const getYouTubeClient = (accessToken, refreshToken) => {
   return google.youtube({ version: 'v3', auth });
 };
 
-module.exports = { getAuthUrl, getTokensFromCode, getYouTubeClient };
+const getResumableUploadUrl = async (auth, metadata) => {
+  // Metadata conține titlul și descrierea videoclipului
+  const response = await auth.request({
+    method: 'POST',
+    url: 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
+    data: {
+      snippet: {
+        title: metadata.title || "Prezentare Auto",
+        description: metadata.description || "Detalii mașină în descriere.",
+        categoryId: '22', // Categoria "People & Blogs" sau '2' pentru "Autos & Vehicles"
+      },
+      status: {
+        privacyStatus: 'unlisted', // Recomandat: unlisted pentru a nu umple canalul public imediat
+        selfDeclaredMadeForKids: false,
+      },
+    },
+    headers: {
+      'X-Upload-Content-Type': 'video/*',
+    },
+  });
+
+  // URL-ul sesiunii de upload se află în header-ul 'location'
+  return response.headers.location;
+};
+
+module.exports = { getAuthUrl, getTokensFromCode, getYouTubeClient,getResumableUploadUrl };

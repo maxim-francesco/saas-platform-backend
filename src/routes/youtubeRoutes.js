@@ -5,5 +5,6 @@ const { isAuthenticated } = require("../middlewares/authMiddleware");
 
 router.get("/auth-url", isAuthenticated, getConnectUrl);
 router.get("/callback", isAuthenticated, handleCallback);
+router.post("/get-upload-url", isAuthenticated, getUploadUrl);
 
 module.exports = router;
