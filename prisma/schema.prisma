@@ -30,6 +30,11 @@ model Business {
   bannerUrl       String?
   listingUrlPattern String?
 
+  // YouTube Integration
+  googleAccessToken    String?   @db.Text
+  googleRefreshToken   String?   @db.Text
+  googleTokenExpiresAt DateTime?
+
   bestAutoApiKey String?  // Cheia API BestAuto (opțională)
 }
 
@@ -166,6 +171,8 @@ model Listing {
   otherCosts     Float?
 
   slug        String?
+
+  youtubeVideoId String? // ID-ul returnat de YouTube (ex: dQw4w9WgXcQ)
   
   // INDEX NOU PENTRU PERFORMANȚĂ
   @@index([price])
