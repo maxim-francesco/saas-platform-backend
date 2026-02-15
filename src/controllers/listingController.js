@@ -341,7 +341,7 @@ const markAsSold = async (req, res) => {
 // Înlocuiește funcția existentă cu aceasta
 const updateListing = async (req, res) => {
   const { listingId } = req.params;
-  const { title, description, attributes, purchasePrice, otherCosts } =
+  const { title, description, attributes, purchasePrice, otherCosts,youtubeVideoId } =
     req.body;
   const { businessId } = req.user;
 
@@ -386,6 +386,7 @@ const updateListing = async (req, res) => {
           // --- LINII NOI ADĂUGATE ---
           purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
           otherCosts: otherCosts ? parseFloat(otherCosts) : null,
+          youtubeVideoId,
           // --- SFÂRȘIT LINII NOI ---
           slug: generateSlug(title),
         },
