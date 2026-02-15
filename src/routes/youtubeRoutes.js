@@ -1,10 +1,9 @@
 const express = require("express");
 const router = express.Router();
-const { getConnectUrl, handleCallback,getUploadUrl } = require("../controllers/youtubeController");
+const { getUploadUrl } = require("../controllers/youtubeController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 
-router.get("/auth-url", isAuthenticated, getConnectUrl);
-router.get("/callback", isAuthenticated, handleCallback);
+// Lăsăm doar ruta de care are nevoie Frontend-ul pentru upload
 router.post("/get-upload-url", isAuthenticated, getUploadUrl);
 
 module.exports = router;

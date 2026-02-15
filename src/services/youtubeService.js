@@ -1,62 +1,55 @@
+// src/services/youtubeService.js
 const { google } = require('googleapis');
 
+// Configurarea clientului cu datele din Google Cloud Console
 const oauth2Client = new google.auth.OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
   process.env.GOOGLE_REDIRECT_URI
 );
 
-// 1. Generează URL-ul de logare pentru dealer
+/**
+ * GENERARE URL AUTENTIFICARE (Pasul 1 pentru obținerea token-ului tău)
+ */
 const getAuthUrl = () => {
-  // Verificăm dacă variabilele există în log-uri (doar pentru debugging)
-  if (!process.env.GOOGLE_CLIENT_ID) {
-    throw new Error("GOOGLE_CLIENT_ID lipsește din variabilele de mediu");
-  }
-
-  const oauth2Client = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-  );
-
   return oauth2Client.generateAuthUrl({
-    access_type: 'offline',
+    access_type: 'offline', // Necesar pentru a primi Refresh Token
     scope: ['https://www.googleapis.com/auth/youtube.upload'],
-    prompt: 'consent'
+    prompt: 'consent' // Forțează Google să afișeze ecranul de permisiuni pentru a asigura primirea refresh_token-ului
   });
 };
 
-// 2. Schimbă codul de la Google pe Token-uri
+/**
+ * SCHIMB COD PENTRU TOKEN (Pasul 2 pentru obținerea token-ului tău)
+ */
 const getTokensFromCode = async (code) => {
   const { tokens } = await oauth2Client.getToken(code);
   return tokens;
 };
 
-// 3. Configurează clientul cu token-urile unui business
-const getYouTubeClient = (accessToken, refreshToken) => {
-  const auth = new google.auth.OAuth2(
-    process.env.GOOGLE_CLIENT_ID,
-    process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
-  );
-  auth.setCredentials({ access_token: accessToken, refresh_token: refreshToken });
-  return google.youtube({ version: 'v3', auth });
-};
+/**
+ * LOGICA DE UPLOAD (Folosită de clienți)
+ */
+const getResumableUploadUrl = async (metadata) => {
+  // Setăm credențialele tale permanente din .env pentru upload
+  oauth2Client.setCredentials({ 
+    refresh_token: process.env.YOUTUBE_CHANNEL_REFRESH_TOKEN 
+  });
 
-const getResumableUploadUrl = async (auth, metadata) => {
-  // Metadata conține titlul și descrierea videoclipului
-  const response = await auth.request({
+  const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
+  
+  // Cerem un URL de upload direct de la Google
+  const response = await youtube.context._options.auth.request({
     method: 'POST',
     url: 'https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',
     data: {
       snippet: {
-        title: metadata.title || "Prezentare Auto",
-        description: metadata.description || "Detalii mașină în descriere.",
-        categoryId: '22', // Categoria "People & Blogs" sau '2' pentru "Autos & Vehicles"
+        title: metadata.title,
+        description: metadata.description,
+        categoryId: '2', // Categoria "Autos & Vehicles"
       },
       status: {
-        privacyStatus: 'unlisted', // Recomandat: unlisted pentru a nu umple canalul public imediat
-        selfDeclaredMadeForKids: false,
+        privacyStatus: 'unlisted', // Videoclipul nu va apărea public pe canal imediat
       },
     },
     headers: {
@@ -64,8 +57,11 @@ const getResumableUploadUrl = async (auth, metadata) => {
     },
   });
 
-  // URL-ul sesiunii de upload se află în header-ul 'location'
-  return response.headers.location;
+  return response.headers.location; // Returnăm URL-ul unde frontend-ul va face PUT
 };
 
-module.exports = { getAuthUrl, getTokensFromCode, getYouTubeClient,getResumableUploadUrl };
+module.exports = { 
+  getAuthUrl, 
+  getTokensFromCode, 
+  getResumableUploadUrl 
+};
