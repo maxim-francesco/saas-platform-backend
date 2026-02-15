@@ -1,20 +1,24 @@
+// src/controllers/youtubeController.js
 const youtubeService = require("../services/youtubeService");
 
 const getUploadUrl = async (req, res) => {
   const { title } = req.body; 
+
   try {
+    // Ne asigurăm că titlul este un string valid
     const uploadUrl = await youtubeService.getResumableUploadUrl({
-      title: `Prezentare: ${title}`,
-      description: "Video urcat prin platforma SaaS Auto."
+      title: title || "Anunț Auto Fără Titlu",
+      description: "Prezentare video realizată prin platforma SaaS."
     });
 
     if (!uploadUrl) {
-      return res.status(500).json({ message: "Nu s-a putut genera URL-ul." });
+      return res.status(500).json({ message: "YouTube nu a returnat un URL." });
     }
 
-    res.json({ uploadUrl }); // Cheia trebuie să fie "uploadUrl"
+    res.json({ uploadUrl });
   } catch (error) {
-    res.status(500).json({ message: "Eroare la Google." });
+    console.error("Eroare controller YouTube:", error.message);
+    res.status(500).json({ message: "Eroare internă la inițierea upload-ului." });
   }
 };
 
