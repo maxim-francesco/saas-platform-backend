@@ -1,5 +1,3 @@
-// prisma/schema.prisma
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,52 +7,150 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// --- MODELE CENTRALE PENTRU MULTI-TENANCY ---
-
-
-// Modelul pentru Business (Tenant) - fiecare dealer auto sau agenție imobiliară
 model Business {
-  id          String    @id @default(cuid())
-  name        String    @unique
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // Relații
-  users           User[]
-  categories      Category[]
-  listings        Listing[]
-  messages        Message[]
-  reviews         Review[]
-  attributeGroups AttributeGroup[] // <--- ADAUGĂ ACEASTĂ LINIE
-  views           View[]           // <--- ADAUGĂ ACEASTĂ LINIE
-  bannerUrl       String?
-  listingUrlPattern String?
-
-  // YouTube Integration
-  googleAccessToken    String?   @db.Text
-  googleRefreshToken   String?   @db.Text
-  googleTokenExpiresAt DateTime?
-
-  bestAutoApiKey String?  // Cheia API BestAuto (opțională)
+  id                   String           @id @default(cuid())
+  name                 String           @unique
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  bannerUrl            String?
+  listingUrlPattern    String?
+  bestAutoApiKey       String?
+  attributeGroups      AttributeGroup[]
+  categories           Category[]
+  listings             Listing[]
+  messages             Message[]
+  reviews              Review[]
+  users                User[]
+  views                View[]
 }
 
-// Modelul pentru Utilizatori (Administratorii care se loghează în panou)
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  password    String   // Parola va fi stocată ca hash
-  role        Role     @default(ADMIN) // Rolul utilizatorului
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id         String   @id @default(cuid())
+  email      String   @unique
+  password   String
+  role       Role     @default(ADMIN)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+}
 
-  // Relație: Un utilizator aparține unui singur Business
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
+model Category {
+  id         String      @id @default(cuid())
+  name       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  businessId String
+  attributes Attribute[]
+  business   Business    @relation(fields: [businessId], references: [id])
+  listings   Listing[]
+}
+
+model AttributeGroup {
+  id         String      @id @default(cuid())
+  name       String
+  businessId String
+  attributes Attribute[]
+  business   Business    @relation(fields: [businessId], references: [id])
+
+  @@unique([name, businessId])
+}
+
+model Attribute {
+  id               String           @id @default(cuid())
+  name             String
+  type             AttributeType
+  categoryId       String
+  attributeGroupId String?
+  attributeGroup   AttributeGroup?  @relation(fields: [attributeGroupId], references: [id])
+  category         Category         @relation(fields: [categoryId], references: [id])
+  values           AttributeValue[]
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  name       String
+  email      String
+  phone      String?
+  message    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+}
+
+model Listing {
+  id              String           @id @default(cuid())
+  title           String
+  description     String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  businessId      String
+  categoryId      String
+  mileage         Int?
+  price           Float?
+  otherCosts      Float?
+  purchasePrice   Float?
+  sellingPrice    Float?
+  soldAt          DateTime?
+  status          ListingStatus    @default(AVAILABLE)
+  slug            String?
+  attributeValues AttributeValue[]
+  business        Business         @relation(fields: [businessId], references: [id])
+  category        Category         @relation(fields: [categoryId], references: [id])
+  images          ListingImage[]
+  views           View[]
+
+  @@index([price])
+  @@index([mileage])
+}
+
+model AttributeValue {
+  id           String    @id @default(cuid())
+  stringValue  String?
+  numberValue  Float?
+  booleanValue Boolean?
+  listingId    String
+  attributeId  String
+  attribute    Attribute @relation(fields: [attributeId], references: [id])
+  listing      Listing   @relation(fields: [listingId], references: [id])
+
+  @@unique([listingId, attributeId])
+}
+
+model ListingImage {
+  id        String  @id @default(cuid())
+  url       String
+  listingId String
+  order     Int     @default(0)
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model View {
+  id         String   @id @default(cuid())
+  viewedAt   DateTime @default(now())
+  businessId String
+  listingId  String?
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  listing    Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Review {
+  id         String   @id @default(cuid())
+  name       String
+  rating     Int
+  text       String
+  isApproved Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  businessId String
+  business   Business @relation(fields: [businessId], references: [id])
+
+  @@index([businessId, isApproved])
 }
 
 enum Role {
-  SUPER_ADMIN // Poate gestiona tot sistemul
-  ADMIN       // Administratorul unui tenant
+  SUPER_ADMIN
+  ADMIN
 }
 
 enum ListingStatus {
@@ -62,177 +158,8 @@ enum ListingStatus {
   SOLD
 }
 
-// --- MODELE PENTRU SISTEMUL DE ANUNȚURI DINAMICE ---
-
-// Modelul pentru Categorii (ex: "Autoturisme", "Apartamente de închiriat")
-model Category {
-  id          String   @id @default(cuid())
-  name        String   // Numele categoriei
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relație: O categorie aparține unui Business
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
-
-  // Relații
-  attributes  Attribute[] // O categorie are mai multe atribute definibile
-  listings    Listing[]   // O categorie are mai multe anunțuri
-}
-
-// Model pentru a grupa atributele (ex: "Confort", "Siguranță", "Multimedia")
-model AttributeGroup {
-  id          String   @id @default(cuid())
-  name        String   // Numele grupului
-
-  // Relație: Un grup de atribute aparține unui Business
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
-
-  // Relație: Un grup are mai multe atribute
-  attributes  Attribute[]
-
-  // Un business nu poate avea două grupuri cu același nume
-  @@unique([name, businessId])
-}
-
-// Modelul pentru Atribute (ex: "Kilometraj", "An fabricație", "Suprafață utilă")
-// Găsește modelul Attribute și adaugă cele două linii de la final
-model Attribute {
-  id          String   @id @default(cuid())
-  name        String
-  type        AttributeType
-
-  // Relație: Un atribut aparține unei singure Categorii
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-
-  // Relație
-  values      AttributeValue[]
-
-  // --- LINII NOI ADĂUGATE ---
-  // Un atribut poate aparține opțional unui grup
-  attributeGroupId String?
-  attributeGroup   AttributeGroup? @relation(fields: [attributeGroupId], references: [id], onDelete: SetNull)
-}
-
 enum AttributeType {
-  STRING // Pentru text (ex: Culoare, Model)
-  NUMBER // Pentru numere (ex: Preț, An, Kilometraj)
-  BOOLEAN // Pentru Da/Nu (ex: "Aer condiționat")
-}
-
-// Modelul central - Anunțul (Listing)
-// prisma/schema.prisma
-
-// Model pentru stocarea mesajelor din formularul de contact
-model Message {
-  id          String    @id @default(cuid())
-  name        String    // Numele expeditorului
-  email       String
-  phone       String?   // Numărul de telefon este opțional
-  message     String    @db.Text // Folosim @db.Text pentru mesaje lungi
-  isRead      Boolean   @default(false) // Pentru a marca mesajele ca citite în admin
-  createdAt   DateTime  @default(now())
-
-  // Relație: Un mesaj este trimis către un singur Business
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
-}
-
-model Listing {
-  id          String    @id @default(cuid())
-  title       String
-  description String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  // CÂMPURI NOI PENTRU SORTARE
-  price       Float? // Adaugă acest câmp pentru preț
-  mileage     Int?   // Adaugă acest câmp pentru kilometraj
-
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
-  
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id])
-
-  attributeValues AttributeValue[]
-  images      ListingImage[]
-  views           View[]
-
-  // --- CÂMPURI NOI ADĂUGATE ---
-  status         ListingStatus @default(AVAILABLE)
-  soldAt         DateTime?
-  sellingPrice   Float?
-
-  // Câmpuri opționale pentru viitorul calcul de profitabilitate
-  purchasePrice  Float?
-  otherCosts     Float?
-
-  slug        String?
-
-  youtubeVideoId String? // ID-ul returnat de YouTube (ex: dQw4w9WgXcQ)
-  
-  // INDEX NOU PENTRU PERFORMANȚĂ
-  @@index([price])
-  @@index([mileage])
-}
-
-// MODELUL CHEIE: Valoarea unui atribut pentru un anumit anunț
-model AttributeValue {
-  id          String  @id @default(cuid())
-
-  // Valorile efective. Doar una dintre ele va fi completată, în funcție de tipul atributului
-  stringValue String?
-  numberValue Float?
-  booleanValue Boolean?
-
-  // Relație: Valoarea este pentru un anumit anunț
-  listingId   String
-  listing     Listing @relation(fields: [listingId], references: [id])
-
-  // Relație: Valoarea corespunde unui anumit atribut
-  attributeId String
-  attribute   Attribute @relation(fields: [attributeId], references: [id])
-
-  // Prevenim crearea de valori duplicate pentru același atribut la același anunț
-  @@unique([listingId, attributeId])
-}
-
-// Adaugă acest model nou
-model ListingImage {
-  id        String  @id @default(cuid())
-  url       String
-  order     Int     @default(0)
-  listingId String
-  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
-}
-
-// Model pentru a înregistra vizualizările
-model View {
-  id        String   @id @default(cuid())
-  viewedAt  DateTime @default(now())
-
-  // Relație: O vizualizare aparține unui Business
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-
-  // Relație: O vizualizare poate aparține opțional unui Anunț
-  listingId String?
-  listing   Listing? @relation(fields: [listingId], references: [id], onDelete: Cascade)
-}
-
-model Review {
-  id          String   @id @default(cuid())
-  name        String
-  rating      Int
-  text        String   @db.Text
-  isApproved  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-
-  businessId  String
-  business    Business @relation(fields: [businessId], references: [id])
-
-  @@index([businessId, isApproved]) // Index pentru performanță
+  STRING
+  NUMBER
+  BOOLEAN
 }

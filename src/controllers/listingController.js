@@ -346,8 +346,7 @@ const updateListing = async (req, res) => {
     description, 
     attributes, 
     purchasePrice, 
-    otherCosts,
-    youtubeVideoId // <--- Preluăm ID-ul video trimis de Frontend
+    otherCosts
   } = req.body;
   const { businessId } = req.user;
 
@@ -392,7 +391,6 @@ const updateListing = async (req, res) => {
           mileage: mileageValue,
           purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
           otherCosts: otherCosts ? parseFloat(otherCosts) : null,
-          youtubeVideoId: youtubeVideoId || null, // <--- SALVARE VIDEO ID
           slug: generateSlug(title),
         },
       });
