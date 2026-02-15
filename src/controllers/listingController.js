@@ -341,114 +341,96 @@ const markAsSold = async (req, res) => {
 // Înlocuiește funcția existentă cu aceasta
 const updateListing = async (req, res) => {
   const { listingId } = req.params;
-  const { title, description, attributes, purchasePrice, otherCosts,youtubeVideoId } =
-    req.body;
   const { businessId } = req.user;
+  const {
+    title,
+    description,
+    price,
+    mileage,
+    categoryId,
+    attributes,
+    images,
+    youtubeVideoId, // - Extragem ID-ul video din body
+  } = req.body;
 
   try {
-    await prisma.$transaction(async (prisma) => {
-      const listing = await prisma.listing.findFirst({
-        where: { id: listingId, businessId },
-      });
-      if (!listing) {
-        throw new Error("Anunțul nu a fost găsit sau nu aveți acces la el.");
-      }
+    // 1. Actualizăm datele de bază ale anunțului, inclusiv YouTube Video ID
+    const updatedListing = await prisma.listing.update({
+      where: { id: listingId, businessId },
+      data: {
+        title,
+        description,
+        price: price ? parseFloat(price) : undefined,
+        mileage: mileage ? parseInt(mileage) : undefined,
+        categoryId,
+        youtubeVideoId, // - Salvarea ID-ului în baza de date
+        slug: title ? generateSlug(title) : undefined,
+      },
+    });
 
-      // 1. Extragem prețul și kilometrajul din atributele primite în request
-      let priceValue = listing.price; // Păstrăm valorile vechi ca default
-      let mileageValue = listing.mileage;
-      if (attributes && Array.isArray(attributes)) {
-        const categoryAttributes = await prisma.attribute.findMany({
-          where: { categoryId: listing.categoryId },
-        });
-        for (const attr of attributes) {
-          const definedAttribute = categoryAttributes.find(
-            (a) => a.id === attr.attributeId
-          );
-          if (
-            definedAttribute?.name.toLowerCase() === "price" ||
-            definedAttribute?.name.toLowerCase() === "pret"
-          )
-            priceValue = parseFloat(attr.value);
-          if (definedAttribute?.name.toLowerCase() === "kilometraj")
-            mileageValue = parseInt(attr.value, 10);
-        }
-      }
-
-      // 2. Actualizăm anunțul, incluzând noile câmpuri
-      await prisma.listing.update({
-        where: { id: listingId },
-        data: {
-          title,
-          description,
-          price: priceValue,
-          mileage: mileageValue,
-          // --- LINII NOI ADĂUGATE ---
-          purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null,
-          otherCosts: otherCosts ? parseFloat(otherCosts) : null,
-          youtubeVideoId,
-          // --- SFÂRȘIT LINII NOI ---
-          slug: generateSlug(title),
+    // 2. Gestionăm imaginile (dacă sunt trimise în body)
+    if (images && Array.isArray(images)) {
+      // Ștergem imaginile vechi care nu mai sunt în noua listă
+      await prisma.image.deleteMany({
+        where: {
+          listingId,
+          url: { notIn: images.map((img) => img.url) },
         },
       });
 
-      // 3. Actualizăm TOATE atributele folosind strategia "Delete & Create"
-      if (attributes && Array.isArray(attributes)) {
-        await prisma.attributeValue.deleteMany({ where: { listingId } });
-        const categoryAttributes = await prisma.attribute.findMany({
-          where: { categoryId: listing.categoryId },
-        });
-        for (const attr of attributes) {
-          const definedAttribute = categoryAttributes.find(
-            (a) => a.id === attr.attributeId
-          );
-          if (!definedAttribute)
-            throw new Error(`Atribut invalid: ${attr.attributeId}`);
-
-          const valueData = { listingId, attributeId: attr.attributeId };
-          if (definedAttribute.type === "STRING")
-            valueData.stringValue = attr.value;
-          else if (definedAttribute.type === "NUMBER")
-            valueData.numberValue = parseFloat(attr.value);
-          else if (definedAttribute.type === "BOOLEAN")
-            valueData.booleanValue = Boolean(attr.value);
-
-          await prisma.attributeValue.create({ data: valueData });
-        }
-      }
-    });
-
-    // --- INTEGRATION BESTAUTO START ---
-    (async () => {
-      try {
-        // 1. Luăm datele actualizate
-        const fullListing = await prisma.listing.findUnique({
-          where: { id: listingId },
-          include: {
-            business: true,
-            attributeValues: { include: { attribute: true } },
-            images: true,
+      // Adăugăm sau actualizăm imaginile noi
+      for (const img of images) {
+        await prisma.image.upsert({
+          where: { url: img.url },
+          update: { order: img.order },
+          create: {
+            url: img.url,
+            order: img.order,
+            listingId,
           },
         });
-
-        // 2. Trimitem update-ul
-        if (fullListing?.business?.bestAutoApiKey) {
-          await bestAutoService.publishListing(
-            fullListing,
-            fullListing.business.bestAutoApiKey
-          );
-        }
-      } catch (err) {
-        console.error("[BestAuto] Eroare la sincronizare (update):", err.message);
       }
-    })();
-    // --- INTEGRATION BESTAUTO END ---
+    }
 
-    res.status(200).json({ message: "Anunțul a fost actualizat cu succes." });
+    // 3. Gestionăm atributele (dacă sunt trimise în body)
+    if (attributes && typeof attributes === "object") {
+      for (const [key, value] of Object.entries(attributes)) {
+        const categoryAttribute = await prisma.categoryAttribute.findFirst({
+          where: { categoryId, name: key },
+        });
+
+        if (categoryAttribute) {
+          await prisma.listingAttribute.upsert({
+            where: {
+              listingId_categoryAttributeId: {
+                listingId,
+                categoryAttributeId: categoryAttribute.id,
+              },
+            },
+            update: { value: String(value) },
+            create: {
+              listingId,
+              categoryAttributeId: categoryAttribute.id,
+              value: String(value),
+            },
+          });
+        }
+      }
+    }
+
+    // Returnăm anunțul complet actualizat
+    const finalListing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      include: {
+        images: { orderBy: { order: "asc" } },
+        attributes: { include: { categoryAttribute: true } },
+      },
+    });
+
+    res.status(200).json(finalListing);
   } catch (error) {
-    res
-      .status(404)
-      .json({ message: error.message || "Eroare la actualizarea anunțului." });
+    console.error("Eroare la update listing:", error);
+    res.status(500).json({ message: "Eroare la actualizarea anunțului." });
   }
 };
 
