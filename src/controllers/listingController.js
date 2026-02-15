@@ -428,7 +428,7 @@ const updateListing = async (req, res) => {
     // Returnăm anunțul actualizat
     const updatedListing = await prisma.listing.findUnique({
       where: { id: listingId },
-      include: { images: true, attributes: true }
+      include: { images: true, attributeValues: true }
     });
 
     res.status(200).json(updatedListing);
