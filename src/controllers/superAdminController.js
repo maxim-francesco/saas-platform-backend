@@ -14,17 +14,19 @@ const getPlatformStats = async (req, res) => {
   }
 };
 
+// În superAdminController.js
 const getAllBusinesses = async (req, res) => {
   try {
     const businesses = await prisma.business.findMany({
       include: {
+        users: { select: { email: true }, take: 1 }, // <--- ADAUGĂ ASTA
         _count: { select: { listings: true, users: true } },
       },
       orderBy: { createdAt: "desc" },
     });
     res.status(200).json(businesses);
   } catch (error) {
-    res.status(500).json({ message: "Eroare la preluarea listei de afaceri." });
+    res.status(500).json({ message: "Eroare..." });
   }
 };
 
