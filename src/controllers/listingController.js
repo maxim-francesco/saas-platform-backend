@@ -1,11 +1,11 @@
-// src/controllers/listingController.js
 const sharp = require("sharp");
 const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
+const stream = require("stream"); // ACEASTĂ LINIE ESTE CRUCIALĂ
 const bestAutoService = require("../services/bestAutoService");
 const { uploadToYouTube } = require('../services/youtubeService');
-const { google } = require('googleapis'); // Asigură-te că ai acest import
+const { google } = require('googleapis');
 
 const uploadVideo = async (req, res) => {
   try {
