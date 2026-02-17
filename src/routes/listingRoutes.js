@@ -20,6 +20,8 @@ const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
 const upload = require("../middlewares/multer");
 
+router.post('/:listingId/upload-video', upload.single('video'), uploadVideo);
+
 // Protejăm toate rutele de anunțuri
 router.use(isAuthenticated);
 
@@ -35,6 +37,5 @@ router.get("/status/sold", getSoldListings); // Rută pentru anunturi vândute
 router.put("/:listingId/sell", markAsSold); // Rută pentru a marca un anunt ca vândut
 router.put("/:listingId/reactivate", reactivateListing);
 router.post("/:listingId/clone", cloneListing);
-router.post('/:listingId/upload-video', upload.single('video'), uploadVideo);
 router.delete('/:listingId/video', isAuthenticated, deleteVideo);
 module.exports = router;
