@@ -4,20 +4,20 @@ const prisma = require("../config/prismaClient");
 const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
 const bestAutoService = require("../services/bestAutoService");
+const { uploadToYouTube } = require('../services/youtubeService');
 
 // Aceasta va fi functia apelata de ruta /api/listings/upload-video
 const uploadVideo = async (req, res) => {
   try {
-    const { listingId } = req.params; // Luăm ID-ul din URL
+    const { listingId } = req.params;
     
     if (!req.file) {
       return res.status(400).json({ message: 'Niciun fisier video incarcat.' });
     }
 
-    // Incarcam pe YouTube
+    // Aici se producea eroarea deoarece uploadToYouTube nu era importat
     const videoId = await uploadToYouTube(req.file);
 
-    // Actualizam direct anuntul in baza de date
     await prisma.listing.update({
       where: { id: listingId },
       data: { youtubeVideoId: videoId }
@@ -25,7 +25,8 @@ const uploadVideo = async (req, res) => {
 
     res.status(200).json({ youtubeVideoId: videoId });
   } catch (error) {
-    console.error('YouTube Upload Error:', error);
+    // Aceasta este eroarea pe care ai văzut-o în log-uri
+    console.error('YouTube Upload Error:', error); 
     res.status(500).json({ message: 'Eroare la incarcarea pe YouTube.' });
   }
 };
