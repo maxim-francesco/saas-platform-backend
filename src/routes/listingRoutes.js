@@ -35,4 +35,5 @@ router.put("/:listingId/sell", markAsSold); // Rută pentru a marca un anunt ca 
 router.put("/:listingId/reactivate", reactivateListing);
 router.post("/:listingId/clone", cloneListing);
 router.post('/:listingId/upload-video', upload.single('video'), uploadVideo);
+router.delete('/:listingId/video', isAuthenticated, deleteVideo);
 module.exports = router;

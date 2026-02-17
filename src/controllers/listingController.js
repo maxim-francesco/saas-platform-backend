@@ -5,29 +5,91 @@ const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
 const bestAutoService = require("../services/bestAutoService");
 const { uploadToYouTube } = require('../services/youtubeService');
+const { google } = require('googleapis'); // Asigură-te că ai acest import
 
 // Aceasta va fi functia apelata de ruta /api/listings/upload-video
 const uploadVideo = async (req, res) => {
   try {
-    const { listingId } = req.params;
+    // 1. Preluam listingId din URL (conform rutei /:listingId/upload-video)
+    const { listingId } = req.params; 
     
+    // 2. Verificam daca fisierul a fost procesat de multer
     if (!req.file) {
-      return res.status(400).json({ message: 'Niciun fisier video incarcat.' });
+      return res.status(400).json({ message: 'Niciun fisier video detectat.' });
     }
 
-    // Aici se producea eroarea deoarece uploadToYouTube nu era importat
+    // 3. Trimitem buffer-ul video catre YouTube API
+    // Aceasta functie returneaza ID-ul unic al clipului de pe YT
     const videoId = await uploadToYouTube(req.file);
 
-    await prisma.listing.update({
+    // 4. Actualizam baza de date cu ID-ul primit
+    // Folosim prisma.listing.update pentru a lega video-ul de anuntul corect
+    const updatedListing = await prisma.listing.update({
       where: { id: listingId },
       data: { youtubeVideoId: videoId }
     });
 
-    res.status(200).json({ youtubeVideoId: videoId });
+    // 5. Raspundem cu succes catre Frontend
+    res.status(200).json({ 
+      message: 'Video incarcat cu succes!',
+      youtubeVideoId: videoId 
+    });
+
   } catch (error) {
-    // Aceasta este eroarea pe care ai văzut-o în log-uri
-    console.error('YouTube Upload Error:', error); 
-    res.status(500).json({ message: 'Eroare la incarcarea pe YouTube.' });
+    // 6. Gestionarea erorii de cota (Quota Exceeded)
+    // Daca Google returneaza cod 403 cu motivul quotaExceeded
+    if (error.errors && error.errors[0] && error.errors[0].reason === 'quotaExceeded') {
+      console.error('Limita YouTube API atinsa:', error.message);
+      return res.status(429).json({ 
+        message: 'Capacitatea de procesare video a fost atinsa pentru astazi. Aceasta functionalitate va fi extinsa in curand!' 
+      });
+    }
+
+    // 7. Alte erori (retea, permisiuni, etc.)
+    console.error('YouTube Upload Error detaliat:', error);
+    res.status(500).json({ message: 'Eroare interna la incarcarea videoclipului.' });
+  }
+};
+
+const deleteVideo = async (req, res) => {
+  try {
+    const { listingId } = req.params;
+
+    // 1. Găsim anunțul pentru a lua ID-ul de YouTube
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { youtubeVideoId: true }
+    });
+
+    if (!listing || !listing.youtubeVideoId) {
+      return res.status(404).json({ message: 'Nu există video de șters.' });
+    }
+
+    // 2. Ștergem de pe YouTube folosind serviciul existent
+    // Notă: Ai nevoie de permisiuni de delete în OAuth scope
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.YOUTUBE_CLIENT_ID,
+      process.env.YOUTUBE_CLIENT_SECRET
+    );
+    oauth2Client.setCredentials({ refresh_token: process.env.YOUTUBE_REFRESH_TOKEN });
+    const youtube = google.youtube({ version: 'v3', auth: oauth2Client });
+
+    try {
+      await youtube.videos.delete({ id: listing.youtubeVideoId });
+    } catch (ytError) {
+      console.warn('Video-ul nu a putut fi șters de pe YT (poate a fost șters manual), continuăm ștergerea din DB.');
+    }
+
+    // 3. Ștergem ID-ul din baza de date
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { youtubeVideoId: null }
+    });
+
+    res.status(200).json({ message: 'Video șters cu succes.' });
+  } catch (error) {
+    console.error('Delete Video Error:', error);
+    res.status(500).json({ message: 'Eroare la ștergerea videoclipului.' });
   }
 };
 
