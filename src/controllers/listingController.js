@@ -8,11 +8,21 @@ const bestAutoService = require("../services/bestAutoService");
 // Aceasta va fi functia apelata de ruta /api/listings/upload-video
 const uploadVideo = async (req, res) => {
   try {
+    const { listingId } = req.params; // Luăm ID-ul din URL
+    
     if (!req.file) {
       return res.status(400).json({ message: 'Niciun fisier video incarcat.' });
     }
 
+    // Incarcam pe YouTube
     const videoId = await uploadToYouTube(req.file);
+
+    // Actualizam direct anuntul in baza de date
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { youtubeVideoId: videoId }
+    });
+
     res.status(200).json({ youtubeVideoId: videoId });
   } catch (error) {
     console.error('YouTube Upload Error:', error);
