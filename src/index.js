@@ -22,8 +22,18 @@ const superAdminRoutes = require("./routes/superAdminRoutes");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
-app.use(express.json());
+// --- CONFIGURARE CORS CORECTATĂ ---
+app.use(cors({
+  origin: true, // Permite orice origine pentru a rezolva problema cu Firebase Studio
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// --- CONFIGURARE LIMITĂ DATE ---
+// Video-urile sunt mari, deci avem nevoie de limite ridicate pentru body-ul cererii
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ limit: "100mb", extended: true }));
 
 // --- ✅ PLASA DE SIGURANȚĂ #1: LOGGER PENTRU TOATE CERERILE ---
 // Acest middleware se va executa primul pentru ORICE cerere și ne va confirma că a ajuns la server.
