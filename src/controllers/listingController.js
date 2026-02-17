@@ -66,15 +66,41 @@ const deleteVideo = async (req, res) => {
   try {
     const { listingId } = req.params;
 
-    // Ștergem ID-ul/URL-ul din baza de date
+    // 1. Găsim anunțul pentru a lua URL-ul video-ului
+    const listing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { youtubeVideoId: true }
+    });
+
+    if (!listing || !listing.youtubeVideoId) {
+      return res.status(404).json({ message: 'Nu există video de șters.' });
+    }
+
+    // 2. Ștergem din Cloudinary dacă este un link de Cloudinary
+    if (listing.youtubeVideoId.includes('cloudinary.com')) {
+      // Reconstruim public_id-ul. 
+      // Am folosit la upload: public_id: `video_${listingId}` în folderul `listings_videos`
+      const publicId = `listings_videos/video_${listingId}`;
+      
+      try {
+        await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
+        console.log(`[Cloudinary] Video șters pentru listing: ${listingId}`);
+      } catch (cloudErr) {
+        console.error('Eroare la ștergerea din Cloudinary:', cloudErr);
+        // Continuăm chiar dacă ștergerea din cloud eșuează, pentru a curăța DB-ul
+      }
+    }
+
+    // 3. Ștergem referința din baza de date
     await prisma.listing.update({
       where: { id: listingId },
       data: { youtubeVideoId: null }
     });
 
-    res.status(200).json({ message: 'Video eliminat din baza de date.' });
+    res.status(200).json({ message: 'Video șters cu succes din Cloudinary și DB.' });
   } catch (error) {
-    res.status(500).json({ message: 'Eroare la ștergere.' });
+    console.error('Delete Video Error:', error);
+    res.status(500).json({ message: 'Eroare la ștergerea videoclipului.' });
   }
 };
 
