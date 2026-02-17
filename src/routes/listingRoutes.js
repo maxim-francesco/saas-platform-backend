@@ -13,7 +13,8 @@ const {
   markAsSold,
   reactivateListing,
   cloneListing,
-  uploadVideo
+  uploadVideo,
+  deleteVideo
 } = require("../controllers/listingController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
