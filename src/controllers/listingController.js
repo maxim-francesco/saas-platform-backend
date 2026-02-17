@@ -5,6 +5,21 @@ const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
 const bestAutoService = require("../services/bestAutoService");
 
+// Aceasta va fi functia apelata de ruta /api/listings/upload-video
+const uploadVideo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Niciun fisier video incarcat.' });
+    }
+
+    const videoId = await uploadToYouTube(req.file);
+    res.status(200).json({ youtubeVideoId: videoId });
+  } catch (error) {
+    console.error('YouTube Upload Error:', error);
+    res.status(500).json({ message: 'Eroare la incarcarea pe YouTube.' });
+  }
+};
+
 // Adaugă această funcție la începutul fișierului
 const generateSlug = (text) => {
   return text

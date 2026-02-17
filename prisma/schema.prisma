@@ -101,6 +101,8 @@ model Listing {
   images          ListingImage[]
   views           View[]
 
+  youtubeVideoId String?  // <--- Adaugă această linie
+
   @@index([price])
   @@index([mileage])
 }
