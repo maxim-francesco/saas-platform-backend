@@ -7,107 +7,74 @@ const bestAutoService = require("../services/bestAutoService");
 const { uploadToYouTube } = require('../services/youtubeService');
 const { google } = require('googleapis'); // Asigură-te că ai acest import
 
-// Aceasta va fi functia apelata de ruta /api/listings/upload-video
 const uploadVideo = async (req, res) => {
   try {
     const { listingId } = req.params;
 
-    // 1. Safety Check: Verificăm dacă obiectul user există (previne eroarea toLowerCase)
-    if (!req.user || !req.user.email) {
-      console.error('Eroare: Utilizator neidentificat în cerere.');
-      return res.status(401).json({ message: 'Trebuie să fii autentificat pentru a încărca video.' });
-    }
-
-    // 2. Restricție: Doar contact@vlc.ro are acces
-    const userEmail = req.user.email.toLowerCase();
-    if (userEmail !== 'contact@vlc.ro') {
-      return res.status(403).json({ message: 'Această funcționalitate este disponibilă doar pentru administrator.' });
-    }
-
-    // 3. Verificăm dacă fișierul a fost primit prin Multer
+    // Verificare simplă: dacă nu există fișier, ne oprim
     if (!req.file) {
-      return res.status(400).json({ message: 'Niciun fișier video nu a fost detectat în cerere.' });
+      return res.status(400).json({ message: 'Niciun fișier video primit.' });
     }
 
-    // 4. Încărcare în Cloudinary folosind Buffer Stream
+    // --- LOGICA NOUĂ: CLOUDINARY ---
+    // Folosim Cloudinary pentru simplitate, deoarece ai deja setup-ul făcut
     const uploadStream = cloudinary.uploader.upload_stream(
       {
         resource_type: "video",
         folder: "listings_videos",
-        public_id: `video_${listingId}`, // Suprascrie video-ul vechi dacă există
+        public_id: `video_${listingId}`,
         overwrite: true
       },
       async (error, result) => {
         if (error) {
-          console.error('Eroare Cloudinary Video:', error);
-          return res.status(500).json({ message: 'Eroare la procesarea video-ului în Cloud.' });
+          console.error('Cloudinary Error:', error);
+          return res.status(500).json({ message: 'Eroare la încărcarea în Cloudinary.' });
         }
 
-        // 5. Salvăm URL-ul securizat în baza de date
-        // Folosim câmpul youtubeVideoId pentru a stoca URL-ul Cloudinary
-        try {
-          await prisma.listing.update({
-            where: { id: listingId },
-            data: { youtubeVideoId: result.secure_url }
-          });
+        // Salvează URL-ul primit de la Cloudinary în câmpul youtubeVideoId
+        // Frontend-ul va detecta dacă este URL (Cloudinary) sau ID (YouTube)
+        await prisma.listing.update({
+          where: { id: listingId },
+          data: { youtubeVideoId: result.secure_url }
+        });
 
-          return res.status(200).json({ 
-            message: 'Video încărcat cu succes pe Cloudinary!',
-            videoUrl: result.secure_url 
-          });
-        } catch (dbError) {
-          console.error('Eroare salvare DB:', dbError);
-          return res.status(500).json({ message: 'Video încărcat, dar salvarea în DB a eșuat.' });
-        }
+        return res.status(200).json({ 
+          message: 'Video salvat pe Cloudinary!',
+          videoUrl: result.secure_url 
+        });
       }
     );
 
-    // Conversia buffer-ului în stream pentru Cloudinary
+    // Trimitem buffer-ul către Cloudinary
     const bufferStream = new stream.PassThrough();
     bufferStream.end(req.file.buffer);
     bufferStream.pipe(uploadStream);
 
+    /* --- LOGICA VECHE (YouTube) - Comentată pentru moment ---
+       const videoId = await youtubeService.uploadToYouTube(req.file);
+       await prisma.listing.update({ ... });
+    */
+
   } catch (error) {
-    console.error('Critical Upload Error:', error);
-    res.status(500).json({ message: 'Eroare internă de server la încărcarea video.' });
+    console.error('Upload Video Error:', error);
+    res.status(500).json({ message: 'Eroare server la procesarea video.' });
   }
 };
 
+// Funcția de ștergere simplificată
 const deleteVideo = async (req, res) => {
   try {
     const { listingId } = req.params;
 
-    // 1. Verificăm permisiunea (doar contact@vlc.ro)
-    if (req.user.email.toLowerCase() !== 'contact@vlc.ro') {
-      return res.status(403).json({ message: 'Acces interzis.' });
-    }
-
-    // 2. Găsim anunțul pentru a vedea dacă are video
-    const listing = await prisma.listing.findUnique({
-      where: { id: listingId },
-      select: { youtubeVideoId: true } // Aici stocăm URL-ul Cloudinary
-    });
-
-    if (!listing || !listing.youtubeVideoId) {
-      return res.status(404).json({ message: 'Nu s-a găsit niciun video de șters.' });
-    }
-
-    // 3. Ștergem din Cloudinary
-    // Deoarece am salvat cu public_id fix: `listings_videos/video_${listingId}`
-    const publicId = `listings_videos/video_${listingId}`;
-    
-    await cloudinary.uploader.destroy(publicId, { resource_type: 'video' });
-
-    // 4. Resetăm câmpul în baza de date
+    // Ștergem ID-ul/URL-ul din baza de date
     await prisma.listing.update({
       where: { id: listingId },
       data: { youtubeVideoId: null }
     });
 
-    res.status(200).json({ message: 'Video eliminat cu succes de pe Cloudinary și din DB.' });
+    res.status(200).json({ message: 'Video eliminat din baza de date.' });
   } catch (error) {
-    console.error('Cloudinary Delete Error:', error);
-    res.status(500).json({ message: 'Eroare la ștergerea videoclipului.' });
+    res.status(500).json({ message: 'Eroare la ștergere.' });
   }
 };
 
