@@ -13,6 +13,7 @@ const {
   markAsSold,
   reactivateListing,
   cloneListing,
+  uploadVideo
 } = require("../controllers/listingController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -33,5 +34,5 @@ router.get("/status/sold", getSoldListings); // Rută pentru anunturi vândute
 router.put("/:listingId/sell", markAsSold); // Rută pentru a marca un anunt ca vândut
 router.put("/:listingId/reactivate", reactivateListing);
 router.post("/:listingId/clone", cloneListing);
-router.post('/upload-video', upload.single('video'), listingController.uploadVideo);
+router.post('/upload-video', upload.single('video'), uploadVideo);
 module.exports = router;
