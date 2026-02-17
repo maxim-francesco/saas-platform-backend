@@ -772,4 +772,5 @@ module.exports = {
   markAsSold,
   reactivateListing,
   cloneListing,
+  uploadVideo
 };
