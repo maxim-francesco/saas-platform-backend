@@ -30,4 +30,28 @@ const getAllBusinesses = async (req, res) => {
   }
 };
 
-module.exports = { getPlatformStats, getAllBusinesses };
+const getBusinessStructure = async (req, res) => {
+  try {
+    const { businessId } = req.params;
+
+    const structure = await prisma.category.findMany({
+      where: { businessId: businessId },
+      include: {
+        attributes: {
+          select: {
+            id: true,
+            name: true,
+            type: true
+          }
+        }
+      }
+    });
+
+    res.status(200).json(structure);
+  } catch (error) {
+    console.error("Error fetching business structure:", error);
+    res.status(500).json({ message: "Eroare la preluarea structurii business-ului." });
+  }
+};
+
+module.exports = { getPlatformStats, getAllBusinesses,getBusinessStructure };
