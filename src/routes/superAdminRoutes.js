@@ -16,6 +16,6 @@ router.use(isAuthenticated, isSuperAdmin);
 
 router.get("/stats", getPlatformStats);
 router.get("/businesses", getAllBusinesses);
-router.get("/businesses/:businessId/structure", isAuthenticated, isSuperAdmin, );
+router.get("/businesses/:businessId/structure", getBusinessStructure);
 
 module.exports = router;
