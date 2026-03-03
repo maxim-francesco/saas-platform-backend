@@ -148,6 +148,7 @@ const getAccessToken = async (apiKey) => {
 // ─────────────────────────────────────────────
 // 2. MAPARE LISTING → PAYLOAD BESTAUTO
 // ─────────────────────────────────────────────
+
 const mapListingToPayload = (listing) => {
   // --- Date de valabilitate anunț ---
   const now = new Date();
@@ -190,7 +191,6 @@ const mapListingToPayload = (listing) => {
       const bestAutoKey = ATTRIBUTE_MAP[normalizedAttrName];
 
       // Dacă nu avem un mapping definit, sărim atributul
-      // (ex: "Pret", "Kilometraj", "Link Video" — gestionate separat sau ignorate)
       if (!bestAutoKey) continue;
 
       // Construim valoarea în funcție de tipul atributului
@@ -201,8 +201,6 @@ const mapListingToPayload = (listing) => {
       } else if (av.numberValue != null) {
         value = av.numberValue.toString();
       } else if (av.booleanValue != null) {
-        // BestAuto nu are documentat formatul boolean explicit,
-        // trimitem ca "Da"/"Nu" (standard românesc)
         value = av.booleanValue ? "Da" : "Nu";
       }
 
@@ -223,11 +221,16 @@ const mapListingToPayload = (listing) => {
   }
 
   // --- Imagini ---
-  // rank pornește de la 1 conform documentației BestAuto (exemplul din PDF folosește rank: 1, 2)
-  const pictures = (listing.images || []).map((img, index) => ({
-    url: img.url,
-    rank: index + 1,
-  }));
+  // Limita BestAuto: maxim 20 poze per anunț.
+  // Luăm primele 20 sortate după `order` (query-ul din controller trimite images: { orderBy: { order: "asc" } })
+  // rank pornește de la 1 conform documentației BestAuto
+  const BESTAUTO_MAX_IMAGES = 20;
+  const pictures = (listing.images || [])
+    .slice(0, BESTAUTO_MAX_IMAGES)
+    .map((img, index) => ({
+      url: img.url,
+      rank: index + 1,
+    }));
 
   // --- Payload final conform structurii din documentația BestAuto ---
   return {
@@ -241,7 +244,7 @@ const mapListingToPayload = (listing) => {
       category: BESTAUTO_CATEGORY_ID,
       price: listing.price || 0,
       currency: "EUR",
-      title: listing.title.substring(0, 100), // limită BestAuto
+      title: listing.title.substring(0, 100),
       text: description,
       validFrom,
       validTo,
