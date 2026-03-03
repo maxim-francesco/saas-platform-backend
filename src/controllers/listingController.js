@@ -93,11 +93,36 @@ const uploadImages = async (req, res) => {
     const folderPath = `saas-platform/${businessId}/${listing.id}`;
     const uploadStream = cloudinary.uploader.upload_stream({ resource_type: "image", folder: folderPath }, async (error, result) => {
       if (error) return res.status(500).json({ message: "Eroare la upload Cloudinary." });
+
       const image = await prisma.$transaction(async (tx) => {
         const imageCount = await tx.listingImage.count({ where: { listingId: listingId } });
         return await tx.listingImage.create({ data: { url: result.secure_url, listingId: listingId, order: imageCount } });
       });
+
+      // Răspundem imediat frontend-ului — sync BestAuto e asincron
       res.status(201).json(image);
+
+      // --- INTEGRATION BESTAUTO: SYNC DUPĂ UPLOAD IMAGINE ---
+      // Retrimitem anunțul COMPLET (cu toate pozele de până acum, inclusiv cea nouă)
+      // Folosim același endpoint POST /Article care face insert + update
+      ;(async () => {
+        try {
+          const fullListing = await prisma.listing.findUnique({
+            where: { id: listingId },
+            include: {
+              business: true,
+              attributeValues: { include: { attribute: true } },
+              images: { orderBy: { order: "asc" } },
+            },
+          });
+          if (fullListing?.business?.bestAutoApiKey) {
+            await bestAutoService.publishListing(fullListing, fullListing.business.bestAutoApiKey);
+          }
+        } catch (err) {
+          console.error("[BestAuto] Eroare la sincronizare (uploadImages):", err.message);
+        }
+      })();
+      // --- END BESTAUTO: SYNC DUPĂ UPLOAD IMAGINE ---
     });
     uploadStream.end(imageBuffer);
   } catch (error) {
