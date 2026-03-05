@@ -178,27 +178,25 @@ const createListing = async (req, res) => {
         console.error("[BestAuto] Eroare la sincronizare (create):", err.message);
       }
     })();
-    // --- END BESTAUTO: CREATE ---
+    // --- END BESTAUTO: SYNC DUPĂ UPLOAD IMAGINE ---
 
-    // --- INTEGRATION AUTOVIT: CREATE ---
-    ;(async () => {
-      try {
-        const fullListing = await prisma.listing.findUnique({
-          where: { id: newListingId },
-          include: {
-            business: true,
-            attributeValues: { include: { attribute: true } },
-            images: { orderBy: { order: "asc" } },
-          },
-        });
+      // --- INTEGRATION AUTOVIT: SYNC DUPĂ UPLOAD IMAGINE ---
+      ;(async () => {
+        try {
+          const fullListing = await prisma.listing.findUnique({
+            where: { id: listingId },
+            include: {
+              business: true,
+              attributeValues: { include: { attribute: true } },
+              images: { orderBy: { order: "asc" } },
+            },
+          });
 
-        const b = fullListing?.business;
-        if (b?.autovitClientId && b?.autovitUsername) {
+          const b = fullListing?.business;
+          if (!b?.autovitClientId || !b?.autovitUsername) return;
+
           const imageUrls = fullListing.images.map(img => img.url);
-          if (imageUrls.length === 0) {
-            console.log("[Autovit] Fără imagini, nu publicăm anunțul.");
-            return;
-          }
+          if (imageUrls.length === 0) return;
 
           const token = await autovitService.getAccessToken(
             b.autovitClientId, b.autovitClientSecret,
@@ -210,20 +208,25 @@ const createListing = async (req, res) => {
           );
 
           const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
-          const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
 
-          await prisma.listing.update({
-            where: { id: newListingId },
-            data: { autovitId: result.id, autovitStatus: "inactive" },
-          });
-
-          console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
+          if (fullListing.autovitId) {
+            // Anunțul există deja pe Autovit — actualizăm
+            await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
+            console.log(`[Autovit] Anunț ${fullListing.autovitId} actualizat cu imagini noi.`);
+          } else {
+            // Prima imagine uploadată — creăm anunțul
+            const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
+            await prisma.listing.update({
+              where: { id: listingId },
+              data: { autovitId: result.id, autovitStatus: "inactive" },
+            });
+            console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
+          }
+        } catch (err) {
+          console.error("[Autovit] Eroare la sincronizare (uploadImages):", err.message);
         }
-      } catch (err) {
-        console.error("[Autovit] Eroare la sincronizare (create):", err.message);
-      }
-    })();
-    // --- END AUTOVIT: CREATE ---
+      })();
+      // --- END AUTOVIT: SYNC DUPĂ UPLOAD IMAGINE ---
 
     res.status(201).json(newListing);
   } catch (error) {
