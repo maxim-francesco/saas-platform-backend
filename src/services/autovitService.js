@@ -26,6 +26,13 @@ const getAccessToken = async (clientId, clientSecret, username, password) => {
     params.append("username", username);
     params.append("password", password);
 
+    console.log("[Autovit] Încerc autentificare cu:", {
+      clientId,
+      username,
+      hasSecret: !!clientSecret,
+      hasPassword: !!password,
+    });
+
     const response = await axios.post(
       `${BASE_URL}/oauth/token`,
       params.toString(),
