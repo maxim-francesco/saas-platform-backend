@@ -22,6 +22,11 @@ model Business {
   reviews              Review[]
   users                User[]
   views                View[]
+
+  autovitClientId      String?
+  autovitClientSecret  String?
+  autovitUsername      String?
+  autovitPassword      String?
 }
 
 model User {
@@ -102,6 +107,7 @@ model Listing {
   views           View[]
 
   youtubeVideoId String?  // <--- Adaugă această linie
+  autovitId   Int?
 
   @@index([price])
   @@index([mileage])
