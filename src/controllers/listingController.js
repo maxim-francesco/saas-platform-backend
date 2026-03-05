@@ -4,6 +4,7 @@ const cloudinary = require("../config/cloudinary");
 const axios = require("axios");
 const stream = require("stream");
 const bestAutoService = require("../services/bestAutoService");
+const autovitService = require("../services/autovitService");
 const { uploadToYouTube } = require('../services/youtubeService');
 const { google } = require('googleapis');
 
@@ -99,12 +100,9 @@ const uploadImages = async (req, res) => {
         return await tx.listingImage.create({ data: { url: result.secure_url, listingId: listingId, order: imageCount } });
       });
 
-      // Răspundem imediat frontend-ului — sync BestAuto e asincron
       res.status(201).json(image);
 
       // --- INTEGRATION BESTAUTO: SYNC DUPĂ UPLOAD IMAGINE ---
-      // Retrimitem anunțul COMPLET (cu toate pozele de până acum, inclusiv cea nouă)
-      // Folosim același endpoint POST /Article care face insert + update
       ;(async () => {
         try {
           const fullListing = await prisma.listing.findUnique({
@@ -164,9 +162,10 @@ const createListing = async (req, res) => {
       return listing;
     });
 
-    // --- INTEGRATION BESTAUTO: CREATE ---
     const newListingId = newListing.id;
-    (async () => {
+
+    // --- INTEGRATION BESTAUTO: CREATE ---
+    ;(async () => {
       try {
         const fullListing = await prisma.listing.findUnique({
           where: { id: newListingId },
@@ -180,6 +179,51 @@ const createListing = async (req, res) => {
       }
     })();
     // --- END BESTAUTO: CREATE ---
+
+    // --- INTEGRATION AUTOVIT: CREATE ---
+    ;(async () => {
+      try {
+        const fullListing = await prisma.listing.findUnique({
+          where: { id: newListingId },
+          include: {
+            business: true,
+            attributeValues: { include: { attribute: true } },
+            images: { orderBy: { order: "asc" } },
+          },
+        });
+
+        const b = fullListing?.business;
+        if (b?.autovitClientId && b?.autovitUsername) {
+          const imageUrls = fullListing.images.map(img => img.url);
+          if (imageUrls.length === 0) {
+            console.log("[Autovit] Fără imagini, nu publicăm anunțul.");
+            return;
+          }
+
+          const token = await autovitService.getAccessToken(
+            b.autovitClientId, b.autovitClientSecret,
+            b.autovitUsername, b.autovitPassword
+          );
+
+          const imageCollectionId = await autovitService.createImageCollection(
+            imageUrls, token, b.autovitUsername
+          );
+
+          const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
+          const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
+
+          await prisma.listing.update({
+            where: { id: newListingId },
+            data: { autovitId: result.id, autovitStatus: "inactive" },
+          });
+
+          console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
+        }
+      } catch (err) {
+        console.error("[Autovit] Eroare la sincronizare (create):", err.message);
+      }
+    })();
+    // --- END AUTOVIT: CREATE ---
 
     res.status(201).json(newListing);
   } catch (error) {
@@ -270,8 +314,7 @@ const updateListing = async (req, res) => {
     });
 
     // --- INTEGRATION BESTAUTO: UPDATE ---
-    // Citim datele DUPĂ tranzacție ca să trimitem versiunea actualizată
-    (async () => {
+    ;(async () => {
       try {
         const fullListing = await prisma.listing.findUnique({
           where: { id: listingId },
@@ -290,6 +333,41 @@ const updateListing = async (req, res) => {
     })();
     // --- END BESTAUTO: UPDATE ---
 
+    // --- INTEGRATION AUTOVIT: UPDATE ---
+    ;(async () => {
+      try {
+        const fullListing = await prisma.listing.findUnique({
+          where: { id: listingId },
+          include: {
+            business: true,
+            attributeValues: { include: { attribute: true } },
+            images: { orderBy: { order: "asc" } },
+          },
+        });
+
+        const b = fullListing?.business;
+        if (b?.autovitClientId && b?.autovitUsername && fullListing.autovitId) {
+          const imageUrls = fullListing.images.map(img => img.url);
+          if (imageUrls.length === 0) return;
+
+          const token = await autovitService.getAccessToken(
+            b.autovitClientId, b.autovitClientSecret,
+            b.autovitUsername, b.autovitPassword
+          );
+
+          const imageCollectionId = await autovitService.createImageCollection(
+            imageUrls, token, b.autovitUsername
+          );
+
+          const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
+          await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
+        }
+      } catch (err) {
+        console.error("[Autovit] Eroare la sincronizare (update):", err.message);
+      }
+    })();
+    // --- END AUTOVIT: UPDATE ---
+
     const updatedListing = await prisma.listing.findUnique({
       where: { id: listingId },
       include: { images: true, attributeValues: true },
@@ -307,11 +385,34 @@ const deleteListing = async (req, res) => {
   const { businessId } = req.user;
 
   let bestAutoApiKey = null;
+  let autovitClientId = null, autovitClientSecret = null;
+  let autovitUsername = null, autovitPassword = null;
+  let autovitId = null;
+
   try {
-    const businessData = await prisma.business.findUnique({ where: { id: businessId }, select: { bestAutoApiKey: true } });
+    const businessData = await prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        bestAutoApiKey: true,
+        autovitClientId: true,
+        autovitClientSecret: true,
+        autovitUsername: true,
+        autovitPassword: true,
+      },
+    });
     bestAutoApiKey = businessData?.bestAutoApiKey;
+    autovitClientId = businessData?.autovitClientId;
+    autovitClientSecret = businessData?.autovitClientSecret;
+    autovitUsername = businessData?.autovitUsername;
+    autovitPassword = businessData?.autovitPassword;
+
+    const listingData = await prisma.listing.findUnique({
+      where: { id: listingId },
+      select: { autovitId: true },
+    });
+    autovitId = listingData?.autovitId;
   } catch (e) {
-    console.error("Eroare la preluare cheie API pentru delete:", e);
+    console.error("Eroare la preluare date pentru delete:", e);
   }
 
   try {
@@ -328,6 +429,22 @@ const deleteListing = async (req, res) => {
         .catch((err) => console.error("[BestAuto] Eroare la ștergere:", err.message));
     }
     // --- END BESTAUTO: DELETE ---
+
+    // --- INTEGRATION AUTOVIT: DELETE ---
+    ;(async () => {
+      try {
+        if (autovitId && autovitClientId) {
+          const token = await autovitService.getAccessToken(
+            autovitClientId, autovitClientSecret,
+            autovitUsername, autovitPassword
+          );
+          await autovitService.deleteAdvert(autovitId, token, autovitUsername);
+        }
+      } catch (err) {
+        console.error("[Autovit] Eroare la ștergere:", err.message);
+      }
+    })();
+    // --- END AUTOVIT: DELETE ---
 
     res.status(200).json({ message: "Anunțul a fost șters." });
   } catch (error) {
@@ -375,26 +492,18 @@ const updateImageOrder = async (req, res) => {
   const { listingId } = req.params;
   const { imageIds } = req.body;
   const { businessId } = req.user;
-  console.log(`[DEBUG] Primit cerere de reordonare pentru listingId: ${listingId}`);
-  console.log(`[DEBUG] Body-ul cererii (req.body):`, req.body);
-  console.log(`[DEBUG] Array-ul de ID-uri extras (imageIds):`, imageIds);
   if (!Array.isArray(imageIds)) {
-    console.log("[DEBUG] EROARE: imageIds nu este un array.");
     return res.status(400).json({ message: "Este necesar un array de ID-uri." });
   }
   try {
     const listing = await prisma.listing.findFirst({ where: { id: listingId, businessId } });
     if (!listing) {
-      console.log("[DEBUG] EROARE: Anunțul nu a fost găsit pentru acest business.");
       return res.status(404).json({ message: "Anunț negăsit." });
     }
-    console.log(`[DEBUG] Se pregătesc ${imageIds.length} operațiuni de update.`);
     const updatePromises = imageIds.map((imageId, index) => {
-      console.log(` -> Pregătire update: imaginea cu ID ${imageId} va primi order = ${index}`);
       return prisma.listingImage.update({ where: { id: imageId }, data: { order: index } });
     });
     await prisma.$transaction(updatePromises);
-    console.log("[DEBUG] Tranzacția de update a fost finalizată cu succes.");
     res.status(200).json({ message: "Ordinea imaginilor a fost actualizată." });
   } catch (error) {
     console.error("[DEBUG] EROARE MAJORĂ în updateImageOrder:", error);

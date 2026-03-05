@@ -108,6 +108,8 @@ model Listing {
 
   youtubeVideoId String?  // <--- Adaugă această linie
   autovitId   Int?
+  autovitStatus String?  // "active", "inactive", null
+
 
   @@index([price])
   @@index([mileage])

@@ -225,68 +225,124 @@ const deactivateAdvert = async (autovitId, token, username) => {
 // 8. MAPPING CÂMPURI PRISMA → AUTOVIT
 // ─────────────────────────────────────────────
 const mapListingToAutovit = (listing, imageCollectionId) => {
+  const normalizeText = (str) =>
+    str.toString().toLowerCase().trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+
+  // Mapping nume atribut DB → cheie Autovit
+  const ATTRIBUTE_MAP = {
+    "marca":                "make",
+    "model":                "model",
+    "an":                   "year",
+    "kilometraj":           "mileage",
+    "combustibil":          "fuel_type",
+    "capacitate cilindrica":"engine_capacity",
+    "putere":               "engine_power",
+    "caroserie":            "body_type",
+    "cutie de viteze":      "gearbox",
+    "culoare":              "color",
+  };
+
   const fuelTypeMap = {
-    petrol: "petrol",
-    gasoline: "petrol",
-    diesel: "diesel",
-    hybrid: "hybrid",
-    electric: "electric",
-    lpg: "lpg",
-    cng: "cng",
+    "benzina": "petrol", "petrol": "petrol", "gasoline": "petrol",
+    "diesel": "diesel", "motorina": "diesel",
+    "hybrid": "hybrid", "hibrid": "hybrid",
+    "electric": "electric", "electrica": "electric",
+    "lpg": "lpg", "gpl": "lpg",
+    "cng": "cng",
   };
 
   const gearboxMap = {
-    manual: "manual",
-    automatic: "automatic",
-    semi_automatic: "semi-automatic",
-    semi: "semi-automatic",
+    "manuala": "manual", "manual": "manual",
+    "automata": "automatic", "automatic": "automatic",
+    "semi-automata": "semi-automatic", "semi_automatic": "semi-automatic",
   };
 
   const bodyTypeMap = {
-    sedan: "sedan",
-    hatchback: "hatchback",
-    combi: "combi",
-    suv: "suv",
-    coupe: "coupe",
-    cabrio: "cabrio",
-    van: "van",
-    pickup: "pickup",
-    minivan: "minivan",
+    "sedan": "sedan", "berlina": "sedan",
+    "hatchback": "hatchback",
+    "combi": "combi", "break": "combi",
+    "suv": "suv",
+    "coupe": "coupe",
+    "cabrio": "cabrio", "cabriolet": "cabrio",
+    "van": "van", "monovolum": "van",
+    "pickup": "pickup",
+    "minivan": "minivan",
   };
 
+  // Extragem valorile din attributeValues
+  const params = {};
+  if (listing.attributeValues && Array.isArray(listing.attributeValues)) {
+    for (const av of listing.attributeValues) {
+      const normalizedName = normalizeText(av.attribute.name);
+      const autovitKey = ATTRIBUTE_MAP[normalizedName];
+      if (!autovitKey) continue;
+
+      let value = av.stringValue ?? av.numberValue ?? av.booleanValue;
+      if (value === null || value === undefined) continue;
+
+      params[autovitKey] = value;
+    }
+  }
+
+  // Normalizăm valorile specifice
+  if (params.fuel_type) {
+    params.fuel_type = fuelTypeMap[normalizeText(params.fuel_type)] || normalizeText(params.fuel_type);
+  }
+  if (params.gearbox) {
+    params.gearbox = gearboxMap[normalizeText(params.gearbox)] || "manual";
+  }
+  if (params.body_type) {
+    params.body_type = bodyTypeMap[normalizeText(params.body_type)] || "sedan";
+  }
+  if (params.make) {
+    params.make = normalizeText(params.make).replace(/\s+/g, "-");
+  }
+  if (params.model) {
+    params.model = normalizeText(params.model).replace(/\s+/g, "-");
+  }
+  if (params.engine_power) {
+    params.engine_power = String(Math.round(params.engine_power));
+  }
+  if (params.engine_capacity) {
+    params.engine_capacity = String(Math.round(params.engine_capacity));
+  }
+  if (params.year) {
+    params.year = Math.round(params.year);
+  }
+  if (params.mileage) {
+    params.mileage = Math.round(params.mileage);
+  }
+
+  // Prețul
+  params.price = {
+    "0": "price",
+    "1": listing.price || 0,
+    currency: "RON",
+    gross_net: "gross",
+  };
+
+  // Câmpuri obligatorii cu fallback
+  params.condition = "used";
+  params.is_imported_car = false;
+  if (params.year) {
+    params.first_registration_year = params.year;
+  }
+
   return {
-    title: `${listing.make} ${listing.model} ${listing.year}`,
+    title: listing.title,
     description: listing.description || "Anunț publicat prin API.",
     category_id: 29,
-    region_id: listing.autovitRegionId || 1,
-    city_id: listing.autovitCityId || 1,
+    region_id: 1,
+    city_id: 1,
     advertiser_type: "business",
     image_collection_id: imageCollectionId,
     contact: {
-      person: listing.contactPerson || "Dealer",
-      phones: listing.contactPhone ? [listing.contactPhone] : [],
+      person: "Dealer",
+      phones: [],
     },
-    params: {
-      make: (listing.make || "").toLowerCase().replace(/\s+/g, "-"),
-      model: (listing.model || "").toLowerCase().replace(/\s+/g, "-"),
-      year: listing.year,
-      mileage: listing.mileage || 0,
-      fuel_type: fuelTypeMap[listing.fuelType?.toLowerCase()] || "petrol",
-      engine_power: String(listing.enginePower || ""),
-      engine_capacity: String(listing.engineCapacity || ""),
-      gearbox: gearboxMap[listing.gearbox?.toLowerCase()] || "manual",
-      body_type: bodyTypeMap[listing.bodyType?.toLowerCase()] || "sedan",
-      color: (listing.color || "white").toLowerCase(),
-      price: {
-        "0": "price",
-        "1": listing.price || 0,
-        currency: listing.currency || "RON",
-        gross_net: "gross",
-      },
-      condition: listing.condition || "used",
-      is_imported_car: listing.isImportedCar || false,
-      first_registration_year: listing.firstRegistrationYear || listing.year,
-    },
+    params,
   };
 };
 
