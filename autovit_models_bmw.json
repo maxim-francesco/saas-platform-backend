@@ -1,0 +1,180 @@
+{
+  "options": {
+    "i5": {
+      "ro": "i5",
+      "en": "i5"
+    },
+    "ix2": {
+      "ro": "iX2",
+      "en": "iX2"
+    },
+    "ix1": {
+      "ro": "iX1",
+      "en": "iX1"
+    },
+    "xm": {
+      "ro": "XM",
+      "en": "XM"
+    },
+    "i7": {
+      "ro": "i7",
+      "en": "i7"
+    },
+    "i4": {
+      "ro": "i4",
+      "en": "i4"
+    },
+    "ix": {
+      "ro": "iX",
+      "en": "iX"
+    },
+    "m8": {
+      "ro": "M8",
+      "en": "M8"
+    },
+    "ix3": {
+      "ro": "iX3",
+      "en": "iX3"
+    },
+    "bmw-z8": {
+      "ro": "Z8",
+      "en": "Z8"
+    },
+    "bmw-z4m": {
+      "ro": "Z4 M",
+      "en": "Z4 M"
+    },
+    "bmw-z4": {
+      "ro": "Z4",
+      "en": "Z4"
+    },
+    "bmw-z3m": {
+      "ro": "Z3 M",
+      "en": "Z3 M"
+    },
+    "bmw-z3": {
+      "ro": "Z3",
+      "en": "Z3"
+    },
+    "bmw-z1": {
+      "ro": "Z1",
+      "en": "Z1"
+    },
+    "bmw-x6m": {
+      "ro": "X6 M",
+      "en": "X6 M"
+    },
+    "bmw-x5m": {
+      "ro": "X5 M",
+      "en": "X5 M"
+    },
+    "bmw-x4m": {
+      "ro": "X4 M",
+      "en": "X4 M"
+    },
+    "bmw-x3m": {
+      "ro": "X3 M",
+      "en": "X3 M"
+    },
+    "bmw-m7": {
+      "ro": "M7",
+      "en": "M7"
+    },
+    "bmw-m6": {
+      "ro": "M6",
+      "en": "M6"
+    },
+    "bmw-m5": {
+      "ro": "M5",
+      "en": "M5"
+    },
+    "bmw-m4": {
+      "ro": "M4",
+      "en": "M4"
+    },
+    "bmw-m3": {
+      "ro": "M3",
+      "en": "M3"
+    },
+    "bmw-m2": {
+      "ro": "M2",
+      "en": "M2"
+    },
+    "bmw-m1": {
+      "ro": "M1",
+      "en": "M1"
+    },
+    "bmw-alpina": {
+      "ro": "ALPINA",
+      "en": "ALPINA"
+    },
+    "x-7": {
+      "ro": "X7",
+      "en": "X7"
+    },
+    "seria-8": {
+      "ro": "Seria 8",
+      "en": "Seria 8"
+    },
+    "x6": {
+      "ro": "X6",
+      "en": "X6"
+    },
+    "x5": {
+      "ro": "X5",
+      "en": "X5"
+    },
+    "x4": {
+      "ro": "X4",
+      "en": "X4"
+    },
+    "x3": {
+      "ro": "X3",
+      "en": "X3"
+    },
+    "x2": {
+      "ro": "X2",
+      "en": "X2"
+    },
+    "x1": {
+      "ro": "X1",
+      "en": "X1"
+    },
+    "bmw-i8": {
+      "ro": "i8",
+      "en": "i8"
+    },
+    "seria-2": {
+      "ro": "Seria 2 ",
+      "en": "Seria 2 "
+    },
+    "i3": {
+      "ro": "i3",
+      "en": "i3"
+    },
+    "seria-7": {
+      "ro": "Seria 7",
+      "en": "Seria 7"
+    },
+    "seria-6": {
+      "ro": "Seria 6",
+      "en": "Seria 6"
+    },
+    "seria-5": {
+      "ro": "Seria 5",
+      "en": "Seria 5"
+    },
+    "seria-4": {
+      "ro": "Seria 4",
+      "en": "Seria 4"
+    },
+    "seria-3": {
+      "ro": "Seria 3",
+      "en": "Seria 3"
+    },
+    "seria-1": {
+      "ro": "Seria 1",
+      "en": "Seria 1"
+    }
+  }
+}

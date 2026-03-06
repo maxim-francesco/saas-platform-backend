@@ -266,17 +266,38 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     "semi-automata": "semi-automatic", "semi_automatic": "semi-automatic",
   };
 
-  const bodyTypeMap = {
-    "sedan": "sedan", "berlina": "sedan",
-    "hatchback": "hatchback",
-    "combi": "combi", "break": "combi",
+    const bodyTypeMap = {
+    "sedan": "sedan",
+    "berlina": "sedan",
+    "hatchback": "compact",      // Autovit nu are hatchback, cel mai apropiat e compact
+    "combi": "combi",
+    "break": "combi",
     "suv": "suv",
     "coupe": "coupe",
-    "cabrio": "cabrio", "cabriolet": "cabrio",
-    "van": "van", "monovolum": "van",
-    "pickup": "pickup",
+    "cabrio": "cabrio",
+    "cabriolet": "cabrio",
+    "van": "minivan",
+    "monovolum": "minivan",
     "minivan": "minivan",
+    "pickup": "suv",             // Nu există pickup, fallback suv
+    "mini": "mini",
+    "city-car": "city-car",
+    "compact": "compact",
   };
+
+  const colorMap = {
+  "alb": "white", "white": "white",
+  "negru": "black", "black": "black",
+  "gri": "gray", "gray": "gray", "grey": "gray",
+  "argint": "silver", "silver": "silver",
+  "albastru": "blue", "blue": "blue",
+  "rosu": "red", "red": "red",
+  "verde": "green", "green": "green",
+  "maro": "brown", "brown": "brown",
+  "portocaliu": "orange", "orange": "orange",
+  "galben": "yellow-gold", "yellow": "yellow-gold", "auriu": "yellow-gold",
+  "bej": "bej", "beige": "bej",
+};
 
   // Extragem valorile din attributeValues
   const params = {};
@@ -297,11 +318,16 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
   if (params.fuel_type) {
     params.fuel_type = fuelTypeMap[normalizeText(params.fuel_type)] || normalizeText(params.fuel_type);
   }
+
+  if (params.color) {
+    params.color = colorMap[normalizeText(params.color)] || "other";
+  }
+
   if (params.gearbox) {
     params.gearbox = gearboxMap[normalizeText(params.gearbox)] || "manual";
   }
   if (params.body_type) {
-    params.body_type = bodyTypeMap[normalizeText(params.body_type)] || "sedan";
+    params.body_type = bodyTypeMap[normalizeText(params.body_type)] || "compact";
   }
   if (params.make) {
     params.make = normalizeText(params.make).replace(/\s+/g, "-");
@@ -339,7 +365,10 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
 
   return {
     title: listing.title,
-    description: listing.description || "Anunț publicat prin API.",
+    // În return-ul final:
+    description: listing.description && listing.description.trim().length >= 30
+      ? listing.description
+      : (listing.description || "") + " Detalii suplimentare disponibile la telefon.",
     category_id: 29,
     region_id: 1,
     city_id: 1,

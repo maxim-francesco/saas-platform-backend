@@ -1,0 +1,648 @@
+{
+  "options": {
+    "acura": {
+      "ro": "Acura",
+      "en": "Acura"
+    },
+    "aixam": {
+      "ro": "Aixam",
+      "en": "Aixam"
+    },
+    "alfa-romeo": {
+      "ro": "Alfa Romeo",
+      "en": "Alfa Romeo"
+    },
+    "aro": {
+      "ro": "Aro",
+      "en": "Aro"
+    },
+    "aston-martin": {
+      "ro": "Aston Martin",
+      "en": "Aston Martin"
+    },
+    "audi": {
+      "ro": "Audi",
+      "en": "Audi"
+    },
+    "austin": {
+      "ro": "Austin",
+      "en": "Austin"
+    },
+    "bmw": {
+      "ro": "BMW",
+      "en": "BMW"
+    },
+    "bentley": {
+      "ro": "Bentley",
+      "en": "Bentley"
+    },
+    "bugatti": {
+      "ro": "Bugatti",
+      "en": "Bugatti"
+    },
+    "buick": {
+      "ro": "Buick",
+      "en": "Buick"
+    },
+    "cadillac": {
+      "ro": "Cadillac",
+      "en": "Cadillac"
+    },
+    "chatenet": {
+      "ro": "Chatenet",
+      "en": "Chatenet"
+    },
+    "chevrolet": {
+      "ro": "Chevrolet",
+      "en": "Chevrolet"
+    },
+    "chrysler": {
+      "ro": "Chrysler",
+      "en": "Chrysler"
+    },
+    "citroen": {
+      "ro": "Citroën",
+      "en": "Citroën"
+    },
+    "comarth": {
+      "ro": "Comarth",
+      "en": "Comarth"
+    },
+    "dfsk": {
+      "ro": "DFSK",
+      "en": "DFSK"
+    },
+    "dkw": {
+      "ro": "DKW",
+      "en": "DKW"
+    },
+    "dr": {
+      "ro": "DR",
+      "en": "DR"
+    },
+    "dacia": {
+      "ro": "Dacia",
+      "en": "Dacia"
+    },
+    "daewoo": {
+      "ro": "Daewoo",
+      "en": "Daewoo"
+    },
+    "daihatsu": {
+      "ro": "Daihatsu",
+      "en": "Daihatsu"
+    },
+    "dodge": {
+      "ro": "Dodge",
+      "en": "Dodge"
+    },
+    "eagle": {
+      "ro": "Eagle",
+      "en": "Eagle"
+    },
+    "excalibur": {
+      "ro": "Excalibur",
+      "en": "Excalibur"
+    },
+    "ferrari": {
+      "ro": "Ferrari",
+      "en": "Ferrari"
+    },
+    "fiat": {
+      "ro": "Fiat",
+      "en": "Fiat"
+    },
+    "ford": {
+      "ro": "Ford",
+      "en": "Ford"
+    },
+    "gmc": {
+      "ro": "GMC",
+      "en": "GMC"
+    },
+    "gonow": {
+      "ro": "Gonow",
+      "en": "Gonow"
+    },
+    "grecav": {
+      "ro": "Grecav",
+      "en": "Grecav"
+    },
+    "holden": {
+      "ro": "Holden",
+      "en": "Holden"
+    },
+    "honda": {
+      "ro": "Honda",
+      "en": "Honda"
+    },
+    "hummer": {
+      "ro": "Hummer",
+      "en": "Hummer"
+    },
+    "hyundai": {
+      "ro": "Hyundai",
+      "en": "Hyundai"
+    },
+    "infiniti": {
+      "ro": "Infiniti",
+      "en": "Infiniti"
+    },
+    "isuzu": {
+      "ro": "Isuzu",
+      "en": "Isuzu"
+    },
+    "iveco": {
+      "ro": "Iveco",
+      "en": "Iveco"
+    },
+    "jaguar": {
+      "ro": "Jaguar",
+      "en": "Jaguar"
+    },
+    "jeep": {
+      "ro": "Jeep",
+      "en": "Jeep"
+    },
+    "kaipan": {
+      "ro": "Kaipan",
+      "en": "Kaipan"
+    },
+    "kia": {
+      "ro": "Kia",
+      "en": "Kia"
+    },
+    "lada": {
+      "ro": "Lada",
+      "en": "Lada"
+    },
+    "lamborghini": {
+      "ro": "Lamborghini",
+      "en": "Lamborghini"
+    },
+    "lancia": {
+      "ro": "Lancia",
+      "en": "Lancia"
+    },
+    "land-rover": {
+      "ro": "Land Rover",
+      "en": "Land Rover"
+    },
+    "lexus": {
+      "ro": "Lexus",
+      "en": "Lexus"
+    },
+    "ligier": {
+      "ro": "Ligier",
+      "en": "Ligier"
+    },
+    "lincoln": {
+      "ro": "Lincoln",
+      "en": "Lincoln"
+    },
+    "lotus": {
+      "ro": "Lotus",
+      "en": "Lotus"
+    },
+    "luaz": {
+      "ro": "LuAZ",
+      "en": "LuAZ"
+    },
+    "maruti": {
+      "ro": "Maruti",
+      "en": "Maruti"
+    },
+    "maserati": {
+      "ro": "Maserati",
+      "en": "Maserati"
+    },
+    "maybach": {
+      "ro": "Maybach",
+      "en": "Maybach"
+    },
+    "mazda": {
+      "ro": "Mazda",
+      "en": "Mazda"
+    },
+    "mclaren": {
+      "ro": "McLaren",
+      "en": "McLaren"
+    },
+    "mercedes-benz": {
+      "ro": "Mercedes-Benz",
+      "en": "Mercedes-Benz"
+    },
+    "mercury": {
+      "ro": "Mercury",
+      "en": "Mercury"
+    },
+    "microcar": {
+      "ro": "Microcar",
+      "en": "Microcar"
+    },
+    "mini": {
+      "ro": "Mini",
+      "en": "Mini"
+    },
+    "mitsubishi": {
+      "ro": "Mitsubishi",
+      "en": "Mitsubishi"
+    },
+    "morgan": {
+      "ro": "Morgan",
+      "en": "Morgan"
+    },
+    "nsu": {
+      "ro": "NSU",
+      "en": "NSU"
+    },
+    "nissan": {
+      "ro": "Nissan",
+      "en": "Nissan"
+    },
+    "nysa": {
+      "ro": "Nysa",
+      "en": "Nysa"
+    },
+    "opel": {
+      "ro": "Opel",
+      "en": "Opel"
+    },
+    "peugeot": {
+      "ro": "Peugeot",
+      "en": "Peugeot"
+    },
+    "polonez": {
+      "ro": "Polonez",
+      "en": "Polonez"
+    },
+    "pontiac": {
+      "ro": "Pontiac",
+      "en": "Pontiac"
+    },
+    "porsche": {
+      "ro": "Porsche",
+      "en": "Porsche"
+    },
+    "proton": {
+      "ro": "Proton",
+      "en": "Proton"
+    },
+    "renault": {
+      "ro": "Renault",
+      "en": "Renault"
+    },
+    "rolls-royce": {
+      "ro": "Rolls-Royce",
+      "en": "Rolls-Royce"
+    },
+    "rover": {
+      "ro": "Rover",
+      "en": "Rover"
+    },
+    "saab": {
+      "ro": "Saab",
+      "en": "Saab"
+    },
+    "samsung": {
+      "ro": "Samsung",
+      "en": "Samsung"
+    },
+    "saturn": {
+      "ro": "Saturn",
+      "en": "Saturn"
+    },
+    "seat": {
+      "ro": "Seat",
+      "en": "Seat"
+    },
+    "smart": {
+      "ro": "Smart",
+      "en": "Smart"
+    },
+    "ssangyong": {
+      "ro": "SsangYong",
+      "en": "SsangYong"
+    },
+    "subaru": {
+      "ro": "Subaru",
+      "en": "Subaru"
+    },
+    "suzuki": {
+      "ro": "Suzuki",
+      "en": "Suzuki"
+    },
+    "syrena": {
+      "ro": "Syrena",
+      "en": "Syrena"
+    },
+    "tvr": {
+      "ro": "TVR",
+      "en": "TVR"
+    },
+    "tarpan": {
+      "ro": "Tarpan",
+      "en": "Tarpan"
+    },
+    "tata": {
+      "ro": "Tata",
+      "en": "Tata"
+    },
+    "tatra": {
+      "ro": "Tatra",
+      "en": "Tatra"
+    },
+    "tavria": {
+      "ro": "Tavria",
+      "en": "Tavria"
+    },
+    "tesla": {
+      "ro": "Tesla",
+      "en": "Tesla"
+    },
+    "toyota": {
+      "ro": "Toyota",
+      "en": "Toyota"
+    },
+    "trabant": {
+      "ro": "Trabant",
+      "en": "Trabant"
+    },
+    "triumph": {
+      "ro": "Triumph",
+      "en": "Triumph"
+    },
+    "vauxhall": {
+      "ro": "Vauxhall",
+      "en": "Vauxhall"
+    },
+    "volkswagen": {
+      "ro": "Volkswagen",
+      "en": "Volkswagen"
+    },
+    "volvo": {
+      "ro": "Volvo",
+      "en": "Volvo"
+    },
+    "warszawa": {
+      "ro": "Warszawa",
+      "en": "Warszawa"
+    },
+    "yugo": {
+      "ro": "Yugo",
+      "en": "Yugo"
+    },
+    "zaporozec": {
+      "ro": "Zaporożec",
+      "en": "Zaporożec"
+    },
+    "zastawa": {
+      "ro": "Zastawa",
+      "en": "Zastawa"
+    },
+    "skoda": {
+      "ro": "Skoda",
+      "en": "Skoda"
+    },
+    "lomax": {
+      "ro": "Lomax",
+      "en": "Lomax"
+    },
+    "abarth": {
+      "ro": "Abarth",
+      "en": "Abarth"
+    },
+    "ds-automobiles": {
+      "ro": "DS Automobiles",
+      "en": "DS Automobiles"
+    },
+    "koenigsegg": {
+      "ro": "Koenigsegg",
+      "en": "Koenigsegg"
+    },
+    "cupra": {
+      "ro": "Cupra",
+      "en": "Cupra"
+    },
+    "skywell": {
+      "ro": "Skywell",
+      "en": "Skywell"
+    },
+    "tazzari": {
+      "ro": "Tazzari",
+      "en": "Tazzari"
+    },
+    "baic": {
+      "ro": "Baic",
+      "en": "Baic"
+    },
+    "xev": {
+      "ro": "Xev",
+      "en": "Xev"
+    },
+    "rivian": {
+      "ro": "Rivian",
+      "en": "Rivian"
+    },
+    "genesis": {
+      "ro": "Genesis",
+      "en": "Genesis"
+    },
+    "mpm-motors": {
+      "ro": "MPM Motors",
+      "en": "MPM Motors"
+    },
+    "lynk-co": {
+      "ro": "Lynk&Co",
+      "en": "Lynk&Co"
+    },
+    "kg-mobility": {
+      "ro": "KGM",
+      "en": "KGM"
+    },
+    "maxus": {
+      "ro": "Maxus",
+      "en": "Maxus"
+    },
+    "byd": {
+      "ro": "Byd",
+      "en": "Byd"
+    },
+    "plymouth": {
+      "ro": "Plymouth",
+      "en": "Plymouth"
+    },
+    "ktm-x-bow": {
+      "ro": "KTM X-Bow",
+      "en": "KTM X-Bow"
+    },
+    "ineos": {
+      "ro": "Ineos",
+      "en": "Ineos"
+    },
+    "mg": {
+      "ro": "MG",
+      "en": "MG"
+    },
+    "microlino": {
+      "ro": "Microlino",
+      "en": "Microlino"
+    },
+    "swm": {
+      "ro": "SWM",
+      "en": "SWM"
+    },
+    "allview": {
+      "ro": "Allview",
+      "en": "Allview"
+    },
+    "bronco-sport": {
+      "ro": "Bronco Sport",
+      "en": "Bronco Sport"
+    },
+    "lucid": {
+      "ro": "Lucid",
+      "en": "Lucid"
+    },
+    "seres": {
+      "ro": "Seres",
+      "en": "Seres"
+    },
+    "jac": {
+      "ro": "JAC",
+      "en": "JAC"
+    },
+    "forthing": {
+      "ro": "Forthing",
+      "en": "Forthing"
+    },
+    "aiways": {
+      "ro": "Aiways",
+      "en": "Aiways"
+    },
+    "polestar": {
+      "ro": "Polestar",
+      "en": "Polestar"
+    },
+    "mahindra": {
+      "ro": "Mahindra",
+      "en": "Mahindra"
+    },
+    "geely": {
+      "ro": "Geely",
+      "en": "Geely"
+    },
+    "leapmotor": {
+      "ro": "Leapmotor",
+      "en": "Leapmotor"
+    },
+    "nio": {
+      "ro": "Nio",
+      "en": "Nio"
+    },
+    "xpeng": {
+      "ro": "Xpeng",
+      "en": "Xpeng"
+    },
+    "zeekr": {
+      "ro": "Zeekr",
+      "en": "Zeekr"
+    },
+    "studebaker": {
+      "ro": "Studebaker",
+      "en": "Studebaker"
+    },
+    "cenntro": {
+      "ro": "Cenntro",
+      "en": "Cenntro"
+    },
+    "relive": {
+      "ro": "Relive",
+      "en": "Relive"
+    },
+    "dongwei": {
+      "ro": "Dongwei",
+      "en": "Dongwei"
+    },
+    "haval": {
+      "ro": "Haval",
+      "en": "Haval"
+    },
+    "chery": {
+      "ro": "Chery",
+      "en": "Chery"
+    },
+    "elaris": {
+      "ro": "Elaris",
+      "en": "Elaris"
+    },
+    "aigo": {
+      "ro": "Aigo",
+      "en": "Aigo"
+    },
+    "beauford": {
+      "ro": "Beauford",
+      "en": "Beauford"
+    },
+    "alpine": {
+      "ro": "Alpine",
+      "en": "Alpine"
+    },
+    "xiaomi": {
+      "ro": "Xiaomi",
+      "en": "Xiaomi"
+    },
+    "jetour": {
+      "ro": "Jetour",
+      "en": "Jetour"
+    },
+    "hongqi": {
+      "ro": "Hongqi",
+      "en": "Hongqi"
+    },
+    "jaecoo": {
+      "ro": "Jaecoo",
+      "en": "Jaecoo"
+    },
+    "omoda": {
+      "ro": "Omoda",
+      "en": "Omoda"
+    },
+    "im-motors": {
+      "ro": "IM Motors",
+      "en": "IM Motors"
+    },
+    "simca": {
+      "ro": "Simca",
+      "en": "Simca"
+    },
+    "oldsmobile": {
+      "ro": "Oldsmobile",
+      "en": "Oldsmobile"
+    },
+    "aonew": {
+      "ro": "AONEW",
+      "en": "AONEW"
+    },
+    "rdb": {
+      "ro": "RDB",
+      "en": "RDB"
+    },
+    "linktour": {
+      "ro": "LINKTOUR",
+      "en": "LINKTOUR"
+    },
+    "baw": {
+      "ro": "Baw",
+      "en": "Baw"
+    },
+    "li_auto": {
+      "ro": "Li Auto",
+      "en": "Li Auto"
+    },
+    "prototip": {
+      "ro": "Prototip",
+      "en": "Prototip"
+    }
+  }
+}
