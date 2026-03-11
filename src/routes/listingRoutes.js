@@ -1,4 +1,3 @@
-// src/routes/listingRoutes.js
 const express = require("express");
 const {
   createListing,
@@ -20,22 +19,22 @@ const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
 const upload = require("../middlewares/multer");
 
-router.post('/:listingId/upload-video', upload.single('video'), uploadVideo);
-
-// Protejăm toate rutele de anunțuri
+// Protejăm TOATE rutele de anunțuri
 router.use(isAuthenticated);
 
 router.post("/", createListing);
 router.get("/", getListings);
 router.get("/:listingId", getListingById);
-router.put("/:listingId", updateListing); // <-- VERIFICĂ ACEASTĂ LINIE ÎN MOD SPECIAL
+router.put("/:listingId", updateListing);
 router.delete("/:listingId", deleteListing);
 router.post("/:listingId/images", upload.single("image"), uploadImages);
-router.delete("/:listingId/images/:imageId", deleteImage); // <-- ADAUGĂ ACEASTĂ LINIE NOUĂ
+router.delete("/:listingId/images/:imageId", deleteImage);
 router.post("/:listingId/reorder-images", updateImageOrder);
-router.get("/status/sold", getSoldListings); // Rută pentru anunturi vândute
-router.put("/:listingId/sell", markAsSold); // Rută pentru a marca un anunt ca vândut
+router.get("/status/sold", getSoldListings);
+router.put("/:listingId/sell", markAsSold);
 router.put("/:listingId/reactivate", reactivateListing);
 router.post("/:listingId/clone", cloneListing);
-router.delete('/:listingId/video', isAuthenticated, deleteVideo);
+router.post('/:listingId/upload-video', upload.single('video'), uploadVideo);
+router.delete('/:listingId/video', deleteVideo);
+
 module.exports = router;
