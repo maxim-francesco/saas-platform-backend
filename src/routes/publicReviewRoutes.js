@@ -7,8 +7,10 @@ const {
 const { publicFormLimiter } = require("../middlewares/rateLimiter");
 const router = express.Router();
 
-// Endpoint pentru a trimite o recenzie nouă
-router.post("/", publicFormLimiter, submitReview);
+const validate = require("../middlewares/validate");
+const { reviewSchema } = require("../validations/schemas");
+
+router.post("/", publicFormLimiter, validate(reviewSchema), submitReview);
 
 // Endpoint pentru a vedea recenziile aprobate
 router.get("/", getApprovedReviews);

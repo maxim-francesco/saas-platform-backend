@@ -10,13 +10,15 @@ const {
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const attributeRoutes = require("./attributeRoutes"); // 1. Importă rutele de atribute
 const router = express.Router();
+const validate = require("../middlewares/validate");
+const { categorySchema } = require("../validations/schemas");
 
 router.use(isAuthenticated);
 
 // Rutele existente pentru categorii
-router.post("/", createCategory);
+router.post("/", validate(categorySchema), createCategory);
 router.get("/", getCategories);
-router.put("/:categoryId", updateCategory); // Rută nouă
+router.put("/:categoryId", validate(categorySchema), updateCategory);
 router.delete("/:categoryId", deleteCategory); // Rută nouă
 
 // 2. Montează rutele de atribute pe o cale specifică
