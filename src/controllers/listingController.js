@@ -11,8 +11,13 @@ const { google } = require('googleapis');
 const uploadVideo = async (req, res) => {
   try {
     const { listingId } = req.params;
+    const { businessId } = req.user;
     if (!req.file) {
       return res.status(400).json({ message: 'Niciun fișier video primit.' });
+    }
+    const listing = await prisma.listing.findFirst({ where: { id: listingId, businessId } });
+    if (!listing) {
+      return res.status(404).json({ message: 'Anunțul nu a fost găsit sau nu aveți acces.' });
     }
     const uploadStream = cloudinary.uploader.upload_stream(
       { resource_type: "video", folder: "listings_videos", public_id: `video_${listingId}`, overwrite: true },
@@ -37,7 +42,8 @@ const uploadVideo = async (req, res) => {
 const deleteVideo = async (req, res) => {
   try {
     const { listingId } = req.params;
-    const listing = await prisma.listing.findUnique({ where: { id: listingId }, select: { youtubeVideoId: true } });
+    const { businessId } = req.user;
+    const listing = await prisma.listing.findFirst({ where: { id: listingId, businessId }, select: { youtubeVideoId: true } });
     if (!listing || !listing.youtubeVideoId) {
       return res.status(404).json({ message: 'Nu există video de șters.' });
     }
@@ -270,8 +276,11 @@ const markAsSold = async (req, res) => {
   const { businessId } = req.user;
   if (!sellingPrice || !soldAt) return res.status(400).json({ message: "Prețul de vânzare și data sunt obligatorii." });
   try {
-    await prisma.listing.updateMany({ where: { id: listingId, businessId }, data: { status: "SOLD", sellingPrice: parseFloat(sellingPrice), soldAt: new Date(soldAt) } });
-    res.status(200).json({ message: "Anunțul a fost marcat ca vândut." });
+    const result = await prisma.listing.updateMany({ where: { id: listingId, businessId }, data: { status: "SOLD", sellingPrice: parseFloat(sellingPrice), soldAt: new Date(soldAt) } });
+    if (result.count === 0) {
+      return res.status(404).json({ message: "Anunțul nu a fost găsit sau nu aveți acces." });
+    }
+    res.status(200).json({ message: "Anunțul a fost marcat ca vândut." });  
   } catch (error) {
     res.status(500).json({ message: "Eroare la marcarea anunțului ca vândut." });
   }
