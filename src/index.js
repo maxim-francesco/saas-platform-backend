@@ -22,10 +22,22 @@ const superAdminRoutes = require("./routes/superAdminRoutes");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// --- CONFIGURARE CORS CORECTATĂ ---
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : [];
+
 app.use(cors({
-  origin: true, 
-  credentials: true
+  origin: (origin, callback) => {
+    // Permite request-uri fără origin (Postman, curl, mobile apps, server-to-server)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error("Blocat de CORS."));
+  },
+  credentials: true,
 }));
 
 // --- CONFIGURARE LIMITĂ DATE ---
