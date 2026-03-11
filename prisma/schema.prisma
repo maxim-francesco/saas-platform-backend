@@ -30,14 +30,15 @@ model Business {
 }
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
-  password   String
-  role       Role     @default(ADMIN)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  id           String   @id @default(cuid())
+  email        String   @unique
+  password     String
+  tokenVersion Int      @default(0)
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
 }
 
 model Category {

@@ -113,18 +113,25 @@ const updateBusinessProfile = async (req, res) => {
       if (email) userData.email = email;
       
       if (password) {
-        // Dacă se schimbă parola, o criptăm
         const hashedPassword = await bcrypt.hash(password, 10);
         userData.password = hashedPassword;
+        userData.tokenVersion = { increment: 1 };
       }
 
       // 3. Actualizăm user-ul doar dacă avem date noi
       if (Object.keys(userData).length > 0) {
-        await prisma.user.update({
-          where: { id: userId },
-          data: userData,
-        });
-      }
+  const updateData = { ...userData };
+  
+  // Dacă se schimbă parola, invalidăm toate token-urile vechi
+          if (password) {
+            updateData.tokenVersion = { increment: 1 };
+          }
+
+          await prisma.user.update({
+            where: { id: userId },
+            data: updateData,
+          });
+        }
     });
 
     res.status(200).json({ message: "Profilul a fost actualizat cu succes!" });
