@@ -9,7 +9,7 @@ const {
   updateBusinessProfile
 } = require("../controllers/businessController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
-const upload = require("../middlewares/multer");
+const { uploadImage } = require("../middlewares/multer");
 const router = express.Router();
 const validate = require("../middlewares/validate");
 const { updateProfileSchema, updateSettingsSchema } = require("../validations/schemas");
@@ -18,7 +18,7 @@ const { updateProfileSchema, updateSettingsSchema } = require("../validations/sc
 router.use(isAuthenticated);
 
 router.get("/me", getMyBusiness);
-router.post("/upload-banner", upload.single("banner"), uploadBanner);
+router.post("/upload-banner", uploadImage.single("banner"), uploadBanner);
 router.delete("/banner", deleteBanner); 
 router.put("/profile", validate(updateProfileSchema), updateBusinessProfile);
 router.put("/settings", validate(updateSettingsSchema), updateBusinessSettings);
