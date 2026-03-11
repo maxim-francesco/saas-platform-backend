@@ -30,7 +30,7 @@ router.get("/", getListings);
 router.get("/:listingId", getListingById);
 router.put("/:listingId", validate(updateListingSchema), updateListing);
 router.delete("/:listingId", deleteListing);
-router.post("/:listingId/images", upload.single("image"), uploadImages);
+router.post("/:listingId/images", uploadImage.single("image"), uploadImages);
 router.delete("/:listingId/images/:imageId", deleteImage);
 router.post("/:listingId/reorder-images", updateImageOrder);
 router.get("/status/sold", getSoldListings);
