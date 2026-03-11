@@ -1,4 +1,5 @@
 // src/index.js
+const helmet = require("helmet");
 const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
@@ -47,10 +48,12 @@ app.use(cors({
   credentials: true,
 }));
 
+app.use(helmet());
+
 // --- CONFIGURARE LIMITĂ DATE ---
 // Video-urile sunt mari, deci avem nevoie de limite ridicate pentru body-ul cererii
-app.use(express.json({ limit: "1000mb" }));
-app.use(express.urlencoded({ limit: "1000mb", extended: true }));
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ limit: "2mb", extended: true }));
 
 // --- ✅ PLASA DE SIGURANȚĂ #1: LOGGER PENTRU TOATE CERERILE ---
 // Acest middleware se va executa primul pentru ORICE cerere și ne va confirma că a ajuns la server.

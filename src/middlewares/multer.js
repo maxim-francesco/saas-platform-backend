@@ -4,7 +4,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ 
   storage: storage,
   limits: {
-    fileSize: Infinity // Permite orice dimensiune
+    fileSize: 100 * 1024 * 1024, // 100MB — suficient pentru video-uri
   }
 });
 
