@@ -23,18 +23,25 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
   : [];
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Permite request-uri fără origin (Postman, curl, mobile apps, server-to-server)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
+    // Verifică exact SAU versiunea fără/cu www
+    const normalizedOrigin = origin.replace("://www.", "://");
+    const isAllowed = allowedOrigins.some((allowed) => {
+      const normalizedAllowed = allowed.replace("://www.", "://");
+      return normalizedOrigin === normalizedAllowed;
+    });
+
+    if (isAllowed) {
       return callback(null, true);
     }
-    
+
+    console.log(`[CORS] Blocat origin: ${origin}`);
     return callback(new Error("Blocat de CORS."));
   },
   credentials: true,
