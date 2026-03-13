@@ -32,3 +32,8 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+check-and-seed.js
+seed-listings.js
+setup-selectpro-v2.js
+setup-selectpro.js

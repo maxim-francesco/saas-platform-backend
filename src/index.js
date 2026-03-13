@@ -18,6 +18,8 @@ const reviewRoutes = require("./routes/reviewRoutes");
 const viewRoutes = require("./routes/viewRoutes");
 const reportsRoutes = require("./routes/reportsRoutes"); // <-- ADAUGĂ ASTA
 const superAdminRoutes = require("./routes/superAdminRoutes");
+const ogRoutes = require("./routes/ogRoutes");
+
 
 
 const app = express();
@@ -83,6 +85,8 @@ app.use("/api/reviews", reviewRoutes);
 app.use("/api/views", viewRoutes);
 app.use("/api/reports", reportsRoutes); // <-- ADAUGĂ ASTA
 app.use("/api/super-admin", superAdminRoutes);
+app.use("/og", ogRoutes);
+
 
 // --- ✅ PLASA DE SIGURANȚĂ #2: GESTIONAR GLOBAL DE ERORI ---
 // Acest middleware se va executa la final DOAR dacă o eroare a fost aruncată ("thrown")
