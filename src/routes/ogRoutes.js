@@ -45,6 +45,7 @@ router.get("/property/:id", async (req, res) => {
     }
 
     const spaUrl = `${SPA_BASE_URL}/property/${listing.id}`;
+    const ogUrl = `https://saas-platform-backend.onrender.com/og/property/${listing.id}`;
     const ogImage = listing.images[0]?.url || `${SPA_BASE_URL}/og-default.jpg`;
     const ogTitle = listing.title;
     const priceLabel = listing.price
@@ -73,10 +74,11 @@ router.get("/property/:id", async (req, res) => {
 
   <!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) -->
   <meta property="og:type"        content="website" />
-  <meta property="og:url"         content="${esc(spaUrl)}" />
+  <meta property="og:url" content="${esc(ogUrl)}" />
   <meta property="og:title"       content="${esc(ogTitle)}" />
   <meta property="og:description" content="${esc(ogDescription)}" />
   <meta property="og:image"       content="${esc(ogImage)}" />
+  <meta property="og:image:type" content="image/jpeg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:locale"      content="ro_RO" />
