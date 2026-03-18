@@ -1,4 +1,5 @@
 // src/services/autovitService.js
+const { HttpsProxyAgent } = require("https-proxy-agent");
 const axios = require("axios");
 
 const BASE_URL = "https://www.autovit.ro/api/open";
@@ -6,13 +7,26 @@ const BASE_URL = "https://www.autovit.ro/api/open";
 // Cache token per clientId
 const tokenCache = new Map();
 
+// Proxy cu IP static pentru Autovit
+const getProxiedAxios = () => {
+  const proxyUrl = process.env.AUTOVIT_PROXY_URL;
+  if (!proxyUrl) {
+    console.warn("[Autovit] ATENTIE: AUTOVIT_PROXY_URL nu e setat!");
+    return axios;
+  }
+  const agent = new HttpsProxyAgent(proxyUrl);
+  return axios.create({
+    httpsAgent: agent,
+    proxy: false,
+  });
+};
+
 // ─────────────────────────────────────────────
 // 1. AUTENTIFICARE
 // ─────────────────────────────────────────────
 const getAccessToken = async (clientId, clientSecret, username, password) => {
   const now = Date.now();
   const cached = tokenCache.get(clientId);
-
   if (cached && cached.expiresAt > now) {
     console.log("[Autovit] Folosim token din cache.");
     return cached.token;
@@ -20,20 +34,14 @@ const getAccessToken = async (clientId, clientSecret, username, password) => {
 
   try {
     console.log("[Autovit] Generare token nou...");
+    const client = getProxiedAxios(); // <-- ADAUGAT
 
     const params = new URLSearchParams();
     params.append("grant_type", "password");
     params.append("username", username);
     params.append("password", password);
 
-    console.log("[Autovit] Încerc autentificare cu:", {
-      clientId,
-      username,
-      hasSecret: !!clientSecret,
-      hasPassword: !!password,
-    });
-
-    const response = await axios.post(
+    const response = await client.post( // <-- client in loc de axios
       `${BASE_URL}/oauth/token`,
       params.toString(),
       {
@@ -52,7 +60,7 @@ const getAccessToken = async (clientId, clientSecret, username, password) => {
     return access_token;
   } catch (error) {
     console.error("[Autovit] Eroare autentificare:", error.response?.data || error.message);
-    throw new Error("Nu s-a putut obține token-ul Autovit.");
+    throw new Error("Nu s-a putut obtine token-ul Autovit.");
   }
 };
 
@@ -61,14 +69,15 @@ const getAccessToken = async (clientId, clientSecret, username, password) => {
 // ─────────────────────────────────────────────
 const createImageCollection = async (imageUrls, token, username) => {
   try {
-    console.log(`[Autovit] Creare colecție cu ${imageUrls.length} imagini...`);
+    console.log(`[Autovit] Creare colectie cu ${imageUrls.length} imagini...`);
+    const client = getProxiedAxios(); // <-- ADAUGAT
 
     const imagesPayload = {};
     imageUrls.forEach((url, index) => {
       imagesPayload[String(index + 1)] = url;
     });
 
-    const response = await axios.post(
+    const response = await client.post( // <-- client
       `${BASE_URL}/imageCollections`,
       imagesPayload,
       {
@@ -81,11 +90,11 @@ const createImageCollection = async (imageUrls, token, username) => {
       }
     );
 
-    console.log(`[Autovit] Colecție imagini creată cu ID: ${response.data.id}`);
+    console.log(`[Autovit] Colectie imagini creata cu ID: ${response.data.id}`);
     return response.data.id;
   } catch (error) {
-    console.error("[Autovit] Eroare creare colecție imagini:", error.response?.data || error.message);
-    throw new Error("Nu s-a putut crea colecția de imagini pe Autovit.");
+    console.error("[Autovit] Eroare creare colectie imagini:", error.response?.data || error.message);
+    throw new Error("Nu s-a putut crea colectia de imagini pe Autovit.");
   }
 };
 
@@ -94,9 +103,10 @@ const createImageCollection = async (imageUrls, token, username) => {
 // ─────────────────────────────────────────────
 const createAdvert = async (advertData, token, username) => {
   try {
-    console.log("[Autovit] Creare anunț...");
+    console.log("[Autovit] Creare anunt...");
+    const client = getProxiedAxios(); // <-- ADAUGAT
 
-    const response = await axios.post(
+    const response = await client.post( // <-- client
       `${BASE_URL}/account/adverts`,
       advertData,
       {
@@ -108,12 +118,12 @@ const createAdvert = async (advertData, token, username) => {
       }
     );
 
-    console.log(`[Autovit] Anunț creat cu ID: ${response.data.id}`);
+    console.log(`[Autovit] Anunt creat cu ID: ${response.data.id}`);
     return response.data;
   } catch (error) {
-    console.error("[Autovit] Eroare creare anunț:", error.response?.data || error.message);
+    console.error("[Autovit] Eroare creare anunt:", error.response?.data || error.message);
     throw new Error(
-      error.response?.data?.error?.message || "Nu s-a putut crea anunțul pe Autovit."
+      error.response?.data?.error?.message || "Nu s-a putut crea anuntul pe Autovit."
     );
   }
 };
@@ -123,9 +133,10 @@ const createAdvert = async (advertData, token, username) => {
 // ─────────────────────────────────────────────
 const updateAdvert = async (autovitId, advertData, token, username) => {
   try {
-    console.log(`[Autovit] Actualizare anunț ${autovitId}...`);
+    console.log(`[Autovit] Actualizare anunt ${autovitId}...`);
+    const client = getProxiedAxios(); // <-- ADAUGAT
 
-    const response = await axios.put(
+    const response = await client.put( // <-- client
       `${BASE_URL}/account/adverts/${autovitId}`,
       advertData,
       {
@@ -137,12 +148,12 @@ const updateAdvert = async (autovitId, advertData, token, username) => {
       }
     );
 
-    console.log(`[Autovit] Anunț ${autovitId} actualizat.`);
+    console.log(`[Autovit] Anunt ${autovitId} actualizat.`);
     return response.data;
   } catch (error) {
-    console.error("[Autovit] Eroare actualizare anunț:", error.response?.data || error.message);
+    console.error("[Autovit] Eroare actualizare anunt:", error.response?.data || error.message);
     throw new Error(
-      error.response?.data?.error?.message || "Nu s-a putut actualiza anunțul pe Autovit."
+      error.response?.data?.error?.message || "Nu s-a putut actualiza anuntul pe Autovit."
     );
   }
 };
@@ -152,31 +163,31 @@ const updateAdvert = async (autovitId, advertData, token, username) => {
 // ─────────────────────────────────────────────
 const deleteAdvert = async (autovitId, token, username) => {
   try {
-    console.log(`[Autovit] Ștergere anunț ${autovitId}...`);
+    console.log(`[Autovit] Stergere anunt ${autovitId}...`);
+    const client = getProxiedAxios(); // <-- ADAUGAT
 
-    await axios.delete(`${BASE_URL}/account/adverts/${autovitId}`, {
-      headers: {
-        "User-Agent": username,
-        Authorization: `Bearer ${token}`,
-      },
-    });
+    await client.delete( // <-- client
+      `${BASE_URL}/account/adverts/${autovitId}`,
+      {
+        headers: {
+          "User-Agent": username,
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-    console.log(`[Autovit] Anunț ${autovitId} șters.`);
+    console.log(`[Autovit] Anunt ${autovitId} sters.`);
     return true;
   } catch (error) {
-    console.error("[Autovit] Eroare ștergere anunț:", error.response?.data || error.message);
-    throw new Error("Nu s-a putut șterge anunțul de pe Autovit.");
+    console.error("[Autovit] Eroare stergere anunt:", error.response?.data || error.message);
+    throw new Error("Nu s-a putut sterge anuntul de pe Autovit.");
   }
 };
 
-// ─────────────────────────────────────────────
-// 6. ACTIVARE ANUNȚ
-// ─────────────────────────────────────────────
 const activateAdvert = async (autovitId, token, username) => {
   try {
-    console.log(`[Autovit] Activare anunț ${autovitId}...`);
-
-    const response = await axios.post(
+    const client = getProxiedAxios(); // <-- ADAUGAT
+    const response = await client.post( // <-- client
       `${BASE_URL}/account/adverts/${autovitId}/activate`,
       {},
       {
@@ -187,23 +198,16 @@ const activateAdvert = async (autovitId, token, username) => {
         },
       }
     );
-
-    console.log(`[Autovit] Anunț ${autovitId} activat.`);
     return response.data;
   } catch (error) {
-    console.error("[Autovit] Eroare activare anunț:", error.response?.data || error.message);
-    throw new Error("Nu s-a putut activa anunțul pe Autovit.");
+    throw new Error("Nu s-a putut activa anuntul pe Autovit.");
   }
 };
 
-// ─────────────────────────────────────────────
-// 7. DEZACTIVARE ANUNȚ
-// ─────────────────────────────────────────────
 const deactivateAdvert = async (autovitId, token, username) => {
   try {
-    console.log(`[Autovit] Dezactivare anunț ${autovitId}...`);
-
-    const response = await axios.post(
+    const client = getProxiedAxios(); // <-- ADAUGAT
+    const response = await client.post( // <-- client
       `${BASE_URL}/account/adverts/${autovitId}/deactivate`,
       {
         reason: {
@@ -219,12 +223,9 @@ const deactivateAdvert = async (autovitId, token, username) => {
         },
       }
     );
-
-    console.log(`[Autovit] Anunț ${autovitId} dezactivat.`);
     return response.data;
   } catch (error) {
-    console.error("[Autovit] Eroare dezactivare anunț:", error.response?.data || error.message);
-    throw new Error("Nu s-a putut dezactiva anunțul pe Autovit.");
+    throw new Error("Nu s-a putut dezactiva anuntul pe Autovit.");
   }
 };
 
