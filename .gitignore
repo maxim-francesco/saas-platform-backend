@@ -6,25 +6,25 @@ node_modules
 
 # --- Date și Cache ---
 # Ignoră fișierele JSON care par a fi exporturi de date sau cache
-autovit_category_29.json
-autovit_makes.json
-autovit_models_bmw.json
+# autovit_category_29.json
+# autovit_makes.json
+# autovit_models_bmw.json
 # Sau poți folosi un wildcard pentru toate: autovit_*.json
 
 # --- Scripturi de Test și Utilitare ---
 # Ignoră scripturile de testare locală
-testAutovit*.js
-testListingAttributes.js
-findTestBusiness.js
+# testAutovit*.js
+# testListingAttributes.js
+# findTestBusiness.js
 
 # Ignoră scripturile de administrare/configurare care pot conține date sensibile
-createSuperAdmin.js
-updateKey.js
-updateAutovit.js
+# createSuperAdmin.js
+# updateKey.js
+# updateAutovit.js
 
 # --- Baze de date ---
 # Ignoră scripturile SQL de reparație temporară
-fix_migration.sql
+# fix_migration.sql
 
 # --- Node.js Standard (recomandat să le ai mereu) ---
 node_modules/
