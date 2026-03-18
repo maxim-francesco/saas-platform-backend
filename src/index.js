@@ -23,6 +23,7 @@ const ogRoutes = require("./routes/ogRoutes");
 
 
 const app = express();
+app.set("trust proxy", 1); // <-- ADAUGĂ ACEASTĂ LINIE
 const PORT = process.env.PORT || 3000;
 
 const allowedOrigins = process.env.ALLOWED_ORIGINS
