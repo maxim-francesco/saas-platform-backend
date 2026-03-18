@@ -1,5 +1,5 @@
 // src/services/autovitService.js
-const { HttpsProxyAgent } = require("https-proxy-agent");
+const HttpsProxyAgent = require("https-proxy-agent");
 const axios = require("axios");
 
 const BASE_URL = "https://www.autovit.ro/api/open";
@@ -14,7 +14,7 @@ const getProxiedAxios = () => {
     console.warn("[Autovit] ATENTIE: AUTOVIT_PROXY_URL nu e setat!");
     return axios;
   }
-  const agent = new HttpsProxyAgent(proxyUrl);
+  const agent = new HttpsProxyAgent.HttpsProxyAgent(proxyUrl);
   return axios.create({
     httpsAgent: agent,
     proxy: false,
