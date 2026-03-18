@@ -3,18 +3,6 @@ const express = require("express");
 const prisma = require("../config/prismaClient");
 const router = express.Router();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /og/property/:id
-//
-// Servește un HTML minimal cu Open Graph meta tags, urmată de un redirect JS/meta
-// spre SPA (necris.ro/property/:id).
-//
-// Cum funcționează:
-//  • Crawlerii (WhatsApp, Facebook, Telegram) citesc <head> și nu execută JS →
-//    văd og:title, og:image, og:description.
-//  • Browserele normale execută JS și sunt redirectate instant la SPA.
-// ─────────────────────────────────────────────────────────────────────────────
-
 const SPA_BASE_URL = process.env.SPA_BASE_URL || "https://necris.ro";
 
 router.get("/property/:id", async (req, res) => {
@@ -40,7 +28,6 @@ router.get("/property/:id", async (req, res) => {
     });
 
     if (!listing) {
-      // Anunț inexistent — redirect simplu la homepage
       return res.redirect(302, SPA_BASE_URL);
     }
 
@@ -57,7 +44,6 @@ router.get("/property/:id", async (req, res) => {
         : `Proprietate disponibilă la ${listing.business?.name || "Necris Imobiliare"}`) +
       priceLabel;
 
-    // Escape HTML pentru a preveni XSS în meta tags
     const esc = (str) =>
       String(str)
         .replace(/&/g, "&amp;")
@@ -73,25 +59,22 @@ router.get("/property/:id", async (req, res) => {
   <title>${esc(ogTitle)}</title>
 
   <!-- Open Graph (Facebook, WhatsApp, Telegram, LinkedIn) -->
-  <meta property="og:type"        content="website" />
-  <meta property="og:url" content="${esc(ogUrl)}" />
-  <meta property="og:title"       content="${esc(ogTitle)}" />
-  <meta property="og:description" content="${esc(ogDescription)}" />
-  <meta property="og:image"       content="${esc(ogImage)}" />
-  <meta property="og:image:type" content="image/jpeg" />
-  <meta property="og:image:width" content="1200" />
+  <meta property="og:type"         content="website" />
+  <meta property="og:url"          content="${esc(ogUrl)}" />
+  <meta property="og:title"        content="${esc(ogTitle)}" />
+  <meta property="og:description"  content="${esc(ogDescription)}" />
+  <meta property="og:image"        content="${esc(ogImage)}" />
+  <meta property="og:image:type"   content="image/jpeg" />
+  <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:locale"      content="ro_RO" />
-  <meta property="og:site_name"   content="${esc(listing.business?.name || "Necris Imobiliare")}" />
+  <meta property="og:locale"       content="ro_RO" />
+  <meta property="og:site_name"    content="${esc(listing.business?.name || "Necris Imobiliare")}" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:title"       content="${esc(ogTitle)}" />
   <meta name="twitter:description" content="${esc(ogDescription)}" />
   <meta name="twitter:image"       content="${esc(ogImage)}" />
-
-  <!-- Meta refresh: fallback pentru browsere fără JS -->
-  <meta http-equiv="refresh" content="0; url=${esc(spaUrl)}" />
 </head>
 <body>
   <p>Se încarcă... <a href="${esc(spaUrl)}">Click aici dacă nu ești redirecționat automat.</a></p>
@@ -103,7 +86,6 @@ router.get("/property/:id", async (req, res) => {
 </body>
 </html>`;
 
-    // Cache 5 minute pe CDN/proxy, 1 minut pe browser
     res.setHeader("Cache-Control", "public, max-age=60, s-maxage=300");
     res.setHeader("Content-Type", "text/html; charset=utf-8");
     return res.status(200).send(html);
