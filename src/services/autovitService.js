@@ -598,7 +598,7 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
   }
 
   return {
-    title: listing.title,
+    title: listing.title.replace(/\b\w/g, (c) => c.toUpperCase()),
     description: listing.description && listing.description.trim().length >= 30
       ? listing.description
       : (listing.description || "") + " Detalii suplimentare disponibile la telefon.",

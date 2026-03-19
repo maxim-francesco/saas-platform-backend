@@ -1,0 +1,1 @@
+ALTER TABLE "public"."Listing" ALTER COLUMN "autovitId" TYPE BIGINT;
