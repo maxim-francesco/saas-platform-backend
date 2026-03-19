@@ -108,7 +108,7 @@ model Listing {
   views           View[]
 
   youtubeVideoId String?  // <--- Adaugă această linie
-  autovitId   Int?
+  autovitId   BigInt?
   autovitStatus String?  // "active", "inactive", null
 
 

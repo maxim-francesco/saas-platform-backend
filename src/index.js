@@ -23,6 +23,10 @@ const ogRoutes = require("./routes/ogRoutes");
 
 
 const app = express();
+// Fix serializare BigInt in JSON
+BigInt.prototype.toJSON = function() {
+  return this.toString();
+};
 app.set("trust proxy", 1); // <-- ADAUGĂ ACEASTĂ LINIE
 const PORT = process.env.PORT || 3000;
 

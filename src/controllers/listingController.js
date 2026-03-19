@@ -168,7 +168,7 @@ const uploadImages = async (req, res) => {
             const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
             await prisma.listing.update({
               where: { id: listingId },
-              data: { autovitId: result.id, autovitStatus: "inactive" },
+              data: { autovitId: BigInt(result.id), autovitStatus: "inactive" },
             });
             console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
           }
