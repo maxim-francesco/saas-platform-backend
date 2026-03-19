@@ -366,6 +366,13 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     params.first_registration_year = params.year;
   }
 
+  console.log("[Autovit] TOATE ATRIBUTELE DIN DB:", 
+  listing.attributeValues.map(av => ({
+    name: av.attribute.name,
+    value: av.stringValue ?? av.numberValue ?? av.booleanValue
+  }))
+  );
+
   return {
     title: listing.title,
     // În return-ul final:
