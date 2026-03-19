@@ -597,22 +597,29 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     params.first_registration_year = params.year;
   }
 
-  return {
-    title: listing.title.replace(/\b\w/g, (c) => c.toUpperCase()),
-    description: listing.description && listing.description.trim().length >= 30
-      ? listing.description
-      : (listing.description || "") + " Detalii suplimentare disponibile la telefon.",
-    category_id: 29,
-    region_id: 1,
-    city_id: 1,
-    advertiser_type: "business",
-    image_collection_id: imageCollectionId,
-    contact: {
-      person: "Dealer",
-      phones: [],
-    },
-    params,
-  };
+  const normalizedTitle = listing.title
+  .split(' ')
+  .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+  .join(' ');
+
+console.log("[Autovit] TITLU NORMALIZAT:", normalizedTitle);
+
+return {
+  title: normalizedTitle,
+  description: listing.description && listing.description.trim().length >= 30
+    ? listing.description
+    : (listing.description || "") + " Detalii suplimentare disponibile la telefon.",
+  category_id: 29,
+  region_id: 1,
+  city_id: 1,
+  advertiser_type: "business",
+  image_collection_id: imageCollectionId,
+  contact: {
+    person: "Dealer",
+    phones: [],
+  },
+  params,
+};
 };
 
 module.exports = {
