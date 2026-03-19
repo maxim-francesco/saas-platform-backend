@@ -132,50 +132,65 @@ const uploadImages = async (req, res) => {
 
       // --- INTEGRATION AUTOVIT: SYNC DUPĂ UPLOAD IMAGINE ---
       ;(async () => {
-        try {
-          const fullListing = await prisma.listing.findUnique({
-            where: { id: listingId },
-            include: {
-              business: true,
-              attributeValues: { include: { attribute: true } },
-              images: { orderBy: { order: "asc" } },
-            },
-          });
+  try {
+    const fullListing = await prisma.listing.findUnique({
+      where: { id: listingId },
+      include: {
+        business: true,
+        attributeValues: { include: { attribute: true } },
+        images: { orderBy: { order: "asc" } },
+      },
+    });
 
-          const b = fullListing?.business;
-          if (!b?.autovitClientId || !b?.autovitUsername) return;
+    const b = fullListing?.business;
+    if (!b?.autovitClientId || !b?.autovitUsername) return;
 
-          const imageUrls = fullListing.images.map(img => img.url);
-          if (imageUrls.length === 0) return;
+    const imageUrls = fullListing.images.map(img => img.url);
+    if (imageUrls.length === 0) return;
 
-          const token = await autovitService.getAccessToken(
-            b.autovitClientId, b.autovitClientSecret,
-            b.autovitUsername, b.autovitPassword
-          );
+    const token = await autovitService.getAccessToken(
+      b.autovitClientId, b.autovitClientSecret,
+      b.autovitUsername, b.autovitPassword
+    );
 
-          const imageCollectionId = await autovitService.createImageCollection(
-            imageUrls, token, b.autovitUsername
-          );
+    const imageCollectionId = await autovitService.createImageCollection(
+      imageUrls, token, b.autovitUsername
+    );
 
-          const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
+    const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
 
-          if (fullListing.autovitId) {
-            // Anunțul există deja pe Autovit — actualizăm
-            await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
-            console.log(`[Autovit] Anunț ${fullListing.autovitId} actualizat cu imagini noi.`);
-          } else {
-            // Prima imagine uploadată — creăm anunțul
-            const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
-            await prisma.listing.update({
-              where: { id: listingId },
-              data: { autovitId: BigInt(result.id), autovitStatus: "inactive" },
-            });
-            console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
-          }
-        } catch (err) {
-          console.error("[Autovit] Eroare la sincronizare (uploadImages):", err.message);
-        }
-      })();
+    if (fullListing.autovitId) {
+      // Anunțul există deja pe Autovit — actualizăm
+      await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
+      console.log(`[Autovit] Anunț ${fullListing.autovitId} actualizat cu imagini noi.`);
+    } else {
+      // Prima imagine uploadată — creăm anunțul
+      const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
+      
+      // Salvăm ID-ul în DB
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { autovitId: BigInt(result.id), autovitStatus: "inactive" },
+      });
+      console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
+
+      // ─── ACTIVARE AUTOMATĂ ───
+      try {
+        await autovitService.activateAdvert(result.id, token, b.autovitUsername);
+        await prisma.listing.update({
+          where: { id: listingId },
+          data: { autovitStatus: "active" },
+        });
+        console.log(`[Autovit] Anunț ${result.id} activat automat.`);
+      } catch (activateErr) {
+        console.error(`[Autovit] Eroare la activare automată:`, activateErr.message);
+      }
+      // ─── SFÂRȘIT ACTIVARE ───
+    }
+  } catch (err) {
+    console.error("[Autovit] Eroare la sincronizare (uploadImages):", err.message);
+  }
+})();
       // --- END AUTOVIT: SYNC DUPĂ UPLOAD IMAGINE ---
 
 
