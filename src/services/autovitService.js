@@ -240,18 +240,18 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-  // Mapping nume atribut DB → cheie Autovit
   const ATTRIBUTE_MAP = {
-    "marca":                "make",
-    "model":                "model",
-    "an":                   "year",
-    "kilometraj":           "mileage",
-    "combustibil":          "fuel_type",
-    "capacitate cilindrica":"engine_capacity",
-    "putere":               "engine_power",
-    "caroserie":            "body_type",
-    "cutie de viteze":      "gearbox",
-    "culoare":              "color",
+    "marca":                 "make",
+    "model":                 "model",
+    "an":                    "year",
+    "kilometraj":            "mileage",
+    "combustibil":           "fuel_type",
+    "capacitate cilindrica": "engine_capacity",
+    "putere":                "engine_power",
+    "caroserie":             "body_type",
+    "cutie de viteze":       "gearbox",
+    "culoare":               "color",
+    "norma de poluare":      "pollution_standard",
   };
 
   const fuelTypeMap = {
@@ -260,49 +260,253 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     "hybrid": "hybrid", "hibrid": "hybrid",
     "electric": "electric", "electrica": "electric",
     "lpg": "lpg", "gpl": "lpg",
+    "benzina + gpl": "petrol-lpg",
     "cng": "cng",
+    "benzina + cng": "petrol-cng",
+    "hibrid plug-in": "plugin-hybrid",
   };
 
   const gearboxMap = {
     "manuala": "manual", "manual": "manual",
     "automata": "automatic", "automatic": "automatic",
-    "semi-automata": "semi-automatic", "semi_automatic": "semi-automatic",
+    "semi-automata": "semi-automatic",
   };
 
-    const bodyTypeMap = {
-    "sedan": "sedan",
-    "berlina": "sedan",
-    "hatchback": "compact",      // Autovit nu are hatchback, cel mai apropiat e compact
-    "combi": "combi",
-    "break": "combi",
+  const bodyTypeMap = {
+    "sedan": "sedan", "berlina": "sedan",
+    "hatchback": "compact", "compacta": "compact", "compact": "compact",
+    "combi": "combi", "break": "combi",
     "suv": "suv",
     "coupe": "coupe",
-    "cabrio": "cabrio",
-    "cabriolet": "cabrio",
-    "van": "minivan",
-    "monovolum": "minivan",
-    "minivan": "minivan",
-    "pickup": "suv",             // Nu există pickup, fallback suv
+    "cabrio": "cabrio", "cabriolet": "cabrio",
+    "van": "minivan", "monovolum": "minivan", "minivan": "minivan",
     "mini": "mini",
-    "city-car": "city-car",
-    "compact": "compact",
+    "masina mica": "mini",
+    "masina de oras": "city-car", "city-car": "city-car",
   };
 
   const colorMap = {
-  "alb": "white", "white": "white",
-  "negru": "black", "black": "black",
-  "gri": "gray", "gray": "gray", "grey": "gray",
-  "argint": "silver", "silver": "silver",
-  "albastru": "blue", "blue": "blue",
-  "rosu": "red", "red": "red",
-  "verde": "green", "green": "green",
-  "maro": "brown", "brown": "brown",
-  "portocaliu": "orange", "orange": "orange",
-  "galben": "yellow-gold", "yellow": "yellow-gold", "auriu": "yellow-gold",
-  "bej": "bej", "beige": "bej",
-};
+    "alb": "white", "white": "white",
+    "negru": "black", "black": "black",
+    "gri": "gray", "gray": "gray", "grey": "gray",
+    "argint": "silver", "silver": "silver",
+    "albastru": "blue", "blue": "blue",
+    "rosu": "red", "red": "red",
+    "verde": "green", "green": "green",
+    "maro": "brown", "brown": "brown",
+    "portocaliu": "orange", "orange": "orange",
+    "galben": "yellow-gold", "auriu": "yellow-gold", "yellow": "yellow-gold",
+    "bej": "bej", "beige": "bej",
+    "alte culori": "other",
+  };
 
-  // Extragem valorile din attributeValues
+  // ─────────────────────────────────────────────
+  // MODEL MAP — traduce valorile din DB la slug-urile Autovit
+  // Cheia = ce e stocat în DB (normalized)
+  // Valoarea = slug-ul acceptat de Autovit
+  // ─────────────────────────────────────────────
+  const modelMap = {
+    // BMW
+    "seria 1": "seria-1", "seria1": "seria-1",
+    "seria 2": "seria-2", "seria2": "seria-2",
+    "seria 3": "seria-3", "seria3": "seria-3",
+    "e46": "seria-3", "e90": "seria-3", "e36": "seria-3", "e30": "seria-3",
+    "seria 4": "seria-4", "seria4": "seria-4",
+    "seria 5": "seria-5", "seria5": "seria-5",
+    "e60": "seria-5", "e39": "seria-5", "e34": "seria-5",
+    "seria 6": "seria-6", "seria6": "seria-6",
+    "seria 7": "seria-7", "seria7": "seria-7",
+    "e65": "seria-7", "e38": "seria-7",
+    "seria 8": "seria-8", "seria8": "seria-8",
+    "x1": "x1", "x2": "x2", "x3": "x3", "x4": "x4",
+    "x5": "x5", "x6": "x6", "x7": "x-7",
+    "i3": "i3", "i4": "i4", "i5": "i5", "i7": "i7",
+    "ix": "ix", "ix3": "ix3", "m3": "bmw-m3", "m4": "bmw-m4",
+    "m5": "bmw-m5", "z3": "bmw-z3", "z4": "bmw-z4",
+
+    // Mercedes
+    "clasa a": "a", "clasa-a": "a",
+    "clasa b": "b", "clasa-b": "b",
+    "clasa c": "c", "clasa-c": "c",
+    "clasa e": "e", "clasa-e": "e",
+    "clasa s": "s", "clasa-s": "s",
+    "clasa g": "g", "clasa-g": "g",
+    "gla": "gla", "glb": "glb", "glc": "glc",
+    "gle": "gle", "gls": "gls", "cla": "cla", "cls": "cls",
+    "slk": "slk", "sl": "sl", "amg gt": "amg-gt",
+
+    // Audi
+    "a1": "a1", "a2": "a2", "a3": "a3", "a4": "a4",
+    "a5": "a5", "a6": "a6", "a7": "a7", "a8": "a8",
+    "q2": "q2", "q3": "q3", "q4": "q4", "q5": "q5",
+    "q6": "q6", "q7": "q7", "q8": "q8",
+    "tt": "tt", "r8": "r8", "e-tron": "e-tron",
+    "rs3": "rs3", "rs4": "rs4", "rs5": "rs5", "rs6": "rs6", "rs7": "rs7",
+
+    // Volkswagen
+    "golf": "golf", "polo": "polo", "passat": "passat",
+    "tiguan": "tiguan", "touareg": "touareg", "touran": "touran",
+    "t-roc": "t-roc", "t-cross": "t-cross", "arteon": "arteon",
+    "caddy": "caddy", "transporter": "transporter", "amarok": "amarok",
+    "id.3": "id3", "id.4": "id-4", "id.5": "id5",
+
+    // Skoda
+    "octavia": "octavia", "fabia": "fabia", "superb": "superb",
+    "karoq": "karoq", "kodiaq": "kodiaq", "kamiq": "kamiq",
+    "scala": "scala", "enyaq": "enyaq",
+
+    // Opel
+    "astra": "astra", "corsa": "corsa", "insignia": "insignia",
+    "mokka": "mokka", "grandland": "grandland", "crossland": "crossland-x",
+    "zafira": "zafira", "vectra": "vectra", "omega": "omega",
+
+    // Ford
+    "focus": "focus", "fiesta": "fiesta", "mondeo": "mondeo",
+    "kuga": "kuga", "puma": "puma", "edge": "edge",
+    "mustang": "mustang", "ranger": "ranger", "transit": "transit",
+    "ecosport": "ecosport", "galaxy": "galaxy", "s-max": "s-max",
+    "c-max": "c-max", "b-max": "b-max",
+
+    // Renault
+    "clio": "clio", "megane": "megane", "laguna": "laguna",
+    "scenic": "scenic", "captur": "captur", "kadjar": "kadjar",
+    "koleos": "koleos", "duster": "duster", "logan": "logan",
+    "sandero": "sandero", "talisman": "talisman", "zoe": "zoe",
+    "austral": "austral", "arkana": "arkana",
+
+    // Peugeot
+    "206": "206", "207": "207", "208": "208",
+    "306": "306", "307": "307", "308": "308",
+    "406": "406", "407": "407", "408": "408",
+    "2008": "2008", "3008": "3008", "4008": "4008", "5008": "5008",
+    "508": "508",
+
+    // Toyota
+    "yaris": "yaris", "corolla": "corolla", "camry": "camry",
+    "rav4": "rav-4", "rav 4": "rav-4", "land cruiser": "land-cruiser",
+    "hilux": "hilux", "avensis": "avensis", "auris": "auris",
+    "prius": "prius", "c-hr": "c-hr", "aygo": "aygo",
+
+    // Hyundai
+    "i10": "i10", "i20": "i20", "i30": "i30", "i40": "i40",
+    "tucson": "tucson", "santa fe": "santa-fe", "kona": "kona",
+    "ioniq": "ioniq", "ix35": "ix35", "ix20": "ix20",
+
+    // Kia
+    "picanto": "picanto", "rio": "rio", "ceed": "ceed",
+    "sportage": "sportage", "sorento": "sorento", "stinger": "stinger",
+    "niro": "niro", "ev6": "ev6",
+
+    // Dacia
+    "sandero": "sandero", "logan": "logan", "duster": "duster",
+    "jogger": "jogger", "spring": "spring",
+
+    // Honda
+    "civic": "civic", "accord": "accord", "cr-v": "cr-v",
+    "jazz": "jazz", "hr-v": "hr-v",
+
+    // Mazda
+    "mazda 3": "3", "mazda 6": "6", "cx-5": "cx-5",
+    "cx-3": "cx-3", "cx-30": "cx-30", "mx-5": "mx-5",
+
+    // Nissan
+    "micra": "micra", "juke": "juke", "qashqai": "qashqai",
+    "x-trail": "x-trail", "leaf": "leaf", "navara": "navara",
+
+    // Seat
+    "ibiza": "ibiza", "leon": "leon", "ateca": "ateca",
+    "tarraco": "tarraco", "arona": "arona",
+
+    // Citroen
+    "c1": "c1", "c2": "c2", "c3": "c3", "c4": "c4",
+    "c5": "c5", "berlingo": "berlingo", "jumper": "jumper",
+    "c3 aircross": "c3-aircross", "c5 aircross": "c5-aircross",
+
+    // Fiat
+    "500": "500", "punto": "punto", "bravo": "bravo",
+    "tipo": "tipo", "doblo": "doblo", "ducato": "ducato",
+    "panda": "panda",
+
+    // Volvo
+    "s40": "s40", "s60": "s60", "s80": "s80", "s90": "s90",
+    "v40": "v40", "v50": "v50", "v60": "v60", "v70": "v70", "v90": "v90",
+    "xc40": "xc-40", "xc 40": "xc-40",
+    "xc60": "xc-60", "xc 60": "xc-60",
+    "xc90": "xc-90", "xc 90": "xc-90",
+
+    // Jeep
+    "renegade": "renegade", "compass": "compass",
+    "cherokee": "cherokee", "grand cherokee": "grand-cherokee",
+    "wrangler": "wrangler",
+
+    // Mitsubishi
+    "outlander": "outlander", "asx": "asx",
+    "lancer": "lancer", "pajero": "pajero", "eclipse cross": "eclipse-cross",
+
+    // Subaru
+    "impreza": "impreza", "forester": "forester",
+    "outback": "outback", "xv": "xv", "legacy": "legacy",
+
+    // Suzuki
+    "swift": "swift", "vitara": "vitara", "jimny": "jimny",
+    "sx4": "sx4", "ignis": "ignis",
+
+    // Alfa Romeo
+    "giulia": "giulia", "stelvio": "stelvio", "giulietta": "giulietta",
+    "147": "147", "156": "156", "159": "159",
+
+    // Porsche
+    "911": "911", "cayenne": "cayenne", "macan": "macan",
+    "panamera": "panamera", "taycan": "taycan", "boxster": "boxster",
+    "cayman": "cayman",
+
+    // Land Rover
+    "range rover": "range-rover", "discovery": "discovery",
+    "freelander": "freelander", "defender": "defender",
+    "range rover sport": "range-rover-sport",
+    "range rover evoque": "range-rover-evoque",
+    "range rover velar": "range-rover-velar",
+    "discovery sport": "discovery-sport",
+
+    // Jaguar
+    "xe": "xe", "xf": "xf", "xj": "xj",
+    "f-pace": "f-pace", "e-pace": "e-pace", "i-pace": "i-pace",
+    "f-type": "f-type",
+
+    // Lexus
+    "is": "seria-is", "es": "seria-es", "gs": "seria-gs",
+    "ls": "seria-ls", "rx": "seria-rx", "nx": "serianx",
+    "ux": "lexus-ux", "lc": "lc-500",
+
+    // Chevrolet
+    "aveo": "aveo", "cruze": "cruze", "captiva": "captiva",
+    "malibu": "malibu", "orlando": "orlando", "trax": "trax",
+    "spark": "spark",
+
+    // Chrysler
+    "300c": "300c", "300m": "300m", "voyager": "voyager",
+    "grand voyager": "grand-voyager", "pt cruiser": "pt-cruiser",
+
+    // Dodge
+    "durango": "durango", "journey": "journey",
+    "challenger": "challenger", "charger": "charger",
+
+    // Lancia
+    "delta": "delta", "ypsilon": "ypsilon",
+
+    // Mini
+    "cooper": "cooper", "cooper s": "cooper-s",
+    "countryman": "countryman", "clubman": "clubman",
+    "paceman": "paceman",
+
+    // Saab
+    "9-3": "9-3", "9-5": "9-5",
+
+    // Lada / Dacia vechi
+    "1300": "1300", "1310": "1310",
+  };
+
+  // Extragere atribute din DB
   const params = {};
   if (listing.attributeValues && Array.isArray(listing.attributeValues)) {
     for (const av of listing.attributeValues) {
@@ -317,7 +521,7 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     }
   }
 
-  // Normalizăm valorile specifice
+  // Normalizări
   if (params.fuel_type) {
     params.fuel_type = fuelTypeMap[normalizeText(params.fuel_type)] || normalizeText(params.fuel_type);
   }
@@ -329,29 +533,47 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
   if (params.gearbox) {
     params.gearbox = gearboxMap[normalizeText(params.gearbox)] || "manual";
   }
+
   if (params.body_type) {
     params.body_type = bodyTypeMap[normalizeText(params.body_type)] || "compact";
   }
+
   if (params.make) {
     params.make = normalizeText(params.make).replace(/\s+/g, "-");
   }
+
+  // ─── MODEL: traducere DB → slug Autovit ───
   if (params.model) {
-    params.model = normalizeText(params.model).replace(/\s+/g, "-");
+    const normalizedModel = normalizeText(params.model);
+    const mappedModel = modelMap[normalizedModel];
+
+    if (mappedModel) {
+      params.model = mappedModel;
+      console.log(`[Autovit] Model mapat: "${normalizedModel}" → "${mappedModel}"`);
+    } else {
+      // Fallback: trimitem ca atare cu slugify
+      params.model = normalizedModel.replace(/\s+/g, "-");
+      console.warn(`[Autovit] Model nemapat: "${normalizedModel}" — trimis ca slug: "${params.model}"`);
+    }
   }
+
   if (params.engine_power) {
     params.engine_power = String(Math.round(params.engine_power));
   }
+
   if (params.engine_capacity) {
     params.engine_capacity = String(Math.round(params.engine_capacity));
   }
+
   if (params.year) {
     params.year = Math.round(params.year);
   }
+
   if (params.mileage) {
     params.mileage = Math.round(params.mileage);
   }
 
-  // Prețul
+  // Preț
   params.price = {
     "0": "price",
     "1": listing.price || 0,
@@ -359,23 +581,15 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     gross_net: "gross",
   };
 
-  // Câmpuri obligatorii cu fallback
+  // Câmpuri fixe
   params.condition = "used";
   params.is_imported_car = false;
   if (params.year) {
     params.first_registration_year = params.year;
   }
 
-  console.log("[Autovit] TOATE ATRIBUTELE DIN DB:", 
-  listing.attributeValues.map(av => ({
-    name: av.attribute.name,
-    value: av.stringValue ?? av.numberValue ?? av.booleanValue
-  }))
-  );
-
   return {
     title: listing.title,
-    // În return-ul final:
     description: listing.description && listing.description.trim().length >= 30
       ? listing.description
       : (listing.description || "") + " Detalii suplimentare disponibile la telefon.",
