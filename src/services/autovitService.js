@@ -104,6 +104,8 @@ const createImageCollection = async (imageUrls, token, username) => {
 const createAdvert = async (advertData, token, username) => {
   try {
     console.log("[Autovit] Creare anunt...");
+    console.log("[Autovit] PAYLOAD TRIMIS:", JSON.stringify(advertData.params, null, 2)); // <-- ADAUGĂ
+
     const client = getProxiedAxios(); // <-- ADAUGAT
 
     const response = await client.post( // <-- client
