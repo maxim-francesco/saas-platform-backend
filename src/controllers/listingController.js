@@ -165,7 +165,20 @@ const uploadImages = async (req, res) => {
       console.log(`[Autovit] Anunț ${fullListing.autovitId} actualizat cu imagini noi.`);
     } else {
       // Prima imagine uploadată — creăm anunțul
-      const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
+      // verificare race condition
+const freshListing = await prisma.listing.findUnique({
+  where: { id: listingId },
+  select: { autovitId: true },
+});
+
+if (freshListing?.autovitId) {
+  await autovitService.updateAdvert(freshListing.autovitId, payload, token, b.autovitUsername);
+  console.log(`[Autovit] Anunț ${freshListing.autovitId} actualizat (race condition evitat).`);
+  return;
+}
+
+// Prima imagine uploadată — creăm anunțul
+const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
       
       // Salvăm ID-ul în DB
       await prisma.listing.update({
