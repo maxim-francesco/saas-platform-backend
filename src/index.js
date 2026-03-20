@@ -19,6 +19,7 @@ const viewRoutes = require("./routes/viewRoutes");
 const reportsRoutes = require("./routes/reportsRoutes"); // <-- ADAUGĂ ASTA
 const superAdminRoutes = require("./routes/superAdminRoutes");
 const ogRoutes = require("./routes/ogRoutes");
+const autovitRoutes = require("./routes/autovitRoutes");
 
 
 
@@ -91,6 +92,8 @@ app.use("/api/views", viewRoutes);
 app.use("/api/reports", reportsRoutes); // <-- ADAUGĂ ASTA
 app.use("/api/super-admin", superAdminRoutes);
 app.use("/og", ogRoutes);
+app.use("/api/autovit", autovitRoutes);
+
 
 
 // --- ✅ PLASA DE SIGURANȚĂ #2: GESTIONAR GLOBAL DE ERORI ---

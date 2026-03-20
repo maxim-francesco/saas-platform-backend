@@ -175,16 +175,27 @@ const uploadImages = async (req, res) => {
       console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
 
       // ─── ACTIVARE AUTOMATĂ ───
-      try {
-        await autovitService.activateAdvert(result.id, token, b.autovitUsername);
-        await prisma.listing.update({
-          where: { id: listingId },
-          data: { autovitStatus: "active" },
-        });
-        console.log(`[Autovit] Anunț ${result.id} activat automat.`);
-      } catch (activateErr) {
-        console.error(`[Autovit] Eroare la activare automată:`, activateErr.message);
-      }
+try {
+  await autovitService.activateAdvert(result.id, token, b.autovitUsername);
+  await prisma.listing.update({
+    where: { id: listingId },
+    data: { autovitStatus: "active" },
+  });
+  console.log(`[Autovit] Anunț ${result.id} activat automat.`);
+
+  // ─── EXPORT OLX AUTOMAT ───
+  try {
+    await autovitService.exportToOLX(result.id, token, b.autovitUsername);
+    console.log(`[Autovit] Anunț ${result.id} exportat pe OLX automat.`);
+  } catch (olxErr) {
+    console.error(`[Autovit] Eroare export OLX automat:`, olxErr.message);
+  }
+  // ─── SFÂRȘIT EXPORT OLX ───
+
+} catch (activateErr) {
+  console.error(`[Autovit] Eroare la activare automată:`, activateErr.message);
+}
+// ─── SFÂRȘIT ACTIVARE ───
       // ─── SFÂRȘIT ACTIVARE ───
     }
   } catch (err) {

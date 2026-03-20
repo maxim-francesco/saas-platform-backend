@@ -231,6 +231,34 @@ const deactivateAdvert = async (autovitId, token, username) => {
   }
 };
 
+const exportToOLX = async (autovitId, token, username) => {
+  try {
+    console.log(`[Autovit] Export OLX pentru anunț ${autovitId}...`);
+    const client = getProxiedAxios();
+
+    const response = await client.post(
+      `${BASE_URL}/account/adverts/${autovitId}/promotions/`,
+      {
+        payment_type: "account",
+        promotion_ids: [49],
+      },
+      {
+        headers: {
+          "User-Agent": username,
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log(`[Autovit] Anunț ${autovitId} exportat pe OLX.`);
+    return response.data;
+  } catch (error) {
+    console.error("[Autovit] Eroare export OLX:", error.response?.data || error.message);
+    throw new Error("Nu s-a putut exporta anunțul pe OLX.");
+  }
+};
+
 // ─────────────────────────────────────────────
 // 8. MAPPING CÂMPURI PRISMA → AUTOVIT
 // ─────────────────────────────────────────────
@@ -240,19 +268,20 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "");
 
-  const ATTRIBUTE_MAP = {
-    "marca":                 "make",
-    "model":                 "model",
-    "an":                    "year",
-    "kilometraj":            "mileage",
-    "combustibil":           "fuel_type",
-    "capacitate cilindrica": "engine_capacity",
-    "putere":                "engine_power",
-    "caroserie":             "body_type",
-    "cutie de viteze":       "gearbox",
-    "culoare":               "color",
-    "norma de poluare":      "pollution_standard",
-  };
+      const ATTRIBUTE_MAP = {
+      "marca":                 "make",
+      "model":                 "model",
+      "an":                    "year",
+      "kilometraj":            "mileage",
+      "combustibil":           "fuel_type",
+      "capacitate cilindrica": "engine_capacity",
+      "putere":                "engine_power",
+      "caroserie":             "body_type",
+      "cutie de viteze":       "gearbox",
+      "culoare":               "color",
+      "norma de poluare":      "pollution_standard",
+      "garantie luni":         "vendors_warranty_valid_until_date", // <-- ADAUGAT
+    };
 
   const fuelTypeMap = {
     "benzina": "petrol", "petrol": "petrol", "gasoline": "petrol",
@@ -630,5 +659,6 @@ module.exports = {
   deleteAdvert,
   activateAdvert,
   deactivateAdvert,
+  exportToOLX, // <-- ADAUGAT
   mapListingToAutovit,
 };
