@@ -487,18 +487,32 @@ const deleteListing = async (req, res) => {
 
     // --- INTEGRATION AUTOVIT: DELETE ---
     ;(async () => {
+  try {
+    if (autovitId && autovitClientId) {
+      const token = await autovitService.getAccessToken(
+        autovitClientId, autovitClientSecret,
+        autovitUsername, autovitPassword
+      );
+
+      // Mai întâi dezactivăm, apoi ștergem
       try {
-        if (autovitId && autovitClientId) {
-          const token = await autovitService.getAccessToken(
-            autovitClientId, autovitClientSecret,
-            autovitUsername, autovitPassword
-          );
-          await autovitService.deleteAdvert(autovitId, token, autovitUsername);
-        }
-      } catch (err) {
-        console.error("[Autovit] Eroare la ștergere:", err.message);
+        await autovitService.deactivateAdvert(autovitId, token, autovitUsername);
+        console.log(`[Autovit] Anunț ${autovitId} dezactivat înainte de ștergere.`);
+      } catch (deactivateErr) {
+        console.warn(`[Autovit] Nu s-a putut dezactiva (poate era deja inactiv):`, deactivateErr.message);
+        // Continuăm oricum cu ștergerea
       }
-    })();
+
+      // Mică pauză să proceseze Autovit dezactivarea
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      await autovitService.deleteAdvert(autovitId, token, autovitUsername);
+      console.log(`[Autovit] Anunț ${autovitId} șters cu succes.`);
+    }
+  } catch (err) {
+    console.error("[Autovit] Eroare la ștergere:", err.message);
+  }
+})();
     // --- END AUTOVIT: DELETE ---
 
     res.status(200).json({ message: "Anunțul a fost șters." });

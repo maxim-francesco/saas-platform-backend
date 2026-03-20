@@ -62,70 +62,74 @@ const searchListings = async (req, res) => {
 
     // Aceasta este versiunea NOUĂ și CORECTĂ
     for (const key in dynamicFilters) {
-      const value = dynamicFilters[key];
-      const attributeName = key.replace(/ /g, "_"); // Formatăm numele atributului din start
+  const value = dynamicFilters[key];
+  const attributeName = key.replace(/_/g, " ");
 
-      let attributeCondition;
+  let attributeCondition;
 
-      // --- BLOC NOU PENTRU FILTRE BOOLEAN (DA/NU) ---
-      if (value === "true" || value === "false") {
-        attributeCondition = {
-          attribute: {
-            name: {
-              equals: attributeName.replace(/_/g, " "),
-              mode: "insensitive",
-            },
-          },
-          booleanValue: {
-            equals: value === "true", // Convertim textul "true" in boolean true
-          },
-        };
-        // --- SFÂRȘIT BLOC NOU ---
-      } else if (key.endsWith("_max")) {
-        // Logica existentă pentru intervale numerice (partea maximă)
-        const attrNameNoSuffix = attributeName.replace("_max", "");
-        attributeCondition = {
-          attribute: {
-            name: {
-              equals: attrNameNoSuffix.replace(/_/g, " "),
-              mode: "insensitive",
-            },
-          },
-          numberValue: { lte: parseFloat(value) },
-        };
-      } else if (key.endsWith("_min")) {
-        // Logica existentă pentru intervale numerice (partea minimă)
-        const attrNameNoSuffix = attributeName.replace("_min", "");
-        attributeCondition = {
-          attribute: {
-            name: {
-              equals: attrNameNoSuffix.replace(/_/g, " "),
-              mode: "insensitive",
-            },
-          },
-          numberValue: { gte: parseFloat(value) },
-        };
-      } else {
-        // Logica existentă pentru filtre de tip text (checkbox-uri)
-        attributeCondition = {
-          attribute: {
-            name: {
-              equals: attributeName.replace(/_/g, " "),
-              mode: "insensitive",
-            },
-          },
-          stringValue: { equals: value, mode: "insensitive" },
-        };
-      }
+  if (value === "true" || value === "false") {
+    // Filtru boolean
+    attributeCondition = {
+      attribute: {
+        name: { equals: attributeName, mode: "insensitive" },
+      },
+      booleanValue: { equals: value === "true" },
+    };
 
-      if (attributeCondition) {
-        whereConditions.push({
-          attributeValues: {
-            some: attributeCondition,
+  } else if (key.endsWith("_max")) {
+    // Interval numeric - maxim
+    const attrNameNoSuffix = attributeName.replace(" max", "");
+    attributeCondition = {
+      attribute: {
+        name: { equals: attrNameNoSuffix, mode: "insensitive" },
+      },
+      numberValue: { lte: parseFloat(value) },
+    };
+
+  } else if (key.endsWith("_min")) {
+    // Interval numeric - minim
+    const attrNameNoSuffix = attributeName.replace(" min", "");
+    attributeCondition = {
+      attribute: {
+        name: { equals: attrNameNoSuffix, mode: "insensitive" },
+      },
+      numberValue: { gte: parseFloat(value) },
+    };
+
+  } else if (Array.isArray(value)) {
+    // ─── NOU: Valori multiple pentru același atribut (ex: Combustibil=Benzina&Combustibil=Hybrid) ───
+    whereConditions.push({
+      OR: value.map(v => ({
+        attributeValues: {
+          some: {
+            attribute: {
+              name: { equals: attributeName, mode: "insensitive" },
+            },
+            stringValue: { equals: v, mode: "insensitive" },
           },
-        });
-      }
-    }
+        },
+      })),
+    });
+    continue; // Sărim peste adăugarea normală de mai jos
+
+  } else {
+    // Filtru text simplu
+    attributeCondition = {
+      attribute: {
+        name: { equals: attributeName, mode: "insensitive" },
+      },
+      stringValue: { equals: value, mode: "insensitive" },
+    };
+  }
+
+  if (attributeCondition) {
+    whereConditions.push({
+      attributeValues: {
+        some: attributeCondition,
+      },
+    });
+  }
+}
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
