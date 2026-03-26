@@ -131,90 +131,90 @@ const uploadImages = async (req, res) => {
       // --- END BESTAUTO: SYNC DUPĂ UPLOAD IMAGINE ---
 
       // --- INTEGRATION AUTOVIT: SYNC DUPĂ UPLOAD IMAGINE ---
-      ;(async () => {
-  try {
-    const fullListing = await prisma.listing.findUnique({
-      where: { id: listingId },
-      include: {
-        business: true,
-        attributeValues: { include: { attribute: true } },
-        images: { orderBy: { order: "asc" } },
-      },
-    });
+//       ;(async () => {
+//   try {
+//     const fullListing = await prisma.listing.findUnique({
+//       where: { id: listingId },
+//       include: {
+//         business: true,
+//         attributeValues: { include: { attribute: true } },
+//         images: { orderBy: { order: "asc" } },
+//       },
+//     });
 
-    const b = fullListing?.business;
-    if (!b?.autovitClientId || !b?.autovitUsername) return;
+//     const b = fullListing?.business;
+//     if (!b?.autovitClientId || !b?.autovitUsername) return;
 
-    const imageUrls = fullListing.images.map(img => img.url);
-    if (imageUrls.length === 0) return;
+//     const imageUrls = fullListing.images.map(img => img.url);
+//     if (imageUrls.length === 0) return;
 
-    const token = await autovitService.getAccessToken(
-      b.autovitClientId, b.autovitClientSecret,
-      b.autovitUsername, b.autovitPassword
-    );
+//     const token = await autovitService.getAccessToken(
+//       b.autovitClientId, b.autovitClientSecret,
+//       b.autovitUsername, b.autovitPassword
+//     );
 
-    const imageCollectionId = await autovitService.createImageCollection(
-      imageUrls, token, b.autovitUsername
-    );
+//     const imageCollectionId = await autovitService.createImageCollection(
+//       imageUrls, token, b.autovitUsername
+//     );
 
-    const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
+//     const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
 
-    if (fullListing.autovitId) {
-      // Anunțul există deja pe Autovit — actualizăm
-      await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
-      console.log(`[Autovit] Anunț ${fullListing.autovitId} actualizat cu imagini noi.`);
-    } else {
-      // Prima imagine uploadată — creăm anunțul
-      // verificare race condition
-const freshListing = await prisma.listing.findUnique({
-  where: { id: listingId },
-  select: { autovitId: true },
-});
+//     if (fullListing.autovitId) {
+//       // Anunțul există deja pe Autovit — actualizăm
+//       await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
+//       console.log(`[Autovit] Anunț ${fullListing.autovitId} actualizat cu imagini noi.`);
+//     } else {
+//       // Prima imagine uploadată — creăm anunțul
+//       // verificare race condition
+// const freshListing = await prisma.listing.findUnique({
+//   where: { id: listingId },
+//   select: { autovitId: true },
+// });
 
-if (freshListing?.autovitId) {
-  await autovitService.updateAdvert(freshListing.autovitId, payload, token, b.autovitUsername);
-  console.log(`[Autovit] Anunț ${freshListing.autovitId} actualizat (race condition evitat).`);
-  return;
-}
+// if (freshListing?.autovitId) {
+//   await autovitService.updateAdvert(freshListing.autovitId, payload, token, b.autovitUsername);
+//   console.log(`[Autovit] Anunț ${freshListing.autovitId} actualizat (race condition evitat).`);
+//   return;
+// }
 
-// Prima imagine uploadată — creăm anunțul
-const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
+// // Prima imagine uploadată — creăm anunțul
+// const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
       
-      // Salvăm ID-ul în DB
-      await prisma.listing.update({
-        where: { id: listingId },
-        data: { autovitId: BigInt(result.id), autovitStatus: "inactive" },
-      });
-      console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
+//       // Salvăm ID-ul în DB
+//       await prisma.listing.update({
+//         where: { id: listingId },
+//         data: { autovitId: BigInt(result.id), autovitStatus: "inactive" },
+//       });
+//       console.log(`[Autovit] Anunț creat cu ID: ${result.id}`);
 
-      // ─── ACTIVARE AUTOMATĂ ───
-try {
-  await autovitService.activateAdvert(result.id, token, b.autovitUsername);
-  await prisma.listing.update({
-    where: { id: listingId },
-    data: { autovitStatus: "active" },
-  });
-  console.log(`[Autovit] Anunț ${result.id} activat automat.`);
+//       // ─── ACTIVARE AUTOMATĂ ───
+// try {
+//   await autovitService.activateAdvert(result.id, token, b.autovitUsername);
+//   await prisma.listing.update({
+//     where: { id: listingId },
+//     data: { autovitStatus: "active" },
+//   });
+//   console.log(`[Autovit] Anunț ${result.id} activat automat.`);
 
-  // ─── EXPORT OLX AUTOMAT ───
-  try {
-    await autovitService.exportToOLX(result.id, token, b.autovitUsername);
-    console.log(`[Autovit] Anunț ${result.id} exportat pe OLX automat.`);
-  } catch (olxErr) {
-    console.error(`[Autovit] Eroare export OLX automat:`, olxErr.message);
-  }
-  // ─── SFÂRȘIT EXPORT OLX ───
+//   // ─── EXPORT OLX AUTOMAT ───
+//   try {
+//     await autovitService.exportToOLX(result.id, token, b.autovitUsername);
+//     console.log(`[Autovit] Anunț ${result.id} exportat pe OLX automat.`);
+//   } catch (olxErr) {
+//     console.error(`[Autovit] Eroare export OLX automat:`, olxErr.message);
+//   }
+//   // ─── SFÂRȘIT EXPORT OLX ───
 
-} catch (activateErr) {
-  console.error(`[Autovit] Eroare la activare automată:`, activateErr.message);
-}
-// ─── SFÂRȘIT ACTIVARE ───
-      // ─── SFÂRȘIT ACTIVARE ───
-    }
-  } catch (err) {
-    console.error("[Autovit] Eroare la sincronizare (uploadImages):", err.message);
-  }
-})();
+// } catch (activateErr) {
+//   console.error(`[Autovit] Eroare la activare automată:`, activateErr.message);
+// }
+// // ─── SFÂRȘIT ACTIVARE ───
+//       // ─── SFÂRȘIT ACTIVARE ───
+//     }
+//   } catch (err) {
+//     console.error("[Autovit] Eroare la sincronizare (uploadImages):", err.message);
+//   }
+// })();
       // --- END AUTOVIT: SYNC DUPĂ UPLOAD IMAGINE ---
 
 
@@ -369,23 +369,23 @@ const updateListing = async (req, res) => {
     });
 
     // --- INTEGRATION BESTAUTO: UPDATE ---
-    ;(async () => {
-      try {
-        const fullListing = await prisma.listing.findUnique({
-          where: { id: listingId },
-          include: {
-            business: true,
-            attributeValues: { include: { attribute: true } },
-            images: { orderBy: { order: "asc" } },
-          },
-        });
-        if (fullListing?.business?.bestAutoApiKey) {
-          await bestAutoService.publishListing(fullListing, fullListing.business.bestAutoApiKey);
-        }
-      } catch (err) {
-        console.error("[BestAuto] Eroare la sincronizare (update):", err.message);
-      }
-    })();
+    // ;(async () => {
+    //   try {
+    //     const fullListing = await prisma.listing.findUnique({
+    //       where: { id: listingId },
+    //       include: {
+    //         business: true,
+    //         attributeValues: { include: { attribute: true } },
+    //         images: { orderBy: { order: "asc" } },
+    //       },
+    //     });
+    //     if (fullListing?.business?.bestAutoApiKey) {
+    //       await bestAutoService.publishListing(fullListing, fullListing.business.bestAutoApiKey);
+    //     }
+    //   } catch (err) {
+    //     console.error("[BestAuto] Eroare la sincronizare (update):", err.message);
+    //   }
+    // })();
     // --- END BESTAUTO: UPDATE ---
 
     // --- INTEGRATION AUTOVIT: UPDATE ---
