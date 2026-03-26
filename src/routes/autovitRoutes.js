@@ -114,4 +114,27 @@ router.post("/:listingId/deactivate", isAuthenticated, async (req, res) => {
   }
 });
 
+router.get("/:listingId/status", isAuthenticated, async (req, res) => {
+  const { listingId } = req.params;
+  const { businessId } = req.user;
+
+  try {
+    const listing = await prisma.listing.findFirst({
+      where: { id: listingId, businessId },
+      select: { autovitId: true, autovitStatus: true },
+    });
+
+    if (!listing) {
+      return res.status(404).json({ message: "Anunțul nu a fost găsit." });
+    }
+
+    res.status(200).json({
+      autovitId: listing.autovitId ? listing.autovitId.toString() : null,
+      autovitStatus: listing.autovitStatus,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Eroare la preluarea statusului." });
+  }
+});
+
 module.exports = router;
