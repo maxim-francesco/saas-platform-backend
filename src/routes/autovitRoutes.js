@@ -137,4 +137,64 @@ router.get("/:listingId/status", isAuthenticated, async (req, res) => {
   }
 });
 
+// POST /api/autovit/:listingId/publish
+router.post("/:listingId/publish", isAuthenticated, async (req, res) => {
+  const { listingId } = req.params;
+  const { businessId } = req.user;
+
+  try {
+    const listing = await prisma.listing.findFirst({
+      where: { id: listingId, businessId },
+      include: { business: true },
+    });
+
+    if (!listing) {
+      return res.status(404).json({ message: "Anunțul nu a fost găsit." });
+    }
+
+    if (!listing.autovitId) {
+      return res.status(400).json({ message: "Anunțul nu este sincronizat cu Autovit. Adaugă mai întâi o imagine." });
+    }
+
+    const b = listing.business;
+    if (!b?.autovitClientId) {
+      return res.status(400).json({ message: "Credențiale Autovit lipsesc pentru acest business." });
+    }
+
+    const token = await autovitService.getAccessToken(
+      b.autovitClientId, b.autovitClientSecret,
+      b.autovitUsername, b.autovitPassword
+    );
+
+    // Pas 1: Activare Autovit
+    await autovitService.activateAdvert(listing.autovitId, token, b.autovitUsername);
+    await prisma.listing.update({
+      where: { id: listingId },
+      data: { autovitStatus: "active" },
+    });
+    console.log(`[Autovit] Anunț ${listing.autovitId} activat.`);
+
+    // Pas 2: Export OLX
+    let olxSuccess = false;
+    try {
+      await autovitService.exportToOLX(listing.autovitId, token, b.autovitUsername);
+      olxSuccess = true;
+      console.log(`[Autovit] Anunț ${listing.autovitId} exportat pe OLX.`);
+    } catch (olxErr) {
+      console.error(`[Autovit] Export OLX eșuat:`, olxErr.message);
+    }
+
+    res.status(200).json({
+      message: olxSuccess
+        ? "Anunțul a fost publicat pe Autovit și exportat pe OLX!"
+        : "Anunțul a fost publicat pe Autovit. Exportul OLX a eșuat.",
+      autovitStatus: "active",
+      olxSuccess,
+    });
+  } catch (error) {
+    console.error("[Autovit] Eroare publish:", error.message);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 module.exports = router;
