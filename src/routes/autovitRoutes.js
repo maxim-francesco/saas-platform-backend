@@ -145,19 +145,19 @@ router.post("/:listingId/publish", isAuthenticated, async (req, res) => {
   try {
     const listing = await prisma.listing.findFirst({
       where: { id: listingId, businessId },
-      include: { business: true },
+      include: {
+        business: true,
+        attributeValues: { include: { attribute: true } },
+        images: { orderBy: { order: "asc" } },
+      },
     });
 
     if (!listing) {
       return res.status(404).json({ message: "Anunțul nu a fost găsit." });
     }
 
-    if (!listing.autovitId) {
-      return res.status(400).json({ message: "Anunțul nu este sincronizat cu Autovit. Adaugă mai întâi o imagine." });
-    }
-
     const b = listing.business;
-    if (!b?.autovitClientId) {
+    if (!b?.autovitClientId || !b?.autovitUsername) {
       return res.status(400).json({ message: "Credențiale Autovit lipsesc pentru acest business." });
     }
 
@@ -166,34 +166,62 @@ router.post("/:listingId/publish", isAuthenticated, async (req, res) => {
       b.autovitUsername, b.autovitPassword
     );
 
+    let currentAutovitId = listing.autovitId;
+
+    if (!currentAutovitId) {
+      const imageUrls = listing.images.map(img => img.url);
+      if (imageUrls.length === 0) {
+        return res.status(400).json({ message: "Anunțul nu are imagini adăugate. Trebuie să adaugi cel puțin o imagine." });
+      }
+
+      // Creăm colecția de imagini
+      const imageCollectionId = await autovitService.createImageCollection(
+        imageUrls, token, b.autovitUsername
+      );
+
+      // Mapăm anunțul la formatul pentru Autovit
+      const payload = autovitService.mapListingToAutovit(listing, imageCollectionId);
+
+      // Creăm efectiv anunțul online
+      const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
+      currentAutovitId = result.id;
+
+      // Salvăm noul ID (ne bazăm pe formatul cerut BigInt, funcție de setarea schemelor)
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { autovitId: BigInt(currentAutovitId), autovitStatus: "inactive" },
+      });
+      console.log(`[Autovit] Anunț nou creat manual cu ID: ${currentAutovitId}`);
+    }
+
     // Pas 1: Activare Autovit
-    await autovitService.activateAdvert(listing.autovitId, token, b.autovitUsername);
+    await autovitService.activateAdvert(currentAutovitId, token, b.autovitUsername);
     await prisma.listing.update({
       where: { id: listingId },
       data: { autovitStatus: "active" },
     });
-    console.log(`[Autovit] Anunț ${listing.autovitId} activat.`);
+    console.log(`[Autovit] Anunț ${currentAutovitId} activat.`);
 
     // Pas 2: Export OLX
     let olxSuccess = false;
     try {
-      await autovitService.exportToOLX(listing.autovitId, token, b.autovitUsername);
+      await autovitService.exportToOLX(currentAutovitId, token, b.autovitUsername);
       olxSuccess = true;
-      console.log(`[Autovit] Anunț ${listing.autovitId} exportat pe OLX.`);
+      console.log(`[Autovit] Anunț ${currentAutovitId} exportat pe OLX.`);
     } catch (olxErr) {
       console.error(`[Autovit] Export OLX eșuat:`, olxErr.message);
     }
 
     res.status(200).json({
       message: olxSuccess
-        ? "Anunțul a fost publicat pe Autovit și exportat pe OLX!"
-        : "Anunțul a fost publicat pe Autovit. Exportul OLX a eșuat.",
+        ? "Anunțul a fost creat, activat pe Autovit și exportat pe OLX!"
+        : "Anunțul este pe Autovit. Exportul OLX a eșuat.",
       autovitStatus: "active",
       olxSuccess,
     });
   } catch (error) {
     console.error("[Autovit] Eroare publish:", error.message);
-    res.status(500).json({ message: error.message });
+    res.status(500).json({ message: error.message || "A apărut o eroare necunoscută la publicare." });
   }
 });
 
