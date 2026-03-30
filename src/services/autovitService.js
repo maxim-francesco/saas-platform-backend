@@ -182,7 +182,9 @@ const deleteAdvert = async (autovitId, token, username) => {
     return true;
   } catch (error) {
     console.error("[Autovit] Eroare stergere anunt:", error.response?.data || error.message);
-    throw new Error("Nu s-a putut sterge anuntul de pe Autovit.");
+    throw new Error(
+      error.response?.data?.error?.message || "Nu s-a putut sterge anuntul de pe Autovit."
+    );
   }
 };
 
@@ -202,7 +204,9 @@ const activateAdvert = async (autovitId, token, username) => {
     );
     return response.data;
   } catch (error) {
-    throw new Error("Nu s-a putut activa anuntul pe Autovit.");
+    throw new Error(
+      error.response?.data?.error?.message || "Nu s-a putut activa anuntul pe Autovit."
+    );
   }
 };
 
@@ -227,7 +231,9 @@ const deactivateAdvert = async (autovitId, token, username) => {
     );
     return response.data;
   } catch (error) {
-    throw new Error("Nu s-a putut dezactiva anuntul pe Autovit.");
+    throw new Error(
+      error.response?.data?.error?.message || "Nu s-a putut dezactiva anuntul pe Autovit."
+    );
   }
 };
 

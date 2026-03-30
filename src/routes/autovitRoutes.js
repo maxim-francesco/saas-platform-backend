@@ -275,12 +275,52 @@ router.post("/:listingId/publish", isAuthenticated, async (req, res) => {
     }
 
     // Pas 1: Activare Autovit
-    await autovitService.activateAdvert(currentAutovitId, token, b.autovitUsername);
-    await prisma.listing.update({
-      where: { id: listingId },
-      data: { autovitStatus: "active" },
-    });
-    console.log(`[Autovit] Anunț ${currentAutovitId} activat.`);
+    try {
+      await autovitService.activateAdvert(currentAutovitId, token, b.autovitUsername);
+      await prisma.listing.update({
+        where: { id: listingId },
+        data: { autovitStatus: "active" },
+      });
+      console.log(`[Autovit] Anunț ${currentAutovitId} activat.`);
+    } catch (activateErr) {
+      if (activateErr.message && activateErr.message.includes("belongs to other user")) {
+        console.log(`[Autovit] Conflict proprietate la activare pentru anunț ${listingId}. Ștergem ID-ul vechi și încercăm re-crearea.`);
+        
+        // Resetăm ID-ul în DB
+        await prisma.listing.update({
+          where: { id: listingId },
+          data: { autovitId: null, autovitStatus: null },
+        });
+
+        // ─── RE-CREARE PE NOUL CONT ───
+        const imageUrls = listing.images.map(img => img.url);
+        if (imageUrls.length === 0) {
+          return res.status(400).json({ message: "Anunțul nu are imagini adăugate. Autocolantul a fost șters, te rugăm să adaugi o imagine și să re-incerci." });
+        }
+
+        const imageCollectionId = await autovitService.createImageCollection(
+          imageUrls, token, b.autovitUsername
+        );
+        const payload = autovitService.mapListingToAutovit(listing, imageCollectionId);
+        const result = await autovitService.createAdvert(payload, token, b.autovitUsername);
+        currentAutovitId = result.id;
+
+        await prisma.listing.update({
+          where: { id: listingId },
+          data: { autovitId: BigInt(currentAutovitId), autovitStatus: "inactive" },
+        });
+
+        // Încercăm activarea noului anunț
+        await autovitService.activateAdvert(currentAutovitId, token, b.autovitUsername);
+        await prisma.listing.update({
+          where: { id: listingId },
+          data: { autovitStatus: "active" },
+        });
+        console.log(`[Autovit] Anunț nou creat și activat după conflict: ${currentAutovitId}`);
+      } else {
+        throw activateErr;
+      }
+    }
 
     // Pas 2: Export OLX
     let olxSuccess = false;

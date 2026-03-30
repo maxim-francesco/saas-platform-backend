@@ -419,6 +419,13 @@ const updateListing = async (req, res) => {
         }
       } catch (err) {
         console.error("[Autovit] Eroare la sincronizare (update):", err.message);
+        if (err.message && err.message.includes("belongs to other user")) {
+          console.log(`[Autovit] Conflict proprietate detectat pentru anunț ${listingId}. Ștergem ID-ul vechi din DB pentru re-publicare pe noul cont.`);
+          await prisma.listing.update({
+            where: { id: listingId },
+            data: { autovitId: null, autovitStatus: null }
+          });
+        }
       }
     })();
     // --- END AUTOVIT: UPDATE ---
