@@ -619,7 +619,7 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
   params.price = {
     "0": "price",
     "1": listing.price || 0,
-    currency: "RON",
+    currency: "EUR",
     gross_net: "gross",
   };
 
