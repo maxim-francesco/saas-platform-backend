@@ -277,7 +277,7 @@ const submitContactForm = async (req, res) => {
       data: { name, email, phone, message, businessId },
     });
 
-    // ✅ Trimite email DOAR pentru Seven Center Auto
+    // ✅ Trimite email pentru clienții configurați
     const SEVENCENTER_BUSINESS_EMAIL = process.env.SEVENCENTER_BUSINESS_EMAIL;
     const business = await prisma.business.findUnique({
       where: { id: businessId },
@@ -288,6 +288,10 @@ const submitContactForm = async (req, res) => {
     if (businessUserEmail === SEVENCENTER_BUSINESS_EMAIL) {
       sendContactNotification({ name, email, phone, message })
         .then(() => console.log("[Email] Notificare trimisă către Seven Center Auto"))
+        .catch((err) => console.error("[Email] Eroare la trimitere:", err.message));
+    } else if (businessUserEmail === "contact@stefan.ro") {
+      sendContactNotification({ toEmail: "stefanautogvr@gmail.com", name, email, phone, message })
+        .then(() => console.log("[Email] Notificare trimisă către Stefan Auto"))
         .catch((err) => console.error("[Email] Eroare la trimitere:", err.message));
     }
 

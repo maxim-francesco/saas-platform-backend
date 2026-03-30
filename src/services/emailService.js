@@ -8,10 +8,10 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendContactNotification = async ({ name, email, phone, message }) => {
+const sendContactNotification = async ({ toEmail, name, email, phone, message }) => {
   const mailOptions = {
     from: `"Platformă SaaS" <${process.env.GMAIL_USER}>`,
-    to: process.env.SEVENCENTER_EMAIL,
+    to: toEmail || process.env.SEVENCENTER_EMAIL,
     subject: `Mesaj nou de la ${name}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
