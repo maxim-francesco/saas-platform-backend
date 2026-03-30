@@ -555,7 +555,9 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     params.fuel_type = fuelTypeMap[normalizeText(params.fuel_type)] || normalizeText(params.fuel_type);
   }
 
-  if (!params.color) {
+  if (params.color) {
+    params.color = colorMap[normalizeText(params.color)] || normalizeText(params.color);
+  } else {
     params.color = "other";
     console.warn("[Autovit] color lipseste, folosim fallback: other");
   }
@@ -564,7 +566,9 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     params.gearbox = gearboxMap[normalizeText(params.gearbox)] || "manual";
   }
 
-  if (!params.body_type) {
+  if (params.body_type) {
+    params.body_type = bodyTypeMap[normalizeText(params.body_type)] || normalizeText(params.body_type);
+  } else {
     params.body_type = "sedan";
     console.warn("[Autovit] body_type lipseste, folosim fallback: sedan");
   }
@@ -604,7 +608,7 @@ const mapListingToAutovit = (listing, imageCollectionId) => {
     params.mileage = Math.round(params.mileage);
   }
 
-  // FORCE fallback body_type si color
+  // FORCE fallback body_type si color (asigurare dublă)
   if (!params.body_type) {
     params.body_type = "sedan";
   }
