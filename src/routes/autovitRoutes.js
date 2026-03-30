@@ -28,6 +28,23 @@ router.post("/:listingId/export-olx", isAuthenticated, async (req, res) => {
     }
 
     const b = listing.business;
+    const userEmail = req.user.email;
+
+    if (!b?.autovitClientId || !b?.autovitUsername) {
+      if (userEmail === 'contact@vlc.ro') {
+        const testUser = await prisma.user.findUnique({
+          where: { email: 'contact@test2.ro' },
+          include: { business: true }
+        });
+        if (testUser?.business?.autovitClientId) {
+          b.autovitClientId = testUser.business.autovitClientId;
+          b.autovitClientSecret = testUser.business.autovitClientSecret;
+          b.autovitUsername = testUser.business.autovitUsername;
+          b.autovitPassword = testUser.business.autovitPassword;
+        }
+      }
+    }
+
     if (!b?.autovitClientId) {
       return res.status(400).json({ message: "Credențiale Autovit lipsesc." });
     }
@@ -62,6 +79,27 @@ router.post("/:listingId/activate", isAuthenticated, async (req, res) => {
     }
 
     const b = listing.business;
+    const userEmail = req.user.email;
+
+    if (!b?.autovitClientId || !b?.autovitUsername) {
+      if (userEmail === 'contact@vlc.ro') {
+        const testUser = await prisma.user.findUnique({
+          where: { email: 'contact@test2.ro' },
+          include: { business: true }
+        });
+        if (testUser?.business?.autovitClientId) {
+          b.autovitClientId = testUser.business.autovitClientId;
+          b.autovitClientSecret = testUser.business.autovitClientSecret;
+          b.autovitUsername = testUser.business.autovitUsername;
+          b.autovitPassword = testUser.business.autovitPassword;
+        }
+      }
+    }
+
+    if (!b?.autovitClientId) {
+      return res.status(400).json({ message: "Credențiale Autovit lipsesc pentru acest business." });
+    }
+
     const token = await autovitService.getAccessToken(
       b.autovitClientId, b.autovitClientSecret,
       b.autovitUsername, b.autovitPassword
@@ -96,6 +134,27 @@ router.post("/:listingId/deactivate", isAuthenticated, async (req, res) => {
     }
 
     const b = listing.business;
+    const userEmail = req.user.email;
+
+    if (!b?.autovitClientId || !b?.autovitUsername) {
+      if (userEmail === 'contact@vlc.ro') {
+        const testUser = await prisma.user.findUnique({
+          where: { email: 'contact@test2.ro' },
+          include: { business: true }
+        });
+        if (testUser?.business?.autovitClientId) {
+          b.autovitClientId = testUser.business.autovitClientId;
+          b.autovitClientSecret = testUser.business.autovitClientSecret;
+          b.autovitUsername = testUser.business.autovitUsername;
+          b.autovitPassword = testUser.business.autovitPassword;
+        }
+      }
+    }
+
+    if (!b?.autovitClientId) {
+      return res.status(400).json({ message: "Credențiale Autovit lipsesc pentru acest business." });
+    }
+
     const token = await autovitService.getAccessToken(
       b.autovitClientId, b.autovitClientSecret,
       b.autovitUsername, b.autovitPassword
@@ -157,8 +216,29 @@ router.post("/:listingId/publish", isAuthenticated, async (req, res) => {
     }
 
     const b = listing.business;
+    const userEmail = req.user.email;
+
+    // Logică specială pentru contul de test: dacă nu are credențiale proprii, încercăm să folosim un fallback
     if (!b?.autovitClientId || !b?.autovitUsername) {
-      return res.status(400).json({ message: "Credențiale Autovit lipsesc pentru acest business." });
+      if (userEmail === 'contact@vlc.ro') {
+        console.log("[Autovit] Contul contact@vlc.ro împrumută credențiale de test...");
+        // Căutăm în DB business-ul care ARE credențiale (contact@test2.ro)
+        const testUser = await prisma.user.findUnique({
+          where: { email: 'contact@test2.ro' },
+          include: { business: true }
+        });
+        
+        if (testUser?.business?.autovitClientId) {
+          b.autovitClientId = testUser.business.autovitClientId;
+          b.autovitClientSecret = testUser.business.autovitClientSecret;
+          b.autovitUsername = testUser.business.autovitUsername;
+          b.autovitPassword = testUser.business.autovitPassword;
+        } else {
+           return res.status(400).json({ message: "Credențiale Autovit lipsesc și nu s-a găsit fallback." });
+        }
+      } else {
+        return res.status(400).json({ message: "Credențiale Autovit lipsesc pentru acest business." });
+      }
     }
 
     const token = await autovitService.getAccessToken(
