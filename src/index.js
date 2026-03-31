@@ -60,8 +60,8 @@ app.use(helmet());
 
 // --- CONFIGURARE LIMITĂ DATE ---
 // Video-urile sunt mari, deci avem nevoie de limite ridicate pentru body-ul cererii
-app.use(express.json({ limit: "2mb" }));
-app.use(express.urlencoded({ limit: "2mb", extended: true }));
+app.use(express.json({ limit: "500mb" }));
+app.use(express.urlencoded({ limit: "500mb", extended: true }));
 
 // --- ✅ PLASA DE SIGURANȚĂ #1: LOGGER PENTRU TOATE CERERILE ---
 // Acest middleware se va executa primul pentru ORICE cerere și ne va confirma că a ajuns la server.

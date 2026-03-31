@@ -22,9 +22,18 @@ const uploadVideo = async (req, res) => {
       return res.status(404).json({ message: 'Anunțul nu a fost găsit sau nu aveți acces.' });
     }
     
-    cloudinary.uploader.upload(
+    const fileSizeInMB = (req.file.size / (1024 * 1024)).toFixed(2);
+    console.log(`[Video Upload] Începe încărcarea pentru anunțul ${listingId} (${fileSizeInMB} MB)`);
+
+    cloudinary.uploader.upload_large(
       req.file.path,
-      { resource_type: "video", folder: "listings_videos", public_id: `video_${listingId}`, overwrite: true },
+      { 
+        resource_type: "video", 
+        folder: "listings_videos", 
+        public_id: `video_${listingId}`, 
+        overwrite: true,
+        chunk_size: 6000000 // 6MB per chunk for large files
+      },
       async (error, result) => {
         // Ștergem fișierul temporar de pe disc
         if (req.file.path && fs.existsSync(req.file.path)) {
