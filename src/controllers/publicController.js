@@ -171,7 +171,7 @@ const searchListings = async (req, res) => {
         },
         attributeValues: {
           include: {
-            attribute: { select: { name: true, type: true } },
+            attribute: { include: { attributeGroup: { select: { name: true } } } },
           },
         },
       },
@@ -204,7 +204,7 @@ const getPublicListingById = async (req, res) => {
         images: { orderBy: { order: "asc" } },
         attributeValues: {
           include: {
-            attribute: { select: { name: true, type: true } },
+            attribute: { include: { attributeGroup: { select: { name: true } } } },
           },
         },
       },

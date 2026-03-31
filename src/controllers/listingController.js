@@ -289,7 +289,7 @@ const getListings = async (req, res) => {
     where: { businessId, status: "AVAILABLE" },
     include: {
       category: { select: { name: true } },
-      attributeValues: { include: { attribute: { select: { name: true, type: true } } } },
+      attributeValues: { include: { attribute: { include: { attributeGroup: { select: { name: true } } } } } },
       images: { orderBy: { order: "asc" } },
       _count: { select: { views: true } },
     },
@@ -432,7 +432,7 @@ const updateListing = async (req, res) => {
 
     const updatedListing = await prisma.listing.findUnique({
       where: { id: listingId },
-      include: { images: true, attributeValues: true },
+      include: { images: true, attributeValues: { include: { attribute: { include: { attributeGroup: { select: { name: true } } } } } } },
     });
 
     res.status(200).json(updatedListing);
@@ -534,7 +534,7 @@ const getListingById = async (req, res) => {
   try {
     const listing = await prisma.listing.findFirst({
       where: { id: listingId, businessId: businessId },
-      include: { attributeValues: { include: { attribute: { select: { name: true } } } }, images: { orderBy: { order: "asc" } } },
+      include: { attributeValues: { include: { attribute: { include: { attributeGroup: { select: { name: true } } } } } }, images: { orderBy: { order: "asc" } } },
     });
     if (!listing) return res.status(404).json({ message: "Anunțul nu a fost găsit." });
     res.status(200).json(listing);
