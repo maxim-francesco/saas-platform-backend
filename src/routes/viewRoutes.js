@@ -1,13 +1,16 @@
 // src/routes/viewRoutes.js
 const express = require("express");
-const { resetViews } = require("../controllers/viewController");
+const { resetViews, resetViewsForListing } = require("../controllers/viewController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
 
-// Protejăm ruta cu autentificare
+// Protejăm toate rutele cu autentificare
 router.use(isAuthenticated);
 
-// Definim ruta: DELETE /api/views/reset
+// DELETE /api/views/reset — reset global pentru tot business-ul
 router.delete("/reset", resetViews);
+
+// DELETE /api/views/listing/:listingId — reset doar pentru un anunț
+router.delete("/listing/:listingId", resetViewsForListing);
 
 module.exports = router;
