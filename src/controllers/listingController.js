@@ -245,7 +245,7 @@ const uploadImages = async (req, res) => {
 };
 
 const createListing = async (req, res) => {
-  const { title, description, categoryId, attributes, purchasePrice, otherCosts } = req.body;
+  const { title, description, internalNotes, categoryId, attributes, purchasePrice, otherCosts } = req.body;
   const { businessId } = req.user;
   try {
     const newListing = await prisma.$transaction(async (prisma) => {
@@ -261,7 +261,7 @@ const createListing = async (req, res) => {
         }
       }
       const listing = await prisma.listing.create({
-        data: { title, description, businessId, categoryId, price: priceValue, mileage: mileageValue, purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null, otherCosts: otherCosts ? parseFloat(otherCosts) : null, slug: generateSlug(title) },
+        data: { title, description, internalNotes, businessId, categoryId, price: priceValue, mileage: mileageValue, purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null, otherCosts: otherCosts ? parseFloat(otherCosts) : null, slug: generateSlug(title) },
       });
       if (attributes && Array.isArray(attributes)) {
         for (const attr of attributes) {
@@ -345,7 +345,7 @@ const markAsSold = async (req, res) => {
 
 const updateListing = async (req, res) => {
   const { listingId } = req.params;
-  const { title, description, attributes, purchasePrice, otherCosts } = req.body;
+  const { title, description, internalNotes, attributes, purchasePrice, otherCosts } = req.body;
   const { businessId } = req.user;
 
   try {
@@ -367,7 +367,7 @@ const updateListing = async (req, res) => {
 
       await prisma.listing.update({
         where: { id: listingId },
-        data: { title, description, price: priceValue, mileage: mileageValue, purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null, otherCosts: otherCosts ? parseFloat(otherCosts) : null, slug: generateSlug(title) },
+        data: { title, description, internalNotes, price: priceValue, mileage: mileageValue, purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null, otherCosts: otherCosts ? parseFloat(otherCosts) : null, slug: generateSlug(title) },
       });
 
       if (attributes && Array.isArray(attributes)) {
@@ -613,7 +613,7 @@ const cloneListing = async (req, res) => {
       const originalListing = await tx.listing.findFirst({ where: { id: listingId, businessId: businessId }, include: { attributeValues: true } });
       if (!originalListing) throw new Error("Anunțul original nu a fost găsit sau nu aveți acces.");
       const newListing = await tx.listing.create({
-        data: { title: `${originalListing.title} [CLONĂ]`, description: originalListing.description, price: originalListing.price, mileage: originalListing.mileage, purchasePrice: originalListing.purchasePrice, otherCosts: originalListing.otherCosts, status: "AVAILABLE", soldAt: null, sellingPrice: null, businessId: originalListing.businessId, categoryId: originalListing.categoryId },
+        data: { title: `${originalListing.title} [CLONĂ]`, description: originalListing.description, internalNotes: originalListing.internalNotes, price: originalListing.price, mileage: originalListing.mileage, purchasePrice: originalListing.purchasePrice, otherCosts: originalListing.otherCosts, status: "AVAILABLE", soldAt: null, sellingPrice: null, businessId: originalListing.businessId, categoryId: originalListing.categoryId },
       });
       if (originalListing.attributeValues.length > 0) {
         await tx.attributeValue.createMany({

@@ -29,6 +29,7 @@ const attributeSchema = Joi.object({
 const createListingSchema = Joi.object({
   title: Joi.string().trim().min(2).max(200).required(),
   description: Joi.string().max(5000).allow(null, "").optional(),
+  internalNotes: Joi.string().max(5000).allow(null, "").optional(),
   categoryId: Joi.string().required(),
   purchasePrice: Joi.number().min(0).allow(null).optional(),
   otherCosts: Joi.number().min(0).allow(null).optional(),
@@ -47,6 +48,7 @@ const createListingSchema = Joi.object({
 const updateListingSchema = Joi.object({
   title: Joi.string().trim().min(2).max(200).optional(),
   description: Joi.string().max(5000).allow(null, "").optional(),
+  internalNotes: Joi.string().max(5000).allow(null, "").optional(),
   purchasePrice: Joi.number().min(0).allow(null).optional(),
   otherCosts: Joi.number().min(0).allow(null).optional(),
   attributes: Joi.array().items(
