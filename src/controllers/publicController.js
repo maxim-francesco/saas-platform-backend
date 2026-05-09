@@ -293,6 +293,10 @@ const submitContactForm = async (req, res) => {
       sendContactNotification({ toEmail: "stefanautogvr@gmail.com", name, email, phone, message })
         .then(() => console.log("[Email] Notificare trimisă către Stefan Auto"))
         .catch((err) => console.error("[Email] Eroare la trimitere:", err.message));
+    } else if (businessUserEmail === "contact@via-automobile.ro") {
+      sendContactNotification({ toEmail: "via.automobile@yahoo.com", name, email, phone, message })
+        .then(() => console.log("[Email] Notificare trimisă către Via Automobile"))
+        .catch((err) => console.error("[Email] Eroare la trimitere:", err.message));
     }
 
     res.status(201).json({
