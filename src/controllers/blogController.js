@@ -1,5 +1,17 @@
 const prisma = require('../config/prismaClient')
 
+const triggerRevalidation = async () => {
+  try {
+    await fetch(
+      'https://alfacars.ro/api/revalidate?secret=alfacars-revalidate-2026',
+      { method: 'GET' }
+    )
+    console.log('[Blog] Revalidation triggered successfully')
+  } catch (err) {
+    console.log('[Blog] Revalidation trigger failed (non-critical):', err.message)
+  }
+}
+
 // Helper: generate slug from title
 const generateSlug = (text) => {
   return text
@@ -115,6 +127,8 @@ const createPost = async (req, res) => {
         businessId,
       },
     })
+    
+    await triggerRevalidation()
     res.status(201).json(post)
   } catch (error) {
     console.error('[Blog] Eroare createPost:', error)
@@ -164,6 +178,8 @@ const updatePost = async (req, res) => {
         publishedAt: (isPublished && !existing.isPublished) ? new Date() : existing.publishedAt,
       },
     })
+    
+    await triggerRevalidation()
     res.status(200).json(updated)
   } catch (error) {
     console.error('[Blog] Eroare updatePost:', error)
