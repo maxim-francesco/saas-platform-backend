@@ -27,6 +27,7 @@ model Business {
   autovitClientSecret  String?
   autovitUsername      String?
   autovitPassword      String?
+  blogPosts            BlogPost[]
 }
 
 model User {
@@ -158,6 +159,27 @@ model Review {
   business   Business @relation(fields: [businessId], references: [id])
 
   @@index([businessId, isApproved])
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String
+  excerpt     String
+  content     String   @db.Text
+  category    String
+  categoryKey String
+  readTime    String
+  coverImage  String?
+  publishedAt DateTime @default(now())
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  businessId  String
+  business    Business @relation(fields: [businessId], references: [id])
+
+  @@unique([slug, businessId])
+  @@index([businessId, isPublished])
 }
 
 enum Role {
