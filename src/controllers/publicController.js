@@ -336,6 +336,11 @@ const getListingsCsvFeed = async (req, res) => {
         images: {
           orderBy: { order: "asc" },
         },
+        attributeValues: {
+          include: {
+            attribute: true,
+          },
+        },
       },
     });
 
@@ -359,6 +364,18 @@ const getListingsCsvFeed = async (req, res) => {
       return text.trim();
     };
 
+    // Helper to get attribute value
+    const getAttrValue = (listing, name) => {
+      const av = listing.attributeValues?.find(
+        (item) => item.attribute?.name?.toLowerCase() === name.toLowerCase()
+      );
+      if (!av) return "";
+      if (av.stringValue !== null && av.stringValue !== undefined) return av.stringValue;
+      if (av.numberValue !== null && av.numberValue !== undefined) return av.numberValue.toString();
+      if (av.booleanValue !== null && av.booleanValue !== undefined) return av.booleanValue ? "Da" : "Nu";
+      return "";
+    };
+
     // Construct CSV content
     const escapeCsv = (str) => {
       if (str === null || str === undefined) return '""';
@@ -367,24 +384,51 @@ const getListingsCsvFeed = async (req, res) => {
     };
 
     const headers = [
-      "id",
-      "title",
-      "description",
-      "link",
-      "image_link",
-      "availability",
-      "condition",
-      "price",
-      "brand"
+      "Post Id",
+      "Marca",
+      "Model",
+      "An",
+      "Kilometraj",
+      "Combustibil",
+      "Cutie Viteze",
+      "Capacitate Cilindrica",
+      "Putere (CP)",
+      "Pret",
+      "Link",
+      "Availability",
+      "Condition",
+      "Titlu",
+      "Descriere"
     ];
 
     const csvLines = [headers.join(",")];
 
     for (const listing of listings) {
       const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
-      const title = listing.title;
-      const description = stripHtml(listing.description);
       
+      // Extragere marca si model din titlu
+      const titleWords = listing.title.trim().split(/\s+/);
+      const marca = titleWords[0] || "";
+      const model = titleWords[1] || "";
+
+      const an = getAttrValue(listing, "An fabricație") || getAttrValue(listing, "An");
+      const kilometraj = listing.mileage || getAttrValue(listing, "Kilometraj");
+      const combustibil = getAttrValue(listing, "Combustibil");
+      const cutie_viteze = getAttrValue(listing, "Transmisie") || getAttrValue(listing, "Cutie de viteze");
+      const capacitate_cilindrica = getAttrValue(listing, "Capacitate cilindrică");
+      const putere_cp = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
+
+      // Pret
+      let pret = "";
+      if (listing.price) {
+        pret = `${listing.price} EUR`;
+      } else {
+        const pVal = getAttrValue(listing, "Preț") || getAttrValue(listing, "Pret") || getAttrValue(listing, "price");
+        if (pVal) {
+          pret = `${pVal} EUR`;
+        }
+      }
+
       // Build link
       let link = business.listingUrlPattern || "https://example.com/anunt/{id}";
       if (link.includes("{slug}")) {
@@ -394,22 +438,27 @@ const getListingsCsvFeed = async (req, res) => {
         link = link.replace("{id}", listing.id);
       }
 
-      const image_link = listing.images && listing.images.length > 0 ? listing.images[0].url : "";
-      const availability = "in stock";
-      const condition = "used";
-      const price = listing.price ? `${listing.price} EUR` : "";
-      const brand = listing.title;
+      const availability = "In Stock";
+      const condition = "Used";
+      const title = listing.title;
+      const description = stripHtml(listing.description);
 
       const row = [
         escapeCsv(id),
-        escapeCsv(title),
-        escapeCsv(description),
+        escapeCsv(marca),
+        escapeCsv(model),
+        escapeCsv(an),
+        escapeCsv(kilometraj),
+        escapeCsv(combustibil),
+        escapeCsv(cutie_viteze),
+        escapeCsv(capacitate_cilindrica),
+        escapeCsv(putere_cp),
+        escapeCsv(pret),
         escapeCsv(link),
-        escapeCsv(image_link),
         escapeCsv(availability),
         escapeCsv(condition),
-        escapeCsv(price),
-        escapeCsv(brand)
+        escapeCsv(title),
+        escapeCsv(description)
       ];
 
       csvLines.push(row.join(","));
