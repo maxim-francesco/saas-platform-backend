@@ -311,6 +311,119 @@ const submitContactForm = async (req, res) => {
   }
 };
 
+const getListingsCsvFeed = async (req, res) => {
+  const { businessId } = req.query;
+
+  if (!businessId) {
+    return res.status(400).json({ message: "businessId este obligatoriu." });
+  }
+
+  try {
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+    });
+
+    if (!business) {
+      return res.status(404).json({ message: "Afacerea nu a fost găsită." });
+    }
+
+    const listings = await prisma.listing.findMany({
+      where: {
+        businessId,
+        status: "AVAILABLE",
+      },
+      include: {
+        images: {
+          orderBy: { order: "asc" },
+        },
+      },
+    });
+
+    // Strip HTML helper
+    const stripHtml = (html) => {
+      if (!html) return "";
+      let text = html.replace(/<[^>]*>/g, "");
+      text = text
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'");
+      return text.trim();
+    };
+
+    // Construct CSV content
+    const escapeCsv = (str) => {
+      if (str === null || str === undefined) return '""';
+      const clean = str.toString().replace(/"/g, '""');
+      return `"${clean}"`;
+    };
+
+    const headers = [
+      "id",
+      "title",
+      "description",
+      "link",
+      "image_link",
+      "availability",
+      "condition",
+      "price",
+      "brand"
+    ];
+
+    const csvLines = [headers.join(",")];
+
+    for (const listing of listings) {
+      const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
+      const title = listing.title;
+      const description = stripHtml(listing.description);
+      
+      // Build link
+      let link = business.listingUrlPattern || "https://example.com/anunt/{id}";
+      if (link.includes("{slug}")) {
+        link = link.replace("{slug}", listing.slug || listing.id);
+      }
+      if (link.includes("{id}")) {
+        link = link.replace("{id}", listing.id);
+      }
+
+      const image_link = listing.images && listing.images.length > 0 ? listing.images[0].url : "";
+      const availability = "in stock";
+      const condition = "used";
+      const price = listing.price ? `${listing.price} EUR` : "";
+      const brand = listing.title;
+
+      const row = [
+        escapeCsv(id),
+        escapeCsv(title),
+        escapeCsv(description),
+        escapeCsv(link),
+        escapeCsv(image_link),
+        escapeCsv(availability),
+        escapeCsv(condition),
+        escapeCsv(price),
+        escapeCsv(brand)
+      ];
+
+      csvLines.push(row.join(","));
+    }
+
+    const csvContent = csvLines.join("\n");
+
+    // Set headers for download
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", "attachment; filename=listings-feed.csv");
+
+    // Send UTF-8 BOM byte so Excel recognizes diacritics
+    res.write("\ufeff");
+    res.end(csvContent);
+  } catch (error) {
+    console.error("Eroare la generarea feed-ului CSV:", error);
+    res.status(500).json({ message: "Eroare la generarea feed-ului CSV." });
+  }
+};
+
 module.exports = {
   searchListings,
   getPublicListingById,
@@ -318,4 +431,5 @@ module.exports = {
   getUniqueAttributeValues,
   getAttributeStats,
   submitContactForm,
+  getListingsCsvFeed,
 };
