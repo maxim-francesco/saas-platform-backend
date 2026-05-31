@@ -464,7 +464,7 @@ const getListingsCsvFeed = async (req, res) => {
       csvLines.push(row.join(","));
     }
 
-    const csvContent = csvLines.join("\n");
+    const csvContent = "sep=,\n" + csvLines.join("\n");
 
     // Set headers for download
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
