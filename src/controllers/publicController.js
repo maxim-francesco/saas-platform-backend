@@ -167,7 +167,6 @@ const searchListings = async (req, res) => {
         images: {
           select: { url: true },
           orderBy: { order: "asc" }, // <-- ADAUGĂ ACEASTĂ LINIE
-          take: 1,
         },
         attributeValues: {
           include: {
@@ -384,39 +383,55 @@ const getListingsCsvFeed = async (req, res) => {
     };
 
     const headers = [
-      "id",
-      "title",
-      "description",
-      "availability",
-      "condition",
-      "price",
-      "link",
+      "Post Id",
+      "Marca",
+      "Model",
+      "An",
+      "Kilometraj",
+      "Combustibil",
+      "Cutie Viteze",
+      "Capacitate Cilindrica",
+      "Putere (CP)",
+      "Pret",
+      "Link",
       "image_link",
-      "brand"
+      "additional_image_link",
+      "Availability",
+      "Condition",
+      "Titlu",
+      "Descriere"
     ];
 
     const csvLines = [headers.join(",")];
 
     for (const listing of listings) {
       const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
-      const title = listing.title;
-      const description = stripHtml(listing.description);
-      const availability = "in stock";
-      const condition = "used";
+      
+      // Extragere marca si model din titlu
+      const titleWords = listing.title.trim().split(/\s+/);
+      const marca = titleWords[0] || "";
+      const model = titleWords[1] || "";
 
-      // Price
-      let price = "";
+      const an = getAttrValue(listing, "An fabricație") || getAttrValue(listing, "An");
+      const kilometraj = listing.mileage || getAttrValue(listing, "Kilometraj");
+      const combustibil = getAttrValue(listing, "Combustibil");
+      const cutie_viteze = getAttrValue(listing, "Transmisie") || getAttrValue(listing, "Cutie de viteze");
+      const capacitate_cilindrica = getAttrValue(listing, "Capacitate cilindrică");
+      const putere_cp = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
+
+      // Pret
+      let pret = "";
       if (listing.price) {
-        price = `${listing.price} EUR`;
+        pret = `${listing.price} EUR`;
       } else {
         const pVal = getAttrValue(listing, "Preț") || getAttrValue(listing, "Pret") || getAttrValue(listing, "price");
         if (pVal) {
-          price = `${pVal} EUR`;
+          pret = `${pVal} EUR`;
         }
       }
 
       // Build link
-      let link = business.listingUrlPattern || "https://www.davocars.ro/stoc/{id}";
+      let link = business.listingUrlPattern || "https://example.com/anunt/{id}";
       if (link.includes("{slug}")) {
         link = link.replace("{slug}", listing.slug || listing.id);
       }
@@ -424,20 +439,35 @@ const getListingsCsvFeed = async (req, res) => {
         link = link.replace("{id}", listing.id);
       }
 
-      // Consolidate all Cloudinary image URLs, separated by a semicolon
-      const image_link = listing.images && listing.images.length > 0 ? listing.images.map(img => img.url).join(";") : "";
-      const brand = getAttrValue(listing, "Marca") || getAttrValue(listing, "Marca auto") || listing.title.trim().split(/\s+/)[0] || "";
+      // Build image links
+      const imageLink = listing.images?.[0]?.url || "";
+      const additionalImageLinks = listing.images
+        ? listing.images.slice(1).map((img) => img.url).join(",")
+        : "";
+
+      const availability = "In Stock";
+      const condition = "Used";
+      const title = listing.title;
+      const description = stripHtml(listing.description);
 
       const row = [
         escapeCsv(id),
-        escapeCsv(title),
-        escapeCsv(description),
+        escapeCsv(marca),
+        escapeCsv(model),
+        escapeCsv(an),
+        escapeCsv(kilometraj),
+        escapeCsv(combustibil),
+        escapeCsv(cutie_viteze),
+        escapeCsv(capacitate_cilindrica),
+        escapeCsv(putere_cp),
+        escapeCsv(pret),
+        escapeCsv(link),
+        escapeCsv(imageLink),
+        escapeCsv(additionalImageLinks),
         escapeCsv(availability),
         escapeCsv(condition),
-        escapeCsv(price),
-        escapeCsv(link),
-        escapeCsv(image_link),
-        escapeCsv(brand)
+        escapeCsv(title),
+        escapeCsv(description)
       ];
 
       csvLines.push(row.join(","));
