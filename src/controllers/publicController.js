@@ -392,8 +392,7 @@ const getListingsCsvFeed = async (req, res) => {
       "price",
       "link",
       "image_link",
-      "brand",
-      "additional_image_link"
+      "brand"
     ];
 
     const csvLines = [headers.join(",")];
@@ -425,9 +424,9 @@ const getListingsCsvFeed = async (req, res) => {
         link = link.replace("{id}", listing.id);
       }
 
-      const image_link = listing.images && listing.images.length > 0 ? listing.images[0].url : "";
+      // Consolidate all Cloudinary image URLs, separated by a semicolon
+      const image_link = listing.images && listing.images.length > 0 ? listing.images.map(img => img.url).join(";") : "";
       const brand = getAttrValue(listing, "Marca") || getAttrValue(listing, "Marca auto") || listing.title.trim().split(/\s+/)[0] || "";
-      const additional_image_link = listing.images && listing.images.length > 1 ? listing.images.slice(1).map(img => img.url).join(",") : "";
 
       const row = [
         escapeCsv(id),
@@ -438,8 +437,7 @@ const getListingsCsvFeed = async (req, res) => {
         escapeCsv(price),
         escapeCsv(link),
         escapeCsv(image_link),
-        escapeCsv(brand),
-        escapeCsv(additional_image_link)
+        escapeCsv(brand)
       ];
 
       csvLines.push(row.join(","));
