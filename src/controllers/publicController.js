@@ -417,7 +417,7 @@ const getListingsCsvFeed = async (req, res) => {
       }
 
       // Build link
-      let link = business.listingUrlPattern || "https://example.com/anunt/{id}";
+      let link = business.listingUrlPattern || "https://www.davocars.ro/stoc/{id}";
       if (link.includes("{slug}")) {
         link = link.replace("{slug}", listing.slug || listing.id);
       }
