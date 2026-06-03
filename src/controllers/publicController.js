@@ -383,25 +383,26 @@ const getListingsCsvFeed = async (req, res) => {
     };
 
     const headers = [
-      "Post Id",
+      "Link",
+      "ID",
       "Marca",
       "Model",
-      "An",
-      "Kilometraj",
-      "Combustibil",
-      "Cutie Viteze",
+      "Year",
+      "Mileage",
+      "Fuel_Type",
+      "Transmise",
       "Capacitate Cilindrica",
       "Putere (CP)",
-      "Pret",
+      "Price",
       "image_link",
-      "additional_image_link",
+      "additional_image",
       "Availability",
       "Condition",
-      "Titlu",
-      "Descriere"
+      "Title",
+      "Description"
     ];
 
-    const csvLines = [headers.join(",")];
+    const csvLines = [headers.join(";")];
 
     for (const listing of listings) {
       const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
@@ -431,6 +432,9 @@ const getListingsCsvFeed = async (req, res) => {
 
       // Build link
       let link = business.listingUrlPattern || "https://example.com/anunt/{id}";
+      if (business.id === "cmhomcpoi02x1ut2cpips3mo3") {
+        link = "https://www.carsleasing.ro/stoc/{id}";
+      }
       if (link.includes("{slug}")) {
         link = link.replace("{slug}", listing.slug || listing.id);
       }
@@ -450,6 +454,7 @@ const getListingsCsvFeed = async (req, res) => {
       const description = stripHtml(listing.description);
 
       const row = [
+        escapeCsv(link),
         escapeCsv(id),
         escapeCsv(marca),
         escapeCsv(model),
@@ -468,10 +473,10 @@ const getListingsCsvFeed = async (req, res) => {
         escapeCsv(description)
       ];
 
-      csvLines.push(row.join(","));
+      csvLines.push(row.join(";"));
     }
 
-    const csvContent = "sep=,\n" + csvLines.join("\n");
+    const csvContent = csvLines.join("\n");
 
     // Set headers for download
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
