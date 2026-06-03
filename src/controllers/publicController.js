@@ -395,6 +395,8 @@ const getListingsCsvFeed = async (req, res) => {
       "Putere (CP)",
       "Pret",
       "Link",
+      "Link Imagine",
+      "Link-uri Imagini Suplimentare",
       "Availability",
       "Condition",
       "Titlu",
@@ -443,6 +445,9 @@ const getListingsCsvFeed = async (req, res) => {
       const title = listing.title;
       const description = stripHtml(listing.description);
 
+      const image_link = listing.images && listing.images.length > 0 ? listing.images[0].url : "";
+      const additional_images = listing.images && listing.images.length > 1 ? listing.images.slice(1).map(img => img.url).join(",") : "";
+
       const row = [
         escapeCsv(id),
         escapeCsv(marca),
@@ -455,6 +460,8 @@ const getListingsCsvFeed = async (req, res) => {
         escapeCsv(putere_cp),
         escapeCsv(pret),
         escapeCsv(link),
+        escapeCsv(image_link),
+        escapeCsv(additional_images),
         escapeCsv(availability),
         escapeCsv(condition),
         escapeCsv(title),
