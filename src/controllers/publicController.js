@@ -384,50 +384,35 @@ const getListingsCsvFeed = async (req, res) => {
     };
 
     const headers = [
-      "Post Id",
-      "Marca",
-      "Model",
-      "An",
-      "Kilometraj",
-      "Combustibil",
-      "Cutie Viteze",
-      "Capacitate Cilindrica",
-      "Putere (CP)",
-      "Pret",
-      "Link",
+      "id",
+      "title",
+      "description",
+      "availability",
+      "condition",
+      "price",
+      "link",
       "image_link",
-      "additional_image_link",
-      "Availability",
-      "Condition",
-      "Titlu",
-      "Descriere"
+      "brand",
+      "additional_image_link"
     ];
 
     const csvLines = [headers.join(",")];
 
     for (const listing of listings) {
       const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
-      
-      // Extragere marca si model din titlu
-      const titleWords = listing.title.trim().split(/\s+/);
-      const marca = titleWords[0] || "";
-      const model = titleWords[1] || "";
+      const title = listing.title;
+      const description = stripHtml(listing.description);
+      const availability = "in stock";
+      const condition = "used";
 
-      const an = getAttrValue(listing, "An fabricație") || getAttrValue(listing, "An");
-      const kilometraj = listing.mileage || getAttrValue(listing, "Kilometraj");
-      const combustibil = getAttrValue(listing, "Combustibil");
-      const cutie_viteze = getAttrValue(listing, "Transmisie") || getAttrValue(listing, "Cutie de viteze");
-      const capacitate_cilindrica = getAttrValue(listing, "Capacitate cilindrică");
-      const putere_cp = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
-
-      // Pret
-      let pret = "";
+      // Price
+      let price = "";
       if (listing.price) {
-        pret = `${listing.price} EUR`;
+        price = `${listing.price} EUR`;
       } else {
         const pVal = getAttrValue(listing, "Preț") || getAttrValue(listing, "Pret") || getAttrValue(listing, "price");
         if (pVal) {
-          pret = `${pVal} EUR`;
+          price = `${pVal} EUR`;
         }
       }
 
@@ -440,32 +425,21 @@ const getListingsCsvFeed = async (req, res) => {
         link = link.replace("{id}", listing.id);
       }
 
-      const availability = "In Stock";
-      const condition = "Used";
-      const title = listing.title;
-      const description = stripHtml(listing.description);
-
       const image_link = listing.images && listing.images.length > 0 ? listing.images[0].url : "";
-      const additional_images = listing.images && listing.images.length > 1 ? listing.images.slice(1).map(img => img.url).join(",") : "";
+      const brand = getAttrValue(listing, "Marca") || getAttrValue(listing, "Marca auto") || listing.title.trim().split(/\s+/)[0] || "";
+      const additional_image_link = listing.images && listing.images.length > 1 ? listing.images.slice(1).map(img => img.url).join(",") : "";
 
       const row = [
         escapeCsv(id),
-        escapeCsv(marca),
-        escapeCsv(model),
-        escapeCsv(an),
-        escapeCsv(kilometraj),
-        escapeCsv(combustibil),
-        escapeCsv(cutie_viteze),
-        escapeCsv(capacitate_cilindrica),
-        escapeCsv(putere_cp),
-        escapeCsv(pret),
-        escapeCsv(link),
-        escapeCsv(image_link),
-        escapeCsv(additional_images),
+        escapeCsv(title),
+        escapeCsv(description),
         escapeCsv(availability),
         escapeCsv(condition),
-        escapeCsv(title),
-        escapeCsv(description)
+        escapeCsv(price),
+        escapeCsv(link),
+        escapeCsv(image_link),
+        escapeCsv(brand),
+        escapeCsv(additional_image_link)
       ];
 
       csvLines.push(row.join(","));
