@@ -5,6 +5,40 @@ const { sendContactNotification } = require("../services/emailService");
 
 // src/controllers/publicController.js
 
+const normalizeString = (str) => {
+  if (!str) return "";
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+};
+
+const matchAttributeValue = (dbValue, filterValue) => {
+  const normDb = normalizeString(dbValue);
+  const normFilter = normalizeString(filterValue);
+
+  if (normFilter === "diesel" || normFilter === "motorina") {
+    return normDb.includes("diesel") || normDb.includes("motorina") || normDb === "d" || normDb === "diese";
+  }
+  
+  if (normFilter === "benzina") {
+    return normDb.includes("benzina");
+  }
+
+  if (normFilter === "automata" || normFilter === "automat") {
+    return normDb.includes("automat");
+  }
+
+  if (normFilter === "manuala" || normFilter === "manual" || normFilter === "manula") {
+    return normDb.includes("manual") || normDb.includes("manula");
+  }
+
+  // Fallback generic match
+  return normDb.includes(normFilter) || normFilter.includes(normDb);
+};
+
 const getUniqueAttributeValues = async (req, res) => {
   try {
     const { attributeId } = req.params;
@@ -35,6 +69,7 @@ const searchListings = async (req, res) => {
       businessId,
       categoryId,
       q,
+      search,
       page = 1,
       limit = 10,
       sortBy = "newest",
@@ -51,85 +86,95 @@ const searchListings = async (req, res) => {
     if (categoryId) {
       whereConditions.push({ categoryId: categoryId });
     }
-    if (q) {
+    
+    const searchVal = q || search;
+    if (searchVal) {
       whereConditions.push({
         OR: [
-          { title: { contains: q, mode: "insensitive" } },
-          { description: { contains: q, mode: "insensitive" } },
+          { title: { contains: searchVal, mode: "insensitive" } },
+          { description: { contains: searchVal, mode: "insensitive" } },
         ],
       });
     }
 
     // Aceasta este versiunea NOUĂ și CORECTĂ
     for (const key in dynamicFilters) {
-  const value = dynamicFilters[key];
-  const attributeName = key.replace(/_/g, " ");
+      const value = dynamicFilters[key];
+      
+      let cleanKey = key;
+      if (key.startsWith("attr_")) {
+        cleanKey = key.substring(5);
+      }
+      
+      const attributeName = cleanKey.replace(/_/g, " ");
 
-  let attributeCondition;
+      let attributeCondition;
 
-  if (value === "true" || value === "false") {
-    // Filtru boolean
-    attributeCondition = {
-      attribute: {
-        name: { equals: attributeName, mode: "insensitive" },
-      },
-      booleanValue: { equals: value === "true" },
-    };
+      if (value === "true" || value === "false") {
+        // Filtru boolean
+        attributeCondition = {
+          attribute: {
+            name: { equals: attributeName, mode: "insensitive" },
+          },
+          booleanValue: { equals: value === "true" },
+        };
 
-  } else if (key.endsWith("_max")) {
-    // Interval numeric - maxim
-    const attrNameNoSuffix = attributeName.replace(" max", "");
-    attributeCondition = {
-      attribute: {
-        name: { equals: attrNameNoSuffix, mode: "insensitive" },
-      },
-      numberValue: { lte: parseFloat(value) },
-    };
+      } else if (cleanKey.endsWith("_max")) {
+        // Interval numeric - maxim
+        const attrNameNoSuffix = attributeName.replace(" max", "");
+        attributeCondition = {
+          attribute: {
+            name: { equals: attrNameNoSuffix, mode: "insensitive" },
+          },
+          numberValue: { lte: parseFloat(value) },
+        };
 
-  } else if (key.endsWith("_min")) {
-    // Interval numeric - minim
-    const attrNameNoSuffix = attributeName.replace(" min", "");
-    attributeCondition = {
-      attribute: {
-        name: { equals: attrNameNoSuffix, mode: "insensitive" },
-      },
-      numberValue: { gte: parseFloat(value) },
-    };
+      } else if (cleanKey.endsWith("_min")) {
+        // Interval numeric - minim
+        const attrNameNoSuffix = attributeName.replace(" min", "");
+        attributeCondition = {
+          attribute: {
+            name: { equals: attrNameNoSuffix, mode: "insensitive" },
+          },
+          numberValue: { gte: parseFloat(value) },
+        };
 
-  } else if (Array.isArray(value)) {
-    // ─── NOU: Valori multiple pentru același atribut (ex: Combustibil=Benzina&Combustibil=Hybrid) ───
-    whereConditions.push({
-      OR: value.map(v => ({
-        attributeValues: {
-          some: {
+      } else {
+        // Filtru text cu potrivire inteligentă (diacritice, spații, case-insensitive, sinonime)
+        const distinctDbValues = await prisma.attributeValue.findMany({
+          where: {
             attribute: {
               name: { equals: attributeName, mode: "insensitive" },
             },
-            stringValue: { equals: v, mode: "insensitive" },
+            stringValue: { not: null },
           },
-        },
-      })),
-    });
-    continue; // Sărim peste adăugarea normală de mai jos
+          distinct: ["stringValue"],
+          select: { stringValue: true },
+        });
+        
+        const dbStrings = distinctDbValues.map(v => v.stringValue);
+        const filterValues = Array.isArray(value) ? value : [value];
+        
+        const matchedDbStrings = dbStrings.filter(dbVal => 
+          filterValues.some(v => matchAttributeValue(dbVal, v))
+        );
+        
+        attributeCondition = {
+          attribute: {
+            name: { equals: attributeName, mode: "insensitive" },
+          },
+          stringValue: { in: matchedDbStrings },
+        };
+      }
 
-  } else {
-    // Filtru text simplu
-    attributeCondition = {
-      attribute: {
-        name: { equals: attributeName, mode: "insensitive" },
-      },
-      stringValue: { equals: value, mode: "insensitive" },
-    };
-  }
-
-  if (attributeCondition) {
-    whereConditions.push({
-      attributeValues: {
-        some: attributeCondition,
-      },
-    });
-  }
-}
+      if (attributeCondition) {
+        whereConditions.push({
+          attributeValues: {
+            some: attributeCondition,
+          },
+        });
+      }
+    }
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
