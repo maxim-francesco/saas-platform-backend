@@ -399,7 +399,8 @@ const getListingsCsvFeed = async (req, res) => {
       "Availability",
       "Condition",
       "Title",
-      "Description"
+      "Description",
+      "quantity_to_sell_on_facebook"
     ];
 
     const csvLines = [headers.join(";")];
@@ -470,7 +471,8 @@ const getListingsCsvFeed = async (req, res) => {
         escapeCsv(availability),
         escapeCsv(condition),
         escapeCsv(title),
-        escapeCsv(description)
+        escapeCsv(description),
+        escapeCsv("1")
       ];
 
       csvLines.push(row.join(";"));
