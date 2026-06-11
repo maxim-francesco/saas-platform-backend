@@ -341,6 +341,10 @@ const submitContactForm = async (req, res) => {
       sendContactNotification({ toEmail: "via.automobile@yahoo.com", name, email, phone, message })
         .then(() => console.log("[Email] Notificare trimisă către Via Automobile"))
         .catch((err) => console.error("[Email] Eroare la trimitere:", err.message));
+    } else if (businessUserEmail === "contact@carsleasing.ro") {
+      sendContactNotification({ toEmail: "office@davocars.ro", name, email, phone, message })
+        .then(() => console.log("[Email] Notificare trimisă către Cars Leasing"))
+        .catch((err) => console.error("[Email] Eroare la trimitere:", err.message));
     }
 
     res.status(201).json({
