@@ -245,58 +245,95 @@ const uploadImages = async (req, res) => {
 };
 
 const createListing = async (req, res) => {
-  const { title, description, internalNotes, categoryId, attributes, purchasePrice, otherCosts } = req.body;
+  const {
+    title, description, internalNotes,
+    makeId, modelId, variant, year, mileage, vin, firstRegistrationAt, countryOfOrigin, registeredInRo,
+    fuelType, gearbox, drivetrain, bodyType, engineCapacity, powerHp, pollutionNorm, co2Emissions,
+    color, colorDetail, upholstery, airConditioning, doors, seats,
+    vatDeductible, noAccidents, serviceBook, firstOwner, ownerCount, warrantyMonths,
+    price, purchasePrice, sellingPrice, otherCosts, status, youtubeVideoId,
+    featureIds = [], extraSpecs
+  } = req.body;
   const { businessId } = req.user;
+
   try {
-    const newListing = await prisma.$transaction(async (prisma) => {
-      const category = await prisma.category.findFirst({ where: { id: categoryId, businessId: businessId }, include: { attributes: true } });
-      if (!category) throw new Error("Categoria nu a fost găsită sau nu aveți acces la ea.");
-      let priceValue = null;
-      let mileageValue = null;
-      if (attributes && Array.isArray(attributes)) {
-        for (const attr of attributes) {
-          const definedAttribute = category.attributes.find((a) => a.id === attr.attributeId);
-          if (definedAttribute?.name.toLowerCase() === "price" || definedAttribute?.name.toLowerCase() === "pret") priceValue = parseFloat(attr.value);
-          if (definedAttribute?.name.toLowerCase() === "kilometraj") mileageValue = parseInt(attr.value, 10);
+    const slug = generateSlug(title);
+    const newListing = await prisma.listing.create({
+      data: {
+        businessId,
+        title,
+        slug,
+        description,
+        internalNotes,
+        makeId: makeId || null,
+        modelId: modelId || null,
+        variant: variant || null,
+        year: year != null ? parseInt(year, 10) : null,
+        mileage: mileage != null ? parseInt(mileage, 10) : null,
+        vin: vin || null,
+        firstRegistrationAt: firstRegistrationAt ? new Date(firstRegistrationAt) : null,
+        countryOfOrigin: countryOfOrigin || null,
+        registeredInRo: registeredInRo != null ? Boolean(registeredInRo) : null,
+        fuelType: fuelType || null,
+        gearbox: gearbox || null,
+        drivetrain: drivetrain || null,
+        bodyType: bodyType || null,
+        engineCapacity: engineCapacity != null ? parseInt(engineCapacity, 10) : null,
+        powerHp: powerHp != null ? parseInt(powerHp, 10) : null,
+        pollutionNorm: pollutionNorm || null,
+        co2Emissions: co2Emissions != null ? parseInt(co2Emissions, 10) : null,
+        color: color || null,
+        colorDetail: colorDetail || null,
+        upholstery: upholstery || null,
+        airConditioning: airConditioning || null,
+        doors: doors != null ? parseInt(doors, 10) : null,
+        seats: seats != null ? parseInt(seats, 10) : null,
+        vatDeductible: vatDeductible != null ? Boolean(vatDeductible) : null,
+        noAccidents: noAccidents != null ? Boolean(noAccidents) : null,
+        serviceBook: serviceBook != null ? Boolean(serviceBook) : null,
+        firstOwner: firstOwner != null ? Boolean(firstOwner) : null,
+        ownerCount: ownerCount != null ? parseInt(ownerCount, 10) : null,
+        warrantyMonths: warrantyMonths != null ? parseInt(warrantyMonths, 10) : null,
+        price: price != null ? parseFloat(price) : null,
+        purchasePrice: purchasePrice != null ? parseFloat(purchasePrice) : null,
+        sellingPrice: sellingPrice != null ? parseFloat(sellingPrice) : null,
+        otherCosts: otherCosts != null ? parseFloat(otherCosts) : null,
+        status: status || "AVAILABLE",
+        youtubeVideoId: youtubeVideoId || null,
+        extraSpecs: extraSpecs || null,
+        features: {
+          connect: (featureIds || []).map(id => ({ id }))
         }
+      },
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
       }
-      const listing = await prisma.listing.create({
-        data: { title, description, internalNotes, businessId, categoryId, price: priceValue, mileage: mileageValue, purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null, otherCosts: otherCosts ? parseFloat(otherCosts) : null, slug: generateSlug(title) },
-      });
-      if (attributes && Array.isArray(attributes)) {
-        for (const attr of attributes) {
-          const definedAttribute = category.attributes.find((a) => a.id === attr.attributeId);
-          if (!definedAttribute) throw new Error(`Atribut invalid: ${attr.attributeId}`);
-          const valueData = { listingId: listing.id, attributeId: attr.attributeId };
-          if (definedAttribute.type === "STRING") valueData.stringValue = attr.value;
-          else if (definedAttribute.type === "NUMBER") valueData.numberValue = parseFloat(attr.value);
-          else if (definedAttribute.type === "BOOLEAN") valueData.booleanValue = Boolean(attr.value);
-          await prisma.attributeValue.create({ data: valueData });
-        }
-      }
-      return listing;
     });
 
-    const newListingId = newListing.id;
-
     // --- INTEGRATION BESTAUTO: CREATE ---
-    ;(async () => {
-      try {
-        const fullListing = await prisma.listing.findUnique({
-          where: { id: newListingId },
-          include: { business: true, attributeValues: { include: { attribute: true } }, images: true },
-        });
-        if (fullListing?.business?.bestAutoApiKey) {
-          await bestAutoService.publishListing(fullListing, fullListing.business.bestAutoApiKey);
+    // TODO(bestauto-v2): BestAuto integration needs to be refactored for fixed schema v2.
+    // Guarded to prevent EAV relation crash.
+    const enableBestAutoSync = false;
+    if (enableBestAutoSync) {
+      ;(async () => {
+        try {
+          if (newListing?.business?.bestAutoApiKey) {
+            await bestAutoService.publishListing(newListing, newListing.business.bestAutoApiKey);
+          }
+        } catch (err) {
+          console.error("[BestAuto] Eroare la sincronizare (create):", err.message);
         }
-      } catch (err) {
-        console.error("[BestAuto] Eroare la sincronizare (create):", err.message);
-      }
-    })();
+      })();
+    }
     // --- END BESTAUTO: CREATE ---
 
-    res.status(201).json(newListing);
+    const { toLegacyListing } = require("../utils/compatSerializer");
+    res.status(201).json(toLegacyListing(newListing, { mode: 'byId' }));
   } catch (error) {
+    console.error("Eroare la crearea anunțului:", error);
     res.status(400).json({ message: error.message || "Eroare la crearea anunțului." });
   }
 };
@@ -369,115 +406,146 @@ const markAsSold = async (req, res) => {
 
 const updateListing = async (req, res) => {
   const { listingId } = req.params;
-  const { title, description, internalNotes, attributes, purchasePrice, otherCosts } = req.body;
   const { businessId } = req.user;
 
+  const {
+    title, description, internalNotes,
+    makeId, modelId, variant, year, mileage, vin, firstRegistrationAt, countryOfOrigin, registeredInRo,
+    fuelType, gearbox, drivetrain, bodyType, engineCapacity, powerHp, pollutionNorm, co2Emissions,
+    color, colorDetail, upholstery, airConditioning, doors, seats,
+    vatDeductible, noAccidents, serviceBook, firstOwner, ownerCount, warrantyMonths,
+    price, purchasePrice, sellingPrice, otherCosts, status, youtubeVideoId,
+    featureIds, extraSpecs
+  } = req.body;
+
   try {
-    await prisma.$transaction(async (prisma) => {
-      const listing = await prisma.listing.findFirst({ where: { id: listingId, businessId } });
-      if (!listing) throw new Error("Anunțul nu a fost găsit sau nu aveți acces la el.");
+    const originalListing = await prisma.listing.findFirst({
+      where: { id: listingId, businessId }
+    });
+    if (!originalListing) {
+      return res.status(404).json({ message: "Anunțul nu a fost găsit sau nu aveți acces la el." });
+    }
 
-      let priceValue = listing.price;
-      let mileageValue = listing.mileage;
+    const updateData = {};
+    if (title !== undefined) {
+      updateData.title = title;
+      updateData.slug = generateSlug(title);
+    }
+    if (description !== undefined) updateData.description = description || null;
+    if (internalNotes !== undefined) updateData.internalNotes = internalNotes || null;
+    if (makeId !== undefined) updateData.makeId = makeId || null;
+    if (modelId !== undefined) updateData.modelId = modelId || null;
+    if (variant !== undefined) updateData.variant = variant || null;
+    if (year !== undefined) updateData.year = year != null ? parseInt(year, 10) : null;
+    if (mileage !== undefined) updateData.mileage = mileage != null ? parseInt(mileage, 10) : null;
+    if (vin !== undefined) updateData.vin = vin || null;
+    if (firstRegistrationAt !== undefined) updateData.firstRegistrationAt = firstRegistrationAt ? new Date(firstRegistrationAt) : null;
+    if (countryOfOrigin !== undefined) updateData.countryOfOrigin = countryOfOrigin || null;
+    if (registeredInRo !== undefined) updateData.registeredInRo = registeredInRo != null ? Boolean(registeredInRo) : null;
+    
+    if (fuelType !== undefined) updateData.fuelType = fuelType || null;
+    if (gearbox !== undefined) updateData.gearbox = gearbox || null;
+    if (drivetrain !== undefined) updateData.drivetrain = drivetrain || null;
+    if (bodyType !== undefined) updateData.bodyType = bodyType || null;
+    if (engineCapacity !== undefined) updateData.engineCapacity = engineCapacity != null ? parseInt(engineCapacity, 10) : null;
+    if (powerHp !== undefined) updateData.powerHp = powerHp != null ? parseInt(powerHp, 10) : null;
+    if (pollutionNorm !== undefined) updateData.pollutionNorm = pollutionNorm || null;
+    if (co2Emissions !== undefined) updateData.co2Emissions = co2Emissions != null ? parseInt(co2Emissions, 10) : null;
+    
+    if (color !== undefined) updateData.color = color || null;
+    if (colorDetail !== undefined) updateData.colorDetail = colorDetail || null;
+    if (upholstery !== undefined) updateData.upholstery = upholstery || null;
+    if (airConditioning !== undefined) updateData.airConditioning = airConditioning || null;
+    if (doors !== undefined) updateData.doors = doors != null ? parseInt(doors, 10) : null;
+    if (seats !== undefined) updateData.seats = seats != null ? parseInt(seats, 10) : null;
+    
+    if (vatDeductible !== undefined) updateData.vatDeductible = vatDeductible != null ? Boolean(vatDeductible) : null;
+    if (noAccidents !== undefined) updateData.noAccidents = noAccidents != null ? Boolean(noAccidents) : null;
+    if (serviceBook !== undefined) updateData.serviceBook = serviceBook != null ? Boolean(serviceBook) : null;
+    if (firstOwner !== undefined) updateData.firstOwner = firstOwner != null ? Boolean(firstOwner) : null;
+    if (ownerCount !== undefined) updateData.ownerCount = ownerCount != null ? parseInt(ownerCount, 10) : null;
+    if (warrantyMonths !== undefined) updateData.warrantyMonths = warrantyMonths != null ? parseInt(warrantyMonths, 10) : null;
+    
+    if (price !== undefined) updateData.price = price != null ? parseFloat(price) : null;
+    if (purchasePrice !== undefined) updateData.purchasePrice = purchasePrice != null ? parseFloat(purchasePrice) : null;
+    if (sellingPrice !== undefined) updateData.sellingPrice = sellingPrice != null ? parseFloat(sellingPrice) : null;
+    if (otherCosts !== undefined) updateData.otherCosts = otherCosts != null ? parseFloat(otherCosts) : null;
+    if (status !== undefined) updateData.status = status;
+    if (youtubeVideoId !== undefined) updateData.youtubeVideoId = youtubeVideoId || null;
+    if (extraSpecs !== undefined) updateData.extraSpecs = extraSpecs || null;
 
-      if (attributes && Array.isArray(attributes)) {
-        const categoryAttributes = await prisma.attribute.findMany({ where: { categoryId: listing.categoryId } });
-        for (const attr of attributes) {
-          const definedAttribute = categoryAttributes.find((a) => a.id === attr.attributeId);
-          if (definedAttribute?.name.toLowerCase() === "price" || definedAttribute?.name.toLowerCase() === "pret") priceValue = parseFloat(attr.value);
-          if (definedAttribute?.name.toLowerCase() === "kilometraj") mileageValue = parseInt(attr.value, 10);
-        }
-      }
+    if (featureIds !== undefined) {
+      updateData.features = {
+        set: (featureIds || []).map(id => ({ id }))
+      };
+    }
 
-      await prisma.listing.update({
-        where: { id: listingId },
-        data: { title, description, internalNotes, price: priceValue, mileage: mileageValue, purchasePrice: purchasePrice ? parseFloat(purchasePrice) : null, otherCosts: otherCosts ? parseFloat(otherCosts) : null, slug: generateSlug(title) },
-      });
-
-      if (attributes && Array.isArray(attributes)) {
-        await prisma.attributeValue.deleteMany({ where: { listingId } });
-        const categoryAttributes = await prisma.attribute.findMany({ where: { categoryId: listing.categoryId } });
-        for (const attr of attributes) {
-          const definedAttribute = categoryAttributes.find((a) => a.id === attr.attributeId);
-          if (!definedAttribute) continue;
-          const valueData = { listingId, attributeId: attr.attributeId };
-          if (definedAttribute.type === "STRING") valueData.stringValue = attr.value;
-          else if (definedAttribute.type === "NUMBER") valueData.numberValue = parseFloat(attr.value);
-          else if (definedAttribute.type === "BOOLEAN") valueData.booleanValue = attr.value === "true" || attr.value === true;
-          else if (definedAttribute.type === "DATE") valueData.dateValue = new Date(attr.value);
-          await prisma.attributeValue.create({ data: valueData });
-        }
+    const updatedListing = await prisma.listing.update({
+      where: { id: listingId },
+      data: updateData,
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
       }
     });
 
     // --- INTEGRATION BESTAUTO: UPDATE ---
-    // ;(async () => {
-    //   try {
-    //     const fullListing = await prisma.listing.findUnique({
-    //       where: { id: listingId },
-    //       include: {
-    //         business: true,
-    //         attributeValues: { include: { attribute: true } },
-    //         images: { orderBy: { order: "asc" } },
-    //       },
-    //     });
-    //     if (fullListing?.business?.bestAutoApiKey) {
-    //       await bestAutoService.publishListing(fullListing, fullListing.business.bestAutoApiKey);
-    //     }
-    //   } catch (err) {
-    //     console.error("[BestAuto] Eroare la sincronizare (update):", err.message);
-    //   }
-    // })();
-    // --- END BESTAUTO: UPDATE ---
+    // TODO(bestauto-v2): BestAuto integration needs to be refactored for fixed schema v2.
+    // Guarded to prevent EAV relation crash.
+    const enableBestAutoSync = false;
+    if (enableBestAutoSync) {
+      ;(async () => {
+        try {
+          // ...
+        } catch (err) {
+          console.error("[BestAuto] Eroare la sincronizare (update):", err.message);
+        }
+      })();
+    }
 
     // --- INTEGRATION AUTOVIT: UPDATE ---
-    ;(async () => {
-      try {
-        const fullListing = await prisma.listing.findUnique({
-          where: { id: listingId },
-          include: {
-            business: true,
-            attributeValues: { include: { attribute: true } },
-            images: { orderBy: { order: "asc" } },
-          },
-        });
-
-        const b = fullListing?.business;
-        if (b?.autovitClientId && b?.autovitUsername && fullListing.autovitId) {
-          const imageUrls = fullListing.images.map(img => img.url);
-          if (imageUrls.length === 0) return;
-
-          const token = await autovitService.getAccessToken(
-            b.autovitClientId, b.autovitClientSecret,
-            b.autovitUsername, b.autovitPassword
-          );
-
-          const imageCollectionId = await autovitService.createImageCollection(
-            imageUrls, token, b.autovitUsername
-          );
-
-          const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
-          await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
-        }
-      } catch (err) {
-        console.error("[Autovit] Eroare la sincronizare (update):", err.message);
-        if (err.message && err.message.includes("belongs to other user")) {
-          console.log(`[Autovit] Conflict proprietate detectat pentru anunț ${listingId}. Ștergem ID-ul vechi din DB pentru re-publicare pe noul cont.`);
-          await prisma.listing.update({
+    // TODO(autovit-v2): Autovit integration needs to be refactored for fixed schema v2.
+    // Guarded to prevent EAV relation crash.
+    const enableAutovitSync = false;
+    if (enableAutovitSync) {
+      ;(async () => {
+        try {
+          const fullListing = await prisma.listing.findUnique({
             where: { id: listingId },
-            data: { autovitId: null, autovitStatus: null }
+            include: {
+              business: true,
+              images: { orderBy: { order: "asc" } },
+            },
           });
+
+          const b = fullListing?.business;
+          if (b?.autovitClientId && b?.autovitUsername && fullListing.autovitId) {
+            const imageUrls = fullListing.images.map(img => img.url);
+            if (imageUrls.length === 0) return;
+
+            const token = await autovitService.getAccessToken(
+              b.autovitClientId, b.autovitClientSecret,
+              b.autovitUsername, b.autovitPassword
+            );
+
+            const imageCollectionId = await autovitService.createImageCollection(
+              imageUrls, token, b.autovitUsername
+            );
+
+            const payload = autovitService.mapListingToAutovit(fullListing, imageCollectionId);
+            await autovitService.updateAdvert(fullListing.autovitId, payload, token, b.autovitUsername);
+          }
+        } catch (err) {
+          console.error("[Autovit] Eroare la sincronizare (update):", err.message);
         }
-      }
-    })();
+      })();
+    }
     // --- END AUTOVIT: UPDATE ---
 
-    const updatedListing = await prisma.listing.findUnique({
-      where: { id: listingId },
-      include: { images: true, attributeValues: { include: { attribute: { include: { attributeGroup: { select: { name: true } } } } } } },
-    });
-
-    res.status(200).json(updatedListing);
+    const { toLegacyListing } = require("../utils/compatSerializer");
+    res.status(200).json(toLegacyListing(updatedListing, { mode: 'byId' }));
   } catch (error) {
     console.error("Eroare la update listing:", error);
     res.status(500).json({ message: error.message || "Eroare la actualizarea anunțului." });
@@ -520,12 +588,12 @@ const deleteListing = async (req, res) => {
   }
 
   try {
-    await prisma.$transaction(async (prisma) => {
-      const listing = await prisma.listing.findFirst({ where: { id: listingId, businessId } });
-      if (!listing) throw new Error("Anunțul nu a fost găsit sau nu aveți acces la el.");
-      await prisma.attributeValue.deleteMany({ where: { listingId } });
-      await prisma.listing.delete({ where: { id: listingId } });
-    });
+    const listing = await prisma.listing.findFirst({ where: { id: listingId, businessId } });
+    if (!listing) {
+      return res.status(404).json({ message: "Anunțul nu a fost găsit sau nu aveți acces la el." });
+    }
+
+    await prisma.listing.delete({ where: { id: listingId } });
 
     // --- INTEGRATION BESTAUTO: DELETE ---
     if (bestAutoApiKey) {
@@ -536,37 +604,37 @@ const deleteListing = async (req, res) => {
 
     // --- INTEGRATION AUTOVIT: DELETE ---
     ;(async () => {
-  try {
-    if (autovitId && autovitClientId) {
-      const token = await autovitService.getAccessToken(
-        autovitClientId, autovitClientSecret,
-        autovitUsername, autovitPassword
-      );
-
-      // Mai întâi dezactivăm, apoi ștergem
       try {
-        await autovitService.deactivateAdvert(autovitId, token, autovitUsername);
-        console.log(`[Autovit] Anunț ${autovitId} dezactivat înainte de ștergere.`);
-      } catch (deactivateErr) {
-        console.warn(`[Autovit] Nu s-a putut dezactiva (poate era deja inactiv):`, deactivateErr.message);
-        // Continuăm oricum cu ștergerea
+        if (autovitId && autovitClientId) {
+          const token = await autovitService.getAccessToken(
+            autovitClientId, autovitClientSecret,
+            autovitUsername, autovitPassword
+          );
+
+          // Mai întâi dezactivăm, apoi ștergem
+          try {
+            await autovitService.deactivateAdvert(autovitId, token, autovitUsername);
+            console.log(`[Autovit] Anunț ${autovitId} dezactivat înainte de ștergere.`);
+          } catch (deactivateErr) {
+            console.warn(`[Autovit] Nu s-a putut dezactiva (poate era deja inactiv):`, deactivateErr.message);
+            // Continuăm oricum cu ștergerea
+          }
+
+          // Mică pauză să proceseze Autovit dezactivarea
+          await new Promise(resolve => setTimeout(resolve, 1000));
+
+          await autovitService.deleteAdvert(autovitId, token, autovitUsername);
+          console.log(`[Autovit] Anunț ${autovitId} șters cu succes.`);
+        }
+      } catch (err) {
+        console.error("[Autovit] Eroare la ștergere:", err.message);
       }
-
-      // Mică pauză să proceseze Autovit dezactivarea
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      await autovitService.deleteAdvert(autovitId, token, autovitUsername);
-      console.log(`[Autovit] Anunț ${autovitId} șters cu succes.`);
-    }
-  } catch (err) {
-    console.error("[Autovit] Eroare la ștergere:", err.message);
-  }
-})();
+    })();
     // --- END AUTOVIT: DELETE ---
 
     res.status(200).json({ message: "Anunțul a fost șters." });
   } catch (error) {
-    res.status(404).json({ message: error.message || "Eroare la ștergerea anunțului." });
+    res.status(500).json({ message: error.message || "Eroare la ștergerea anunțului." });
   }
 };
 
@@ -641,23 +709,78 @@ const cloneListing = async (req, res) => {
   const { listingId } = req.params;
   const { businessId } = req.user;
   try {
-    const newClonedListing = await prisma.$transaction(async (tx) => {
-      const originalListing = await tx.listing.findFirst({ where: { id: listingId, businessId: businessId }, include: { attributeValues: true } });
-      if (!originalListing) throw new Error("Anunțul original nu a fost găsit sau nu aveți acces.");
-      const newListing = await tx.listing.create({
-        data: { title: `${originalListing.title} [CLONĂ]`, description: originalListing.description, internalNotes: originalListing.internalNotes, price: originalListing.price, mileage: originalListing.mileage, purchasePrice: originalListing.purchasePrice, otherCosts: originalListing.otherCosts, status: "AVAILABLE", soldAt: null, sellingPrice: null, businessId: originalListing.businessId, categoryId: originalListing.categoryId },
-      });
-      if (originalListing.attributeValues.length > 0) {
-        await tx.attributeValue.createMany({
-          data: originalListing.attributeValues.map((attr) => ({ stringValue: attr.stringValue, numberValue: attr.numberValue, booleanValue: attr.booleanValue, attributeId: attr.attributeId, listingId: newListing.id })),
-        });
-      }
-      return newListing;
+    const originalListing = await prisma.listing.findFirst({
+      where: { id: listingId, businessId },
+      include: { features: true }
     });
-    res.status(201).json(newClonedListing);
+    if (!originalListing) {
+      return res.status(404).json({ message: "Anunțul original nu a fost găsit sau nu aveți acces." });
+    }
+
+    const clonedTitle = `${originalListing.title} (Copie)`;
+    const clonedSlug = generateSlug(clonedTitle);
+
+    const newListing = await prisma.listing.create({
+      data: {
+        businessId: originalListing.businessId,
+        title: clonedTitle,
+        slug: clonedSlug,
+        description: originalListing.description,
+        internalNotes: originalListing.internalNotes,
+        makeId: originalListing.makeId,
+        modelId: originalListing.modelId,
+        variant: originalListing.variant,
+        year: originalListing.year,
+        mileage: originalListing.mileage,
+        vin: originalListing.vin,
+        firstRegistrationAt: originalListing.firstRegistrationAt,
+        countryOfOrigin: originalListing.countryOfOrigin,
+        registeredInRo: originalListing.registeredInRo,
+        fuelType: originalListing.fuelType,
+        gearbox: originalListing.gearbox,
+        drivetrain: originalListing.drivetrain,
+        bodyType: originalListing.bodyType,
+        engineCapacity: originalListing.engineCapacity,
+        powerHp: originalListing.powerHp,
+        pollutionNorm: originalListing.pollutionNorm,
+        co2Emissions: originalListing.co2Emissions,
+        color: originalListing.color,
+        colorDetail: originalListing.colorDetail,
+        upholstery: originalListing.upholstery,
+        airConditioning: originalListing.airConditioning,
+        doors: originalListing.doors,
+        seats: originalListing.seats,
+        vatDeductible: originalListing.vatDeductible,
+        noAccidents: originalListing.noAccidents,
+        serviceBook: originalListing.serviceBook,
+        firstOwner: originalListing.firstOwner,
+        ownerCount: originalListing.ownerCount,
+        warrantyMonths: originalListing.warrantyMonths,
+        price: originalListing.price,
+        purchasePrice: originalListing.purchasePrice,
+        sellingPrice: null,
+        otherCosts: originalListing.otherCosts,
+        status: "AVAILABLE",
+        soldAt: null,
+        youtubeVideoId: originalListing.youtubeVideoId,
+        extraSpecs: originalListing.extraSpecs || null,
+        features: {
+          connect: (originalListing.features || []).map(f => ({ id: f.id }))
+        }
+      },
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
+      }
+    });
+
+    const { toLegacyListing } = require("../utils/compatSerializer");
+    res.status(201).json(toLegacyListing(newListing, { mode: 'byId' }));
   } catch (error) {
-    console.error("[DEBUG] Eroare la clonarea anunțului:", error);
-    res.status(404).json({ message: error.message || "Eroare la clonarea anunțului." });
+    console.error("Eroare la clonarea anunțului:", error);
+    res.status(500).json({ message: error.message || "Eroare la clonarea anunțului." });
   }
 };
 

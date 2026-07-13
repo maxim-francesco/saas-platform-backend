@@ -19,6 +19,7 @@ const ogRoutes = require("./routes/ogRoutes");
 const autovitRoutes = require("./routes/autovitRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const publicBlogRoutes = require("./routes/publicBlogRoutes");
+const catalogRoutes = require("./routes/catalogRoutes");
 
 
 
@@ -91,6 +92,7 @@ app.use("/og", ogRoutes);
 app.use("/api/autovit", autovitRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/public/blog", publicBlogRoutes);
+app.use("/api/catalog", catalogRoutes);
 
 
 

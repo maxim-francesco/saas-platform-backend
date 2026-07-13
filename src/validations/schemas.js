@@ -26,41 +26,100 @@ const attributeSchema = Joi.object({
 });
 
 // --- LISTINGS ---
+const FUEL_TYPES = ["PETROL", "DIESEL", "PETROL_LPG", "LPG", "HYBRID", "PLUGIN_HYBRID", "MILD_HYBRID", "ELECTRIC"];
+const GEARBOX_TYPES = ["MANUAL", "AUTOMATIC"];
+const DRIVETRAINS = ["FWD", "RWD", "AWD"];
+const BODY_TYPES = ["SUV", "SEDAN", "HATCHBACK", "BREAK", "COUPE", "CABRIO", "MONOVOLUM", "VAN", "PICKUP"];
+const POLLUTION_NORMS = ["NON_EURO", "EURO_1", "EURO_2", "EURO_3", "EURO_4", "EURO_5", "EURO_6", "EURO_6D"];
+const COLORS = ["BLACK", "GREY", "WHITE", "BLUE", "RED", "BROWN", "SILVER", "ORANGE", "GREEN", "PURPLE", "GOLD", "BEIGE", "YELLOW", "OTHER"];
+const UPHOLSTERIES = ["FABRIC", "VELOUR", "LEATHER", "PARTIAL_LEATHER", "ALCANTARA"];
+const AIR_CONDITIONINGS = ["NONE", "MANUAL", "AUTOMATIC", "DUAL_ZONE", "TRI_ZONE", "QUAD_ZONE"];
+const LISTING_STATUSES = ["INCOMING", "AVAILABLE", "RESERVED", "SOLD"];
+
 const createListingSchema = Joi.object({
   title: Joi.string().trim().min(2).max(200).required(),
   description: Joi.string().max(5000).allow(null, "").optional(),
   internalNotes: Joi.string().max(5000).allow(null, "").optional(),
-  categoryId: Joi.string().required(),
+  makeId: Joi.string().max(100).allow(null).optional(),
+  modelId: Joi.string().max(100).allow(null).optional(),
+  variant: Joi.string().max(200).allow(null, "").optional(),
+  year: Joi.number().integer().min(1900).max(new Date().getFullYear() + 2).allow(null).optional(),
+  mileage: Joi.number().integer().min(0).allow(null).optional(),
+  vin: Joi.string().max(100).allow(null, "").optional(),
+  firstRegistrationAt: Joi.date().iso().allow(null).optional(),
+  countryOfOrigin: Joi.string().length(2).uppercase().allow(null, "").optional(),
+  registeredInRo: Joi.boolean().allow(null).optional(),
+  fuelType: Joi.string().valid(...FUEL_TYPES).allow(null).optional(),
+  gearbox: Joi.string().valid(...GEARBOX_TYPES).allow(null).optional(),
+  drivetrain: Joi.string().valid(...DRIVETRAINS).allow(null).optional(),
+  bodyType: Joi.string().valid(...BODY_TYPES).allow(null).optional(),
+  engineCapacity: Joi.number().integer().min(0).allow(null).optional(),
+  powerHp: Joi.number().integer().min(0).allow(null).optional(),
+  pollutionNorm: Joi.string().valid(...POLLUTION_NORMS).allow(null).optional(),
+  co2Emissions: Joi.number().integer().min(0).allow(null).optional(),
+  color: Joi.string().valid(...COLORS).allow(null).optional(),
+  colorDetail: Joi.string().max(200).allow(null, "").optional(),
+  upholstery: Joi.string().valid(...UPHOLSTERIES).allow(null).optional(),
+  airConditioning: Joi.string().valid(...AIR_CONDITIONINGS).allow(null).optional(),
+  doors: Joi.number().integer().min(0).allow(null).optional(),
+  seats: Joi.number().integer().min(0).allow(null).optional(),
+  vatDeductible: Joi.boolean().allow(null).optional(),
+  noAccidents: Joi.boolean().allow(null).optional(),
+  serviceBook: Joi.boolean().allow(null).optional(),
+  firstOwner: Joi.boolean().allow(null).optional(),
+  ownerCount: Joi.number().integer().min(0).allow(null).optional(),
+  warrantyMonths: Joi.number().integer().min(0).allow(null).optional(),
+  price: Joi.number().min(0).allow(null).optional(),
   purchasePrice: Joi.number().min(0).allow(null).optional(),
+  sellingPrice: Joi.number().min(0).allow(null).optional(),
   otherCosts: Joi.number().min(0).allow(null).optional(),
-  attributes: Joi.array().items(
-    Joi.object({
-      attributeId: Joi.string().required(),
-      value: Joi.alternatives().try(
-        Joi.string().max(500),
-        Joi.number(),
-        Joi.boolean()
-      ).required(),
-    })
-  ).optional(),
+  status: Joi.string().valid(...LISTING_STATUSES).allow(null).optional(),
+  youtubeVideoId: Joi.string().max(500).allow(null, "").optional(),
+  featureIds: Joi.array().items(Joi.string()).default([]).optional(),
+  extraSpecs: Joi.object().unknown(true).allow(null).optional(),
 });
 
 const updateListingSchema = Joi.object({
   title: Joi.string().trim().min(2).max(200).optional(),
   description: Joi.string().max(5000).allow(null, "").optional(),
   internalNotes: Joi.string().max(5000).allow(null, "").optional(),
+  makeId: Joi.string().max(100).allow(null).optional(),
+  modelId: Joi.string().max(100).allow(null).optional(),
+  variant: Joi.string().max(200).allow(null, "").optional(),
+  year: Joi.number().integer().min(1900).max(new Date().getFullYear() + 2).allow(null).optional(),
+  mileage: Joi.number().integer().min(0).allow(null).optional(),
+  vin: Joi.string().max(100).allow(null, "").optional(),
+  firstRegistrationAt: Joi.date().iso().allow(null).optional(),
+  countryOfOrigin: Joi.string().length(2).uppercase().allow(null, "").optional(),
+  registeredInRo: Joi.boolean().allow(null).optional(),
+  fuelType: Joi.string().valid(...FUEL_TYPES).allow(null).optional(),
+  gearbox: Joi.string().valid(...GEARBOX_TYPES).allow(null).optional(),
+  drivetrain: Joi.string().valid(...DRIVETRAINS).allow(null).optional(),
+  bodyType: Joi.string().valid(...BODY_TYPES).allow(null).optional(),
+  engineCapacity: Joi.number().integer().min(0).allow(null).optional(),
+  powerHp: Joi.number().integer().min(0).allow(null).optional(),
+  pollutionNorm: Joi.string().valid(...POLLUTION_NORMS).allow(null).optional(),
+  co2Emissions: Joi.number().integer().min(0).allow(null).optional(),
+  color: Joi.string().valid(...COLORS).allow(null).optional(),
+  colorDetail: Joi.string().max(200).allow(null, "").optional(),
+  upholstery: Joi.string().valid(...UPHOLSTERIES).allow(null).optional(),
+  airConditioning: Joi.string().valid(...AIR_CONDITIONINGS).allow(null).optional(),
+  doors: Joi.number().integer().min(0).allow(null).optional(),
+  seats: Joi.number().integer().min(0).allow(null).optional(),
+  vatDeductible: Joi.boolean().allow(null).optional(),
+  noAccidents: Joi.boolean().allow(null).optional(),
+  serviceBook: Joi.boolean().allow(null).optional(),
+  firstOwner: Joi.boolean().allow(null).optional(),
+  ownerCount: Joi.number().integer().min(0).allow(null).optional(),
+  warrantyMonths: Joi.number().integer().min(0).allow(null).optional(),
+  price: Joi.number().min(0).allow(null).optional(),
   purchasePrice: Joi.number().min(0).allow(null).optional(),
+  sellingPrice: Joi.number().min(0).allow(null).optional(),
   otherCosts: Joi.number().min(0).allow(null).optional(),
-  attributes: Joi.array().items(
-    Joi.object({
-      attributeId: Joi.string().required(),
-      value: Joi.alternatives().try(
-        Joi.string().max(500),
-        Joi.number(),
-        Joi.boolean()
-      ).required(),
-    })
-  ).optional(),
+  status: Joi.string().valid(...LISTING_STATUSES).allow(null).optional(),
+  youtubeVideoId: Joi.string().max(500).allow(null, "").optional(),
+  featureIds: Joi.array().items(Joi.string()).default([]).optional(),
+  extraSpecs: Joi.object().unknown(true).allow(null).optional(),
 });
 
 const markAsSoldSchema = Joi.object({
