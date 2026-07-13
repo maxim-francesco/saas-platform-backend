@@ -297,7 +297,8 @@
     "gearbox": {
       "AUTOMATIC": [
         "contains:autom",
-        "contains:dsg"
+        "contains:dsg",
+        "cutie automata"
       ],
       "MANUAL": [
         "contains:manu",
@@ -313,7 +314,8 @@
         "contains:quattro",
         "contains:4matic",
         "contains:x drive",
-        "contains:x-drive"
+        "contains:x-drive",
+        "tractiune 4x4"
       ],
       "RWD": [
         "contains:spate"
@@ -472,16 +474,19 @@
       ],
       "DUAL_ZONE": [
         "contains:dublu",
+        "dublu climatronic",
         "dubluclimatronic",
         "climatronic doua zone"
       ],
       "AUTOMATIC": [
         "automata",
         "automat",
-        "contains:climatronic"
+        "contains:climatronic",
+        "climatronic"
       ],
       "MANUAL": [
-        "contains:aer conditionat"
+        "contains:aer conditionat",
+        "aer conditionat"
       ]
     },
     "countryOfOrigin": {
@@ -1270,5 +1275,14 @@
         "garantie dealer"
       ]
     }
-  ]
+  ],
+  "titleMakeAliases": {
+    "vw": "volkswagen",
+    "mercedes": "mercedes-benz",
+    "mercedes benz": "mercedes-benz",
+    "lynk & co": "lynk-co",
+    "lynk&co": "lynk-co",
+    "bmlw": "bmw",
+    "volskwagen": "volkswagen"
+  }
 }
