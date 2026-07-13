@@ -40,3 +40,4 @@ setup-selectpro.js
 .env.production.backup
 .env.saasclone.backup
 etl/reports/
+tmp/

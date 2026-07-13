@@ -34,18 +34,49 @@ const getBusinessStructure = async (req, res) => {
   try {
     const { businessId } = req.params;
 
-    const structure = await prisma.category.findMany({
-      where: { businessId: businessId },
-      include: {
-        attributes: {
-          select: {
-            id: true,
-            name: true,
-            type: true
-          }
-        }
+    const listingsCount = await prisma.listing.count({ where: { businessId } });
+    const features = await prisma.feature.findMany({ select: { id: true, name: true } });
+
+    const staticAttributes = [
+      { id: "attr:make", name: "Marca", type: "STRING" },
+      { id: "attr:model", name: "Model", type: "STRING" },
+      { id: "attr:year", name: "An", type: "NUMBER" },
+      { id: "attr:mileage", name: "Kilometraj", type: "NUMBER" },
+      { id: "attr:price", name: "Pret", type: "NUMBER" },
+      { id: "attr:engineCapacity", name: "Capacitate cilindrică", type: "NUMBER" },
+      { id: "attr:powerHp", name: "Putere (CP)", type: "NUMBER" },
+      { id: "attr:fuelType", name: "Combustibil", type: "STRING" },
+      { id: "attr:gearbox", name: "Cutie de viteze", type: "STRING" },
+      { id: "attr:drivetrain", name: "Tractiune", type: "STRING" },
+      { id: "attr:bodyType", name: "Caroserie", type: "STRING" },
+      { id: "attr:pollutionNorm", name: "Norma de poluare", type: "STRING" },
+      { id: "attr:color", name: "Culoare", type: "STRING" },
+      { id: "attr:vin", name: "VIN", type: "STRING" },
+      { id: "attr:countryOfOrigin", name: "Tara de origine", type: "STRING" },
+      { id: "attr:vatDeductible", name: "TVA deductibil", type: "BOOLEAN" },
+      { id: "attr:noAccidents", name: "Fara accident", type: "BOOLEAN" },
+      { id: "attr:serviceBook", name: "Carte service", type: "BOOLEAN" },
+      { id: "attr:firstOwner", name: "Primul proprietar", type: "BOOLEAN" },
+      { id: "attr:registeredInRo", name: "Inmatriculat", type: "BOOLEAN" }
+    ];
+
+    const featureAttributes = features.map(f => ({
+      id: `feat:${f.id}`,
+      name: f.name,
+      type: "BOOLEAN"
+    }));
+
+    const attributes = [...staticAttributes, ...featureAttributes];
+
+    const structure = [
+      {
+        id: "legacy-vehicule",
+        name: "Vehicule",
+        businessId: businessId,
+        listingsCount: listingsCount,
+        attributes: attributes
       }
-    });
+    ];
 
     res.status(200).json(structure);
   } catch (error) {

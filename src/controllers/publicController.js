@@ -1,66 +1,80 @@
 // src/controllers/publicController.js
 const prisma = require("../config/prismaClient");
 const { sendContactNotification } = require("../services/emailService");
+const { toLegacyListing } = require("../utils/compatSerializer");
 
-
-// src/controllers/publicController.js
-
-const normalizeString = (str) => {
-  if (!str) return "";
-  return str
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ");
+const COLOR_MAP = {
+  BLACK: "Negru",
+  GREY: "Gri",
+  WHITE: "Alb",
+  BLUE: "Albastru",
+  RED: "Rosu",
+  BROWN: "Maro",
+  SILVER: "Argintiu",
+  ORANGE: "Portocaliu",
+  GREEN: "Verde",
+  PURPLE: "Mov",
+  GOLD: "Auriu",
+  BEIGE: "Bej",
+  YELLOW: "Galben",
+  OTHER: "Alta"
 };
 
-const matchAttributeValue = (dbValue, filterValue) => {
-  const normDb = normalizeString(dbValue);
-  const normFilter = normalizeString(filterValue);
-
-  if (normFilter === "diesel" || normFilter === "motorina") {
-    return normDb.includes("diesel") || normDb.includes("motorina") || normDb === "d" || normDb === "diese";
-  }
-  
-  if (normFilter === "benzina") {
-    return normDb.includes("benzina");
-  }
-
-  if (normFilter === "automata" || normFilter === "automat") {
-    return normDb.includes("automat");
-  }
-
-  if (normFilter === "manuala" || normFilter === "manual" || normFilter === "manula") {
-    return normDb.includes("manual") || normDb.includes("manula");
-  }
-
-  // Fallback generic match
-  return normDb.includes(normFilter) || normFilter.includes(normDb);
+const FUEL_TYPE_MAP = {
+  PETROL: "Benzina",
+  DIESEL: "Diesel",
+  PETROL_LPG: "Benzina + GPL",
+  LPG: "GPL",
+  HYBRID: "Hibrid",
+  PLUGIN_HYBRID: "Plug-in Hybrid",
+  MILD_HYBRID: "Mild Hybrid",
+  ELECTRIC: "Electric"
 };
 
-const getUniqueAttributeValues = async (req, res) => {
-  try {
-    const { attributeId } = req.params;
-    const distinctValues = await prisma.attributeValue.findMany({
-      where: {
-        attributeId: attributeId,
-        stringValue: { not: null }, // Ne asigurăm că luăm doar valorile de tip text
-      },
-      distinct: ["stringValue"],
-      select: {
-        stringValue: true,
-      },
-      orderBy: {
-        stringValue: "asc",
-      },
-    });
-    // Transformăm array-ul de obiecte într-un array simplu de string-uri
-    const values = distinctValues.map((item) => item.stringValue);
-    res.status(200).json(values);
-  } catch (error) {
-    res.status(500).json({ message: "Eroare la preluarea valorilor unice." });
-  }
+const GEARBOX_MAP = {
+  MANUAL: "Manuala",
+  AUTOMATIC: "Automata"
+};
+
+const DRIVETRAIN_MAP = {
+  FWD: "Fata",
+  RWD: "Spate",
+  AWD: "Integrala"
+};
+
+const BODY_TYPE_MAP = {
+  SUV: "SUV",
+  SEDAN: "Berlina",
+  HATCHBACK: "Hatchback",
+  BREAK: "Break",
+  COUPE: "Coupe",
+  CABRIO: "Cabrio",
+  MONOVOLUM: "Monovolum",
+  VAN: "Van",
+  PICKUP: "Pickup"
+};
+
+const POLLUTION_NORM_MAP = {
+  EURO_1: "Euro 1",
+  EURO_2: "Euro 2",
+  EURO_3: "Euro 3",
+  EURO_4: "Euro 4",
+  EURO_5: "Euro 5",
+  EURO_6: "Euro 6",
+  EURO_6D: "Euro 6d",
+  NON_EURO: "Non-Euro"
+};
+
+const UUID_TO_KEY = {
+  "cmmnj2p3m00fip828op7z1oup": "make",
+  "cmmnj2p5h00fkp828mt1mpj58": "model",
+  "cmmnj2p1r00fgp828rnjb8l8e": "year",
+  "cmmnj2p7d00fmp828fw53hgek": "mileage",
+  "cmmnj2ozw00fep828js0dmn5h": "price",
+  "cmmnj2ne900dwp8286bzcygsg": "engineCapacity",
+  "cmmnj2ng700dyp828g040kyxf": "powerHp",
+  "cmmnj2nca00dup8287h8ylag0": "fuelType",
+  "cmmnj2ni600e0p828ukv3tcw3": "gearbox"
 };
 
 const searchListings = async (req, res) => {
@@ -76,17 +90,12 @@ const searchListings = async (req, res) => {
       ...dynamicFilters
     } = req.query;
 
-    const whereConditions = [];
-
-    whereConditions.push({ status: "AVAILABLE" });
+    const whereConditions = [{ status: "AVAILABLE" }];
 
     if (businessId) {
-      whereConditions.push({ businessId: businessId });
+      whereConditions.push({ businessId });
     }
-    if (categoryId) {
-      whereConditions.push({ categoryId: categoryId });
-    }
-    
+
     const searchVal = q || search;
     if (searchVal) {
       whereConditions.push({
@@ -97,89 +106,105 @@ const searchListings = async (req, res) => {
       });
     }
 
-    // Aceasta este versiunea NOUĂ și CORECTĂ
+    // Map EAV filters to fixed v2 columns
     for (const key in dynamicFilters) {
-      const value = dynamicFilters[key];
+      if (!key.startsWith("attr_")) continue;
       
-      let cleanKey = key;
-      if (key.startsWith("attr_")) {
-        cleanKey = key.substring(5);
-      }
+      const rawVal = dynamicFilters[key];
+      if (rawVal === undefined || rawVal === null || rawVal === '') continue;
       
-      const attributeName = cleanKey.replace(/_/g, " ");
+      const cleanKey = key.substring(5).toLowerCase();
+      const valArray = Array.isArray(rawVal) ? rawVal : [rawVal];
 
-      let attributeCondition;
-
-      if (value === "true" || value === "false") {
-        // Filtru boolean
-        attributeCondition = {
-          attribute: {
-            name: { equals: attributeName, mode: "insensitive" },
-          },
-          booleanValue: { equals: value === "true" },
-        };
-
-      } else if (cleanKey.endsWith("_max")) {
-        // Interval numeric - maxim
-        const attrNameNoSuffix = attributeName.replace(" max", "");
-        attributeCondition = {
-          attribute: {
-            name: { equals: attrNameNoSuffix, mode: "insensitive" },
-          },
-          numberValue: { lte: parseFloat(value) },
-        };
-
-      } else if (cleanKey.endsWith("_min")) {
-        // Interval numeric - minim
-        const attrNameNoSuffix = attributeName.replace(" min", "");
-        attributeCondition = {
-          attribute: {
-            name: { equals: attrNameNoSuffix, mode: "insensitive" },
-          },
-          numberValue: { gte: parseFloat(value) },
-        };
-
-      } else {
-        // Filtru text cu potrivire inteligentă (diacritice, spații, case-insensitive, sinonime)
-        const distinctDbValues = await prisma.attributeValue.findMany({
-          where: {
-            attribute: {
-              name: { equals: attributeName, mode: "insensitive" },
-            },
-            stringValue: { not: null },
-          },
-          distinct: ["stringValue"],
-          select: { stringValue: true },
+      if (cleanKey === 'combustibil' || cleanKey === 'tip_carburant') {
+        const mappedEnums = [];
+        valArray.forEach(v => {
+          const norm = v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (norm.includes("diesel") || norm.includes("motorina")) mappedEnums.push("DIESEL");
+          else if (norm.includes("benzina")) {
+            if (norm.includes("gpl")) mappedEnums.push("PETROL_LPG");
+            else mappedEnums.push("PETROL");
+          }
+          else if (norm.includes("gpl")) mappedEnums.push("LPG");
+          else if (norm.includes("plug")) mappedEnums.push("PLUGIN_HYBRID");
+          else if (norm.includes("mild")) mappedEnums.push("MILD_HYBRID");
+          else if (norm.includes("hybrid") || norm.includes("hibrid")) mappedEnums.push("HYBRID");
+          else if (norm.includes("electric")) mappedEnums.push("ELECTRIC");
         });
-        
-        const dbStrings = distinctDbValues.map(v => v.stringValue);
-        const filterValues = Array.isArray(value) ? value : [value];
-        
-        const matchedDbStrings = dbStrings.filter(dbVal => 
-          filterValues.some(v => matchAttributeValue(dbVal, v))
-        );
-        
-        attributeCondition = {
-          attribute: {
-            name: { equals: attributeName, mode: "insensitive" },
-          },
-          stringValue: { in: matchedDbStrings },
-        };
+        if (mappedEnums.length > 0) {
+          whereConditions.push({ fuelType: { in: mappedEnums } });
+        }
       }
-
-      if (attributeCondition) {
+      else if (cleanKey === 'cutie_de_viteze' || cleanKey === 'cutie_viteze' || cleanKey === 'transmisie') {
+        const mappedEnums = [];
+        valArray.forEach(v => {
+          const norm = v.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+          if (norm.includes("automat")) mappedEnums.push("AUTOMATIC");
+          else if (norm.includes("manual")) mappedEnums.push("MANUAL");
+        });
+        if (mappedEnums.length > 0) {
+          whereConditions.push({ gearbox: { in: mappedEnums } });
+        }
+      }
+      else if (cleanKey === 'marca') {
         whereConditions.push({
-          attributeValues: {
-            some: attributeCondition,
-          },
+          make: {
+            name: {
+              in: valArray,
+              mode: 'insensitive'
+            }
+          }
         });
+      }
+      else if (cleanKey === 'model') {
+        whereConditions.push({
+          model: {
+            name: {
+              in: valArray,
+              mode: 'insensitive'
+            }
+          }
+        });
+      }
+      else if (cleanKey.endsWith('_min')) {
+        const fieldName = cleanKey.replace('_min', '');
+        const valParsed = parseFloat(valArray[0]);
+        if (!isNaN(valParsed)) {
+          if (fieldName === 'an' || fieldName === 'an_fabricatie' || fieldName === 'anul_fabricatiei') {
+            whereConditions.push({ year: { gte: Math.round(valParsed) } });
+          } else if (fieldName === 'pret' || fieldName === 'price') {
+            whereConditions.push({ price: { gte: valParsed } });
+          } else if (fieldName === 'kilometraj' || fieldName === 'km') {
+            whereConditions.push({ mileage: { gte: Math.round(valParsed) } });
+          } else if (fieldName === 'capacitate_cilindrica') {
+            whereConditions.push({ engineCapacity: { gte: Math.round(valParsed) } });
+          } else if (fieldName === 'putere' || fieldName === 'putere_cp') {
+            whereConditions.push({ powerHp: { gte: Math.round(valParsed) } });
+          }
+        }
+      }
+      else if (cleanKey.endsWith('_max')) {
+        const fieldName = cleanKey.replace('_max', '');
+        const valParsed = parseFloat(valArray[0]);
+        if (!isNaN(valParsed)) {
+          if (fieldName === 'an' || fieldName === 'an_fabricatie' || fieldName === 'anul_fabricatiei') {
+            whereConditions.push({ year: { lte: Math.round(valParsed) } });
+          } else if (fieldName === 'pret' || fieldName === 'price') {
+            whereConditions.push({ price: { lte: valParsed } });
+          } else if (fieldName === 'kilometraj' || fieldName === 'km') {
+            whereConditions.push({ mileage: { lte: Math.round(valParsed) } });
+          } else if (fieldName === 'capacitate_cilindrica') {
+            whereConditions.push({ engineCapacity: { lte: Math.round(valParsed) } });
+          } else if (fieldName === 'putere' || fieldName === 'putere_cp') {
+            whereConditions.push({ powerHp: { lte: Math.round(valParsed) } });
+          }
+        }
       }
     }
 
     const where = whereConditions.length > 0 ? { AND: whereConditions } : {};
 
-    // --- LOGICA DE SORTARE ACTUALIZATĂ ---
-    let orderBy = { createdAt: "desc" }; // Default: cele mai noi
+    let orderBy = { createdAt: "desc" };
     switch (sortBy) {
       case "oldest":
         orderBy = { createdAt: "asc" };
@@ -197,7 +222,6 @@ const searchListings = async (req, res) => {
         orderBy = { mileage: "desc" };
         break;
     }
-    // --- SFÂRȘIT LOGICĂ DE SORTARE ---
 
     const skip = (parseInt(page) - 1) * parseInt(limit);
     const take = parseInt(limit);
@@ -206,25 +230,20 @@ const searchListings = async (req, res) => {
       where,
       skip,
       take,
-      orderBy, // Folosim obiectul de sortare actualizat
+      orderBy,
       include: {
-        category: { select: { name: true } },
-        images: {
-          select: { url: true },
-          orderBy: { order: "asc" }, // <-- ADAUGĂ ACEASTĂ LINIE
-        },
-        attributeValues: {
-          include: {
-            attribute: { include: { attributeGroup: { select: { name: true } } } },
-          },
-        },
-      },
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
+      }
     });
 
     const totalListings = await prisma.listing.count({ where });
+    const legacyListings = listings.map(l => toLegacyListing(l, { mode: 'search' }));
 
     res.status(200).json({
-      data: listings,
+      data: legacyListings,
       pagination: {
         total: totalListings,
         page: parseInt(page),
@@ -244,13 +263,10 @@ const getPublicListingById = async (req, res) => {
     const listing = await prisma.listing.findUnique({
       where: { id: listingId },
       include: {
-        category: { select: { name: true } },
-        images: { orderBy: { order: "asc" } },
-        attributeValues: {
-          include: {
-            attribute: { include: { attributeGroup: { select: { name: true } } } },
-          },
-        },
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
       },
     });
 
@@ -258,8 +274,6 @@ const getPublicListingById = async (req, res) => {
       return res.status(404).json({ message: "Anunțul nu a fost găsit." });
     }
 
-    // --- ✅ LOGICĂ NOUĂ ADĂUGATĂ ---
-    // Înregistrăm vizualizarea în fundal, fără a bloca răspunsul principal
     prisma.view
       .create({
         data: {
@@ -267,10 +281,9 @@ const getPublicListingById = async (req, res) => {
           listingId: listing.id,
         },
       })
-      .catch((err) => console.error("Failed to record view:", err)); // Prindem orice eroare ca să nu crape request-ul
-    // --- SFÂRȘIT LOGICĂ NOUĂ ---
+      .catch((err) => console.error("Failed to record view:", err));
 
-    res.status(200).json(listing);
+    res.status(200).json(toLegacyListing(listing, { mode: 'byId' }));
   } catch (error) {
     res.status(500).json({ message: "Eroare la preluarea anunțului." });
   }
@@ -278,33 +291,171 @@ const getPublicListingById = async (req, res) => {
 
 const getPublicAttributesForCategory = async (req, res) => {
   try {
-    const { categoryId } = req.params;
-    const attributes = await prisma.attribute.findMany({
-      where: { categoryId: categoryId },
-      orderBy: { name: "asc" },
-    });
-    res.status(200).json(attributes);
+    const staticAttributes = [
+      { id: "attr:make", name: "Marca", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:model", name: "Model", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:year", name: "An", type: "NUMBER", categoryId: "legacy-vehicule" },
+      { id: "attr:mileage", name: "Kilometraj", type: "NUMBER", categoryId: "legacy-vehicule" },
+      { id: "attr:price", name: "Pret", type: "NUMBER", categoryId: "legacy-vehicule" },
+      { id: "attr:engineCapacity", name: "Capacitate cilindrică", type: "NUMBER", categoryId: "legacy-vehicule" },
+      { id: "attr:powerHp", name: "Putere (CP)", type: "NUMBER", categoryId: "legacy-vehicule" },
+      { id: "attr:fuelType", name: "Combustibil", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:gearbox", name: "Cutie de viteze", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:drivetrain", name: "Tractiune", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:bodyType", name: "Caroserie", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:pollutionNorm", name: "Norma de poluare", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:color", name: "Culoare", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:vin", name: "VIN", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:countryOfOrigin", name: "Tara de origine", type: "STRING", categoryId: "legacy-vehicule" },
+      { id: "attr:vatDeductible", name: "TVA deductibil", type: "BOOLEAN", categoryId: "legacy-vehicule" },
+      { id: "attr:noAccidents", name: "Fara accident", type: "BOOLEAN", categoryId: "legacy-vehicule" },
+      { id: "attr:serviceBook", name: "Carte service", type: "BOOLEAN", categoryId: "legacy-vehicule" },
+      { id: "attr:firstOwner", name: "Primul proprietar", type: "BOOLEAN", categoryId: "legacy-vehicule" },
+      { id: "attr:registeredInRo", name: "Inmatriculat", type: "BOOLEAN", categoryId: "legacy-vehicule" }
+    ];
+
+    const features = await prisma.feature.findMany({ select: { name: true, slug: true } });
+    const featureAttributes = features.map(f => ({
+      id: `attr:feature:${f.slug}`,
+      name: f.name,
+      type: "BOOLEAN",
+      categoryId: "legacy-vehicule"
+    }));
+
+    res.status(200).json([...staticAttributes, ...featureAttributes]);
   } catch (error) {
     res.status(500).json({ message: "Eroare la preluarea atributelor." });
+  }
+};
+
+const getUniqueAttributeValues = async (req, res) => {
+  try {
+    const { attributeId } = req.params;
+    
+    let key = attributeId;
+    if (attributeId.startsWith("attr:")) {
+      key = attributeId.substring(5);
+    } else {
+      key = UUID_TO_KEY[attributeId] || attributeId;
+    }
+
+    let values = [];
+    if (key === 'make' || key === 'marca') {
+      const distinctMakes = await prisma.make.findMany({
+        select: { name: true },
+        orderBy: { name: "asc" }
+      });
+      values = distinctMakes.map(m => m.name);
+    }
+    else if (key === 'model') {
+      const distinctModels = await prisma.carModel.findMany({
+        select: { name: true },
+        orderBy: { name: "asc" }
+      });
+      values = distinctModels.map(m => m.name);
+    }
+    else if (key === 'fuelType' || key === 'combustibil') {
+      const distinctListings = await prisma.listing.findMany({
+        where: { fuelType: { not: null } },
+        distinct: ["fuelType"],
+        select: { fuelType: true }
+      });
+      values = distinctListings.map(l => FUEL_TYPE_MAP[l.fuelType] || l.fuelType);
+    }
+    else if (key === 'gearbox' || key === 'cutie de viteze') {
+      const distinctListings = await prisma.listing.findMany({
+        where: { gearbox: { not: null } },
+        distinct: ["gearbox"],
+        select: { gearbox: true }
+      });
+      values = distinctListings.map(l => GEARBOX_MAP[l.gearbox] || l.gearbox);
+    }
+    else if (key === 'drivetrain' || key === 'tractiune') {
+      const distinctListings = await prisma.listing.findMany({
+        where: { drivetrain: { not: null } },
+        distinct: ["drivetrain"],
+        select: { drivetrain: true }
+      });
+      values = distinctListings.map(l => DRIVETRAIN_MAP[l.drivetrain] || l.drivetrain);
+    }
+    else if (key === 'bodyType' || key === 'caroserie') {
+      const distinctListings = await prisma.listing.findMany({
+        where: { bodyType: { not: null } },
+        distinct: ["bodyType"],
+        select: { bodyType: true }
+      });
+      values = distinctListings.map(l => BODY_TYPE_MAP[l.bodyType] || l.bodyType);
+    }
+    else if (key === 'color' || key === 'culoare') {
+      const distinctDetails = await prisma.listing.findMany({
+        where: { colorDetail: { not: null } },
+        distinct: ["colorDetail"],
+        select: { colorDetail: true }
+      });
+      const distinctEnums = await prisma.listing.findMany({
+        where: { color: { not: null } },
+        distinct: ["color"],
+        select: { color: true }
+      });
+      const set = new Set();
+      distinctDetails.forEach(l => set.add(l.colorDetail));
+      distinctEnums.forEach(l => set.add(COLOR_MAP[l.color] || l.color));
+      values = Array.from(set).sort();
+    }
+    else if (key === 'pollutionNorm' || key === 'norma de poluare') {
+      const distinctListings = await prisma.listing.findMany({
+        where: { pollutionNorm: { not: null } },
+        distinct: ["pollutionNorm"],
+        select: { pollutionNorm: true }
+      });
+      values = distinctListings.map(l => POLLUTION_NORM_MAP[l.pollutionNorm] || l.pollutionNorm);
+    }
+    else {
+      values = [];
+    }
+
+    res.status(200).json(values);
+  } catch (error) {
+    console.error("Error in getUniqueAttributeValues:", error);
+    res.status(500).json({ message: "Eroare la preluarea valorilor unice." });
   }
 };
 
 const getAttributeStats = async (req, res) => {
   try {
     const { attributeId } = req.params;
-    const stats = await prisma.attributeValue.aggregate({
+    let key = attributeId;
+    if (attributeId.startsWith("attr:")) {
+      key = attributeId.substring(5);
+    } else {
+      key = UUID_TO_KEY[attributeId] || attributeId;
+    }
+
+    let field = null;
+    if (key === 'price' || key === 'pret' || key === 'Pret') field = 'price';
+    else if (key === 'mileage' || key === 'kilometraj' || key === 'Kilometraj') field = 'mileage';
+    else if (key === 'year' || key === 'an' || key === 'An') field = 'year';
+    else if (key === 'powerHp' || key === 'putere' || key === 'Putere (CP)') field = 'powerHp';
+    else if (key === 'engineCapacity' || key === 'capacitate' || key === 'Capacitate cilindrică') field = 'engineCapacity';
+
+    if (!field) {
+      return res.status(200).json({ min: 0, max: 100000 });
+    }
+
+    const stats = await prisma.listing.aggregate({
       where: {
-        attributeId: attributeId,
-        numberValue: { not: null },
+        [field]: { not: null },
       },
-      _min: { numberValue: true },
-      _max: { numberValue: true },
+      _min: { [field]: true },
+      _max: { [field]: true },
     });
+
     res.status(200).json({
-      min: stats._min.numberValue || 0,
-      max: stats._max.numberValue || 100000, // Valori default în caz că nu se găsește nimic
+      min: stats._min[field] !== null ? stats._min[field] : 0,
+      max: stats._max[field] !== null ? stats._max[field] : 100000,
     });
   } catch (error) {
+    console.error("Error in getAttributeStats:", error);
     res.status(500).json({ message: "Eroare la preluarea statisticilor." });
   }
 };
@@ -321,7 +472,6 @@ const submitContactForm = async (req, res) => {
       data: { name, email, phone, message, businessId },
     });
 
-    // ✅ Trimite email pentru clienții configurați
     const SEVENCENTER_BUSINESS_EMAIL = process.env.SEVENCENTER_BUSINESS_EMAIL;
     const business = await prisma.business.findUnique({
       where: { id: businessId },
@@ -381,18 +531,14 @@ const getListingsCsvFeed = async (req, res) => {
         status: "AVAILABLE",
       },
       include: {
+        make: true,
+        model: true,
         images: {
           orderBy: { order: "asc" },
-        },
-        attributeValues: {
-          include: {
-            attribute: true,
-          },
-        },
+        }
       },
     });
 
-    // Strip HTML helper
     const stripHtml = (html) => {
       if (!html) return "";
       let text = html
@@ -407,24 +553,10 @@ const getListingsCsvFeed = async (req, res) => {
         .replace(/&gt;/g, ">")
         .replace(/&quot;/g, '"')
         .replace(/&#039;/g, "'");
-      // Collapse all whitespaces, including newlines, into a single space
       text = text.replace(/\s+/g, " ");
       return text.trim();
     };
 
-    // Helper to get attribute value
-    const getAttrValue = (listing, name) => {
-      const av = listing.attributeValues?.find(
-        (item) => item.attribute?.name?.toLowerCase() === name.toLowerCase()
-      );
-      if (!av) return "";
-      if (av.stringValue !== null && av.stringValue !== undefined) return av.stringValue;
-      if (av.numberValue !== null && av.numberValue !== undefined) return av.numberValue.toString();
-      if (av.booleanValue !== null && av.booleanValue !== undefined) return av.booleanValue ? "Da" : "Nu";
-      return "";
-    };
-
-    // Construct CSV content
     const escapeCsv = (str) => {
       if (str === null || str === undefined) return '""';
       const clean = str.toString().replace(/"/g, '""');
@@ -457,30 +589,21 @@ const getListingsCsvFeed = async (req, res) => {
     for (const listing of listings) {
       const id = listing.autovitId ? listing.autovitId.toString() : listing.id;
       
-      // Extragere marca si model din titlu
-      const titleWords = listing.title.trim().split(/\s+/);
-      const marca = titleWords[0] || "";
-      const model = titleWords[1] || "";
+      const marca = listing.make?.name || listing.title.trim().split(/\s+/)[0] || "";
+      const model = listing.model?.name || listing.title.trim().split(/\s+/)[1] || "";
 
-      const an = getAttrValue(listing, "An fabricație") || getAttrValue(listing, "An");
-      const kilometraj = listing.mileage || getAttrValue(listing, "Kilometraj");
-      const combustibil = getAttrValue(listing, "Combustibil");
-      const cutie_viteze = getAttrValue(listing, "Transmisie") || getAttrValue(listing, "Cutie de viteze");
-      const capacitate_cilindrica = getAttrValue(listing, "Capacitate cilindrică");
-      const putere_cp = getAttrValue(listing, "Putere (CP)") || getAttrValue(listing, "Putere");
+      const an = listing.year ? listing.year.toString() : "";
+      const kilometraj = listing.mileage ? listing.mileage.toString() : "";
+      const combustibil = listing.fuelType ? (FUEL_TYPE_MAP[listing.fuelType] || listing.fuelType) : "";
+      const cutie_viteze = listing.gearbox ? (GEARBOX_MAP[listing.gearbox] || listing.gearbox) : "";
+      const capacitate_cilindrica = listing.engineCapacity ? listing.engineCapacity.toString() : "";
+      const putere_cp = listing.powerHp ? listing.powerHp.toString() : "";
 
-      // Pret
       let pret = "";
       if (listing.price) {
         pret = `${listing.price} EUR`;
-      } else {
-        const pVal = getAttrValue(listing, "Preț") || getAttrValue(listing, "Pret") || getAttrValue(listing, "price");
-        if (pVal) {
-          pret = `${pVal} EUR`;
-        }
       }
 
-      // Build link
       let link = business.listingUrlPattern || "https://example.com/anunt/{id}";
       if (business.id === "cmhomcpoi02x1ut2cpips3mo3") {
         link = "https://www.carsleasing.ro/stoc/{id}";
@@ -492,7 +615,6 @@ const getListingsCsvFeed = async (req, res) => {
         link = link.replace("{id}", listing.id);
       }
 
-      // Build image links
       const imageLink = listing.images?.[0]?.url || "";
       const additionalImageLinks = listing.images
         ? listing.images.slice(1).map((img) => img.url).join(",")
@@ -529,11 +651,9 @@ const getListingsCsvFeed = async (req, res) => {
 
     const csvContent = csvLines.join("\n");
 
-    // Set headers for download
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", "attachment; filename=listings-feed.csv");
 
-    // Send UTF-8 BOM byte so Excel recognizes diacritics
     res.write("\ufeff");
     res.end(csvContent);
   } catch (error) {

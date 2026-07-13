@@ -303,28 +303,52 @@ const createListing = async (req, res) => {
 
 const getListings = async (req, res) => {
   const { businessId } = req.user;
-  const listings = await prisma.listing.findMany({
-    where: { businessId, status: "AVAILABLE" },
-    include: {
-      category: { select: { name: true } },
-      attributeValues: { include: { attribute: { include: { attributeGroup: { select: { name: true } } } } } },
-      images: { orderBy: { order: "asc" } },
-      _count: { select: { views: true } },
-    },
-  });
-  res.status(200).json(listings);
+  try {
+    const listings = await prisma.listing.findMany({
+      where: { businessId, status: "AVAILABLE" },
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } },
+        _count: { select: { views: true } },
+      },
+    });
+    const { toLegacyListing } = require("../utils/compatSerializer");
+    const legacyListings = listings.map(l => {
+      const legacy = toLegacyListing(l, { mode: 'search' });
+      legacy._count = l._count;
+      return legacy;
+    });
+    res.status(200).json(legacyListings);
+  } catch (error) {
+    console.error("Error in getListings:", error);
+    res.status(500).json({ message: "Eroare la preluarea anunțurilor." });
+  }
 };
 
 const getSoldListings = async (req, res) => {
   const businessId = req.user?.businessId || req.query.businessId;
   if (!businessId) return res.status(400).json({ message: "Business ID is required." });
-  const listings = await prisma.listing.findMany({
-    where: { businessId, status: "SOLD" },
-    include: { category: { select: { name: true } }, images: { orderBy: { order: "asc" }, take: 1 } },
-    orderBy: { soldAt: "desc" },
-    take: req.query.limit ? parseInt(req.query.limit) : undefined,
-  });
-  res.status(200).json(listings);
+  try {
+    const listings = await prisma.listing.findMany({
+      where: { businessId, status: "SOLD" },
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
+      },
+      orderBy: { soldAt: "desc" },
+      take: req.query.limit ? parseInt(req.query.limit) : undefined,
+    });
+    const { toLegacyListing } = require("../utils/compatSerializer");
+    const legacyListings = listings.map(l => toLegacyListing(l, { mode: 'search' }));
+    res.status(200).json(legacyListings);
+  } catch (error) {
+    console.error("Error in getSoldListings:", error);
+    res.status(500).json({ message: "Eroare la preluarea anunțurilor vândute." });
+  }
 };
 
 const markAsSold = async (req, res) => {
@@ -552,11 +576,19 @@ const getListingById = async (req, res) => {
   try {
     const listing = await prisma.listing.findFirst({
       where: { id: listingId, businessId: businessId },
-      include: { attributeValues: { include: { attribute: { include: { attributeGroup: { select: { name: true } } } } } }, images: { orderBy: { order: "asc" } } },
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
+      },
     });
     if (!listing) return res.status(404).json({ message: "Anunțul nu a fost găsit." });
-    res.status(200).json(listing);
+    
+    const { toLegacyListing } = require("../utils/compatSerializer");
+    res.status(200).json(toLegacyListing(listing, { mode: 'byId' }));
   } catch (error) {
+    console.error("Error in getListingById:", error);
     res.status(500).json({ message: "Eroare la preluarea anunțului." });
   }
 };

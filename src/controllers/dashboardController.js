@@ -24,15 +24,19 @@ const getStats = async (req, res) => {
     const date30DaysAgo = new Date();
     date30DaysAgo.setDate(date30DaysAgo.getDate() - 30);
 
+    const distinctMakes = await prisma.listing.groupBy({
+      by: ['makeId'],
+      where: { businessId, makeId: { not: null } }
+    });
+    const categoryCount = distinctMakes.length;
+
     const [
       listingCount,
-      categoryCount,
       totalMessageCount,
       totalViews,
       viewsLast30Days,
     ] = await prisma.$transaction([
       prisma.listing.count({ where: { businessId } }),
-      prisma.category.count({ where: { businessId } }),
       prisma.message.count({ where: { businessId } }),
       prisma.view.count({ where: { businessId } }),
       prisma.view.count({
@@ -43,7 +47,7 @@ const getStats = async (req, res) => {
     // --- ✅ PAS DE DEPANARE #2 ---
     // Verificăm ce rezultate primim direct din baza de date.
     console.log(
-      `[DEBUG] Rezultate din DB: listings=${listingCount}, categories=${categoryCount}, messages=${totalMessageCount}, views=${totalViews}`
+      `[DEBUG] Rezultate din DB: listings=${listingCount}, distinctMakes=${categoryCount}, messages=${totalMessageCount}, views=${totalViews}`
     );
     // --- SFÂRȘIT PAS DE DEPANARE ---
 

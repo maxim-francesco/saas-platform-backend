@@ -34,21 +34,31 @@ router.get("/listings/status/sold", (req, res, next) => {
   next();
 }, async (req, res) => {
   const prisma = require("../config/prismaClient");
+  const { toLegacyListing } = require("../utils/compatSerializer");
   const listings = await prisma.listing.findMany({
     where: { businessId: req.query.businessId, status: "SOLD" },
-    select: {
-      id: true,
-      title: true,
-      price: true,
-      soldAt: true,
-      status: true,
-      images: { orderBy: { order: "asc" }, take: 1, select: { url: true } },
-      category: { select: { name: true } },
+    include: {
+      make: true,
+      model: true,
+      features: true,
+      images: { orderBy: { order: "asc" } },
     },
     orderBy: { soldAt: "desc" },
     take: req.query.limit ? parseInt(req.query.limit) : 20,
   });
-  res.status(200).json(listings);
+  
+  res.status(200).json(listings.map(l => {
+    const legacy = toLegacyListing(l, { mode: 'search' });
+    return {
+      id: legacy.id,
+      title: legacy.title,
+      price: legacy.price,
+      soldAt: legacy.soldAt,
+      status: legacy.status,
+      images: legacy.images.slice(0, 1),
+      category: legacy.category
+    };
+  }));
 });
 
 module.exports = router;

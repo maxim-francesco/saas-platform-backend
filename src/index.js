@@ -4,15 +4,12 @@ const express = require("express");
 require("dotenv").config();
 const cors = require("cors");
 const authRoutes = require("./routes/authRoutes");
-const categoryRoutes = require("./routes/categoryRoutes");
 const listingRoutes = require("./routes/listingRoutes");
 const publicRoutes = require("./routes/publicRoutes");
 const messageRoutes = require("./routes/messageRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const businessRoutes = require("./routes/businessRoutes");
 const imageRoutes = require("./routes/imageRoutes");
-const attributeGroupRoutes = require("./routes/attributeGroupRoutes"); // Asigură-te că este importat
-const attributesRootRoutes = require("./routes/attributesRootRoutes");
 const publicReviewRoutes = require("./routes/publicReviewRoutes");
 const reviewRoutes = require("./routes/reviewRoutes");
 const viewRoutes = require("./routes/viewRoutes");
@@ -79,15 +76,12 @@ app.get("/", (req, res) => {
 
 // Folosește rutele
 app.use("/api/auth", authRoutes);
-app.use("/api/categories", categoryRoutes);
 app.use("/api/listings", listingRoutes);
 app.use("/api/public", publicRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/images", imageRoutes);
-app.use("/api/attribute-groups", attributeGroupRoutes);
-app.use("/api/attributes", attributesRootRoutes); // Adaugă această linie
 app.use("/api/public/reviews", publicReviewRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/views", viewRoutes);
