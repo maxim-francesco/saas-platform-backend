@@ -99,7 +99,11 @@ function mapNumeric(field, rawValue) {
   if (!match) {
     return { value: null, rejected: false, unmapped: true };
   }
-  const parsed = parseFloat(match[0]);
+  let parsed = parseFloat(match[0]);
+  // Convert litres (e.g. 1.6) to cc (e.g. 1600) for engine capacity before applying guard
+  if (field === 'engineCapacity' && parsed > 0 && parsed < 15) {
+    parsed = Math.round((parsed * 1000) / 100) * 100;
+  }
   const guard = mappingsData.numericGuards[field];
   if (!guard) {
     return { value: parsed, rejected: false, unmapped: false };
