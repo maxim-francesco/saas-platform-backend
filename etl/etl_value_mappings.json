@@ -1,0 +1,1274 @@
+{
+  "$meta": {
+    "purpose": "Tabela canonică de mapare pentru ETL v1(EAV) -> v2(schema fixă). Sursă: inventar M2 pe clona producției.",
+    "normalization": "lower + trim + colapsare spații + diacritice RO eliminate (ăâîșțşţ -> aaistst) — identic cu inventory.sql",
+    "unmappedPolicy": "orice valoare/atribut nerutat -> extraSpecs{numeAtributOriginal: valoare} + linie în raportul de nemapate; NIMIC nu se pierde"
+  },
+  "tenantWhitelist": [
+    {
+      "name": "Patrifar Auto",
+      "businessId": "cml8mss5n02t6rb29lh2mnhu2"
+    },
+    {
+      "name": "AWD Auto",
+      "businessId": "cmg5ligro0175s52cn0jimm7s"
+    },
+    {
+      "name": "Cars Leasing",
+      "businessId": "cmhomcpoi02x1ut2cpips3mo3"
+    },
+    {
+      "name": "AUTOLUC",
+      "businessId": "cmk8u4tgq0enjlj28sedolu8r"
+    },
+    {
+      "name": "Stefan Auto GVR",
+      "businessId": "cmk42dgx00ce8lj2871bq7mcy"
+    },
+    {
+      "name": "DNY AUTO RULATE",
+      "businessId": "cmjt7dozl09bllj28m6pev9s6"
+    },
+    {
+      "name": "Benefic Car",
+      "businessId": "cmnmfqggh02hkxi2784vniylc"
+    },
+    {
+      "name": "Nițu Auto Park",
+      "businessId": "cmlct9h4l0579rb294uz93xmv"
+    },
+    {
+      "name": "Apark Auto Rulate",
+      "businessId": "cmianiqvm0945rw274mz1hjmu"
+    },
+    {
+      "name": "G-AUTO",
+      "businessId": "cmg5az8tn0000s52cb4fbcwpb"
+    },
+    {
+      "name": "Top Cars Ionel",
+      "businessId": "cmit2vc3w00n8t7261rg9i5ox"
+    },
+    {
+      "name": "VIA Automobile",
+      "businessId": "cmgl8zusd0000p02efiw82o7e"
+    },
+    {
+      "name": "Seven Center Auto",
+      "businessId": "cmgij91wq004wry2di043xhyx"
+    },
+    {
+      "name": "Auto NRC",
+      "businessId": "cmhkwsbcv01lsut2conlsz33r"
+    },
+    {
+      "name": "My Export Auto",
+      "businessId": "cmh297llm026qrl27139a74qv"
+    },
+    {
+      "name": "VLC CAR DEALS",
+      "businessId": "cmlhxd6wr08e9rb29wadrogmm"
+    },
+    {
+      "name": "Auto Handel",
+      "businessId": "cmixasddh01hxt726w2nm1qwg"
+    },
+    {
+      "name": "Auto Rulate by Olteanu",
+      "businessId": "cmie848tc0anqrw27otyqp6gt"
+    },
+    {
+      "name": "MEDFIL AUTOMOBILE",
+      "businessId": "cmjt2601008sslj28uni4fwkj"
+    },
+    {
+      "name": "APG Auto Rulate",
+      "businessId": "cmlgumy5h076irb29kw5ei8fm"
+    },
+    {
+      "name": "LWY Automobile",
+      "businessId": "cmjsrpb7r086zlj28shyim8pc"
+    },
+    {
+      "name": "UZY AUTO",
+      "businessId": "cmh7jytnv00csru2d2eztgdv5"
+    },
+    {
+      "name": "Alfa",
+      "businessId": "cmoqb6gtw0ymsu21qq0y5om26"
+    },
+    {
+      "name": "MRL Premium Auto",
+      "businessId": "cmjhqt48n0595lj28o5kd07t7"
+    },
+    {
+      "name": "BVA Automobile",
+      "businessId": "cmj8bur4100g2lj28c72n6hd4"
+    },
+    {
+      "name": "Fortis",
+      "businessId": "cmmnj2md300dgp828hbr08wt6"
+    },
+    {
+      "name": "RCL AUTO RULATE ALBA SRL",
+      "businessId": "cmi0i8m1203gmrw27c0neim70"
+    },
+    {
+      "name": "Demo Auto Premium",
+      "businessId": "cmgnq24pn0081p02egm5pimf0"
+    }
+  ],
+  "fieldSources": {
+    "_comment": "atribute EAV normalizate -> câmp fix v2; coloana fixă v1 are prioritate unde există (price, mileage)",
+    "price": [
+      "pret"
+    ],
+    "mileage": [
+      "kilometraj"
+    ],
+    "year": [
+      "an fabricatie",
+      "an",
+      "anul fabricatiei"
+    ],
+    "engineCapacity": [
+      "capacitate cilindrica"
+    ],
+    "powerHp": [
+      "putere (cp)",
+      "putere"
+    ],
+    "fuelType": [
+      "combustibil",
+      "tip carburant"
+    ],
+    "gearbox": [
+      "cutie de viteze",
+      "cutie viteze",
+      "transmisie",
+      "cutie automata"
+    ],
+    "drivetrain": [
+      "tractiune",
+      "tractiune 4x4"
+    ],
+    "bodyType": [
+      "caroserie",
+      "tip caroserie",
+      "tipul caroseriei"
+    ],
+    "pollutionNorm": [
+      "norma de poluare",
+      "norma poluare"
+    ],
+    "color": [
+      "culoare"
+    ],
+    "upholstery": [
+      "tapiterie",
+      "interior"
+    ],
+    "airConditioning": [
+      "climatizare",
+      "aer conditionat",
+      "climatronic",
+      "climatizare automata",
+      "climatronic doua zone",
+      "climatronic 3 zone",
+      "climatronic 4 zone",
+      "climatizare spate",
+      "dublu climatronic"
+    ],
+    "doors": [
+      "numar usi",
+      "numar de usi",
+      "usi",
+      "numar portiere"
+    ],
+    "seats": [
+      "numar locuri"
+    ],
+    "co2Emissions": [
+      "emisii co2"
+    ],
+    "vin": [
+      "vin",
+      "serie sasiu (vin)",
+      "serie sasiu",
+      "serie vin"
+    ],
+    "countryOfOrigin": [
+      "tara de origine",
+      "tara",
+      "tara de provenenienta"
+    ],
+    "firstRegistrationAt": [
+      "prima inmatriculare"
+    ],
+    "registeredInRo": [
+      "inmatriculat",
+      "inmatriculata"
+    ],
+    "vatDeductible": [
+      "tva deductibil"
+    ],
+    "noAccidents": [
+      "fara accident",
+      "fara accident in istoric"
+    ],
+    "serviceBook": [
+      "carte service",
+      "carte de service",
+      "istoric service",
+      "verificare service"
+    ],
+    "firstOwner": [
+      "primul proprietar"
+    ],
+    "ownerCount": [
+      "numar proprietari"
+    ],
+    "warrantyMonths": [
+      "garantie (luni)",
+      "garantie pana la luni",
+      "garantie"
+    ],
+    "status.INCOMING": [
+      "viitor",
+      "in curand"
+    ],
+    "extraSpecs.explicit": [
+      "numar chei",
+      "dimensiune jante",
+      "consum mixt",
+      "consum mediu",
+      "masina importata",
+      "dotari interior",
+      "link video",
+      "tip faruri",
+      "faruri",
+      "stare",
+      "status",
+      "disponibilitate",
+      "reducere",
+      "comanda",
+      "cosignatie",
+      "pachet sport"
+    ]
+  },
+  "enumMappings": {
+    "fuelType": {
+      "DIESEL": [
+        "diesel",
+        "motorina",
+        "motorina (diesel)",
+        "d",
+        "diese"
+      ],
+      "PETROL": [
+        "benzina",
+        "benzin"
+      ],
+      "PETROL_LPG": [
+        "benzina + gpl",
+        "benzina+gpl",
+        "benzina + gpl "
+      ],
+      "LPG": [
+        "gpl",
+        "gpl (gaz)"
+      ],
+      "ELECTRIC": [
+        "electrica",
+        "electric"
+      ],
+      "PLUGIN_HYBRID": [
+        "contains:plug"
+      ],
+      "MILD_HYBRID": [
+        "contains:mild"
+      ],
+      "HYBRID": [
+        "contains:hybrid",
+        "contains:hibrid"
+      ],
+      "_order": "PLUGIN -> MILD -> HYBRID -> LPG combo -> restul (ordinea conteaza)"
+    },
+    "gearbox": {
+      "AUTOMATIC": [
+        "contains:autom",
+        "contains:dsg"
+      ],
+      "MANUAL": [
+        "contains:manu",
+        "manual",
+        "manula"
+      ]
+    },
+    "drivetrain": {
+      "AWD": [
+        "contains:4x4",
+        "contains:4*4",
+        "contains:integral",
+        "contains:quattro",
+        "contains:4matic",
+        "contains:x drive",
+        "contains:x-drive"
+      ],
+      "RWD": [
+        "contains:spate"
+      ],
+      "FWD": [
+        "contains:fata",
+        "4x2",
+        "2x4",
+        "f"
+      ]
+    },
+    "bodyType": {
+      "SUV": [
+        "contains:suv",
+        "contains:crossover",
+        "sub"
+      ],
+      "SEDAN": [
+        "limuzina",
+        "limousine",
+        "berlina",
+        "sedan"
+      ],
+      "HATCHBACK": [
+        "contains:hatchback",
+        "hb",
+        "compacta"
+      ],
+      "BREAK": [
+        "break",
+        "breck",
+        "combi",
+        "kombi"
+      ],
+      "MONOVOLUM": [
+        "contains:monovolum",
+        "multivan"
+      ],
+      "COUPE": [
+        "coupe"
+      ],
+      "CABRIO": [
+        "cabrio"
+      ],
+      "VAN": [
+        "van",
+        "duba"
+      ]
+    },
+    "pollutionNorm": {
+      "EURO_6D": [
+        "euro 6d",
+        "6d"
+      ],
+      "EURO_6": [
+        "euro 6",
+        "euro6",
+        "6"
+      ],
+      "EURO_5": [
+        "euro 5",
+        "euro5",
+        "5"
+      ],
+      "EURO_4": [
+        "euro 4",
+        "4"
+      ],
+      "EURO_3": [
+        "euro 3",
+        "3"
+      ]
+    },
+    "color": {
+      "BLACK": [
+        "prefix:negr",
+        "prefix:neagr"
+      ],
+      "GREY": [
+        "prefix:gri"
+      ],
+      "WHITE": [
+        "prefix:alb",
+        "not:albastru"
+      ],
+      "BLUE": [
+        "prefix:albastr"
+      ],
+      "RED": [
+        "prefix:rosu",
+        "prefix:rosi",
+        "prefix:visin",
+        "prefix:grena",
+        "prefix:bordo",
+        "red metalic"
+      ],
+      "BROWN": [
+        "prefix:maro"
+      ],
+      "SILVER": [
+        "prefix:argint"
+      ],
+      "ORANGE": [
+        "prefix:portocal",
+        "orange"
+      ],
+      "GREEN": [
+        "prefix:verde"
+      ],
+      "PURPLE": [
+        "prefix:mov"
+      ],
+      "GOLD": [
+        "prefix:aur"
+      ],
+      "BEIGE": [
+        "prefix:bej",
+        "prefix:crem"
+      ],
+      "YELLOW": [
+        "prefix:galben"
+      ],
+      "_order": "BLUE se evalueaza INAINTE de WHITE (prefix 'albastr' vs 'alb')"
+    },
+    "upholstery": {
+      "ALCANTARA": [
+        "contains:alcantara"
+      ],
+      "PARTIAL_LEATHER": [
+        "piele velur",
+        "mixt",
+        "contains:semipiele",
+        "partiala piele",
+        "partial piele"
+      ],
+      "LEATHER": [
+        "piele"
+      ],
+      "VELOUR": [
+        "velur"
+      ],
+      "FABRIC": [
+        "textil",
+        "stofa",
+        "panza"
+      ]
+    },
+    "airConditioning": {
+      "QUAD_ZONE": [
+        "clima 4 zone",
+        "4 zone",
+        "climatronic 4 zone"
+      ],
+      "TRI_ZONE": [
+        "climatronic 3 zone"
+      ],
+      "DUAL_ZONE": [
+        "contains:dublu",
+        "dubluclimatronic",
+        "climatronic doua zone"
+      ],
+      "AUTOMATIC": [
+        "automata",
+        "automat",
+        "contains:climatronic"
+      ],
+      "MANUAL": [
+        "contains:aer conditionat"
+      ]
+    },
+    "countryOfOrigin": {
+      "FR": [
+        "franta",
+        "feanta"
+      ],
+      "DE": [
+        "germania"
+      ],
+      "RO": [
+        "romania",
+        "ro"
+      ],
+      "IT": [
+        "italia"
+      ],
+      "BE": [
+        "belgia"
+      ],
+      "FI": [
+        "finlanda"
+      ]
+    }
+  },
+  "crossFieldRules": [
+    {
+      "when": "atribut 'transmisie' cu valoare de tractiune (spate/fata/x-drive)",
+      "then": "ruteaza la drivetrain, nu la gearbox — 3 cazuri in date"
+    },
+    {
+      "when": "atribute booleene de climatizare (climatronic etc.) = true",
+      "then": "seteaza airConditioning la valoarea enum corespunzatoare din sinonime"
+    },
+    {
+      "when": "senzori parcare STRING: 'da'",
+      "then": "feature senzori-parcare"
+    },
+    {
+      "when": "senzori parcare STRING: contine fata+spate",
+      "then": "features senzori-parcare-fata + senzori-parcare-spate"
+    },
+    {
+      "when": "senzori parcare STRING: contine camera/360",
+      "then": "+ camera-marsarier sau camera-360"
+    },
+    {
+      "when": "pilot automat STRING 'da'",
+      "then": "feature pilot-automat"
+    },
+    {
+      "when": "istoric service: 'da'",
+      "then": "serviceBook=true; altele -> extraSpecs"
+    },
+    {
+      "when": "tapiterie piele / interior piele / interior din piele / scaune piele (boolean) = true",
+      "then": "upholstery=LEATHER daca e null"
+    },
+    {
+      "when": "tapiterie alcantara/stofa/mixta (boolean VIA) = true",
+      "then": "upholstery corespunzator daca e null"
+    },
+    {
+      "when": "garantie BOOLEAN true",
+      "then": "feature garantie-inclusa; garantie NUMBER -> warrantyMonths"
+    },
+    {
+      "when": "price fix v1 != null si EAV pret != null si difera",
+      "then": "price fix castiga; EAV pret -> raport reconciliere"
+    }
+  ],
+  "numericGuards": {
+    "year": [
+      1950,
+      2027
+    ],
+    "mileage": [
+      0,
+      2000000
+    ],
+    "powerHp": [
+      20,
+      1500
+    ],
+    "engineCapacity": [
+      500,
+      8500
+    ],
+    "doors": [
+      2,
+      7
+    ],
+    "seats": [
+      2,
+      9
+    ],
+    "co2Emissions": [
+      0,
+      500
+    ],
+    "warrantyMonths": [
+      0,
+      120
+    ],
+    "ownerCount": [
+      0,
+      20
+    ],
+    "_onFail": "valoarea NU intra in camp; merge in extraSpecs + raport (ex. reale din date: an=212, an=12.2015, km=-1, putere=1798)"
+  },
+  "makeNormalization": {
+    "_comment": "raw -> slug Autovit (autovit_makes.json). Typo-uri reale din date incluse.",
+    "bmw": "bmw",
+    "renault": "renault",
+    "tesla": "tesla",
+    "audi": "audi",
+    "aud": "audi",
+    "dacia": "dacia",
+    "volkswagen": "volkswagen",
+    "vw": "volkswagen",
+    "volskwagen": "volkswagen",
+    "skoda": "skoda",
+    "ford": "ford",
+    "nissan": "nissan",
+    "volvo": "volvo",
+    "vol": "volvo",
+    "mercedes": "mercedes-benz",
+    "mercedes benz": "mercedes-benz",
+    "mercedes-benz": "mercedes-benz",
+    "mercedes-benz e-klasse avantgarde": "mercedes-benz",
+    "citroen": "citroen",
+    "hyundai": "hyundai",
+    "hyndai": "hyundai",
+    "peugeot": "peugeot",
+    "peugeout": "peugeot",
+    "seat": "seat",
+    "toyota": "toyota",
+    "opel": "opel",
+    "kia": "kia",
+    "jeep": "jeep",
+    "honda": "honda",
+    "porsche": "porsche",
+    "mazda": "mazda",
+    "fiat": "fiat",
+    "lada": "lada",
+    "mitsubishi": "mitsubishi",
+    "jaguar": "jaguar",
+    "subaru": "subaru",
+    "mg": "mg",
+    "lynk&co": "lynk-co",
+    "genesis": "genesis",
+    "mini couper": "mini",
+    "mini cooper": "mini"
+  },
+  "featureDictionary": [
+    {
+      "slug": "abs",
+      "name": "ABS",
+      "group": "SAFETY",
+      "synonyms": [
+        "abs",
+        "abs/esp"
+      ]
+    },
+    {
+      "slug": "esp",
+      "name": "ESP",
+      "group": "SAFETY",
+      "synonyms": [
+        "esp",
+        "controlul tractiunii"
+      ]
+    },
+    {
+      "slug": "airbaguri",
+      "name": "Airbag-uri",
+      "group": "SAFETY",
+      "synonyms": [
+        "prefix:airbag"
+      ]
+    },
+    {
+      "slug": "isofix",
+      "name": "ISOFIX",
+      "group": "SAFETY",
+      "synonyms": [
+        "isofix",
+        "sistem isofix"
+      ]
+    },
+    {
+      "slug": "lane-assist",
+      "name": "Asistență bandă (Lane Assist)",
+      "group": "SAFETY",
+      "synonyms": [
+        "lane assist",
+        "asistenta banda (lane assist)",
+        "active lane control assistant",
+        "asistenta schimbare banda"
+      ]
+    },
+    {
+      "slug": "blind-spot",
+      "name": "Monitorizare unghi mort",
+      "group": "SAFETY",
+      "synonyms": [
+        "blind spot assist",
+        "avertizare unghi mort",
+        "monitorizare unghi mort",
+        "asistenta unghi mort",
+        "side assist"
+      ]
+    },
+    {
+      "slug": "franare-urgenta",
+      "name": "Frânare de urgență",
+      "group": "SAFETY",
+      "synonyms": [
+        "franare de urgenta",
+        "franare de urgenta (pre-safe)",
+        "sistem activ franare urgenta",
+        "franare asistata",
+        "asistenta la franare",
+        "sistem avertizare pre-coliziune",
+        "avertizare sonora pre-coliziune",
+        "sistem pre-coliziune lateral",
+        "sistem pre-coliziune spate",
+        "sistem asistenta franare oras",
+        "sistem franare automata pietoni",
+        "front assist"
+      ]
+    },
+    {
+      "slug": "recunoastere-semne",
+      "name": "Recunoaștere semne rutiere",
+      "group": "SAFETY",
+      "synonyms": [
+        "recunoastere semne rutiere",
+        "recunoastere semne",
+        "sistem recunoastere indicatoare de viteza",
+        "sistem recunoastere semne trafic"
+      ]
+    },
+    {
+      "slug": "senzori-parcare-fata",
+      "name": "Senzori parcare față",
+      "group": "SAFETY",
+      "synonyms": [
+        "senzori parcare fata"
+      ]
+    },
+    {
+      "slug": "senzori-parcare-spate",
+      "name": "Senzori parcare spate",
+      "group": "SAFETY",
+      "synonyms": [
+        "senzori parcare spate"
+      ]
+    },
+    {
+      "slug": "senzori-parcare",
+      "name": "Senzori parcare",
+      "group": "SAFETY",
+      "synonyms": [
+        "senzori parcare",
+        "asistenta la parcare",
+        "sistem de parcare automat"
+      ]
+    },
+    {
+      "slug": "camera-marsarier",
+      "name": "Cameră marșarier",
+      "group": "SAFETY",
+      "synonyms": [
+        "camera marsarier",
+        "camera video spate",
+        "camera video",
+        "sistem avertizare marsarier"
+      ]
+    },
+    {
+      "slug": "camera-360",
+      "name": "Cameră 360°",
+      "group": "SAFETY",
+      "synonyms": [
+        "camera 360",
+        "camere 360",
+        "camera video 360o"
+      ]
+    },
+    {
+      "slug": "pilot-automat",
+      "name": "Pilot automat",
+      "group": "COMFORT",
+      "synonyms": [
+        "pilot automat",
+        "pilot automat (cruise control)",
+        "limitator viteza"
+      ]
+    },
+    {
+      "slug": "pilot-automat-adaptiv",
+      "name": "Pilot automat adaptiv",
+      "group": "COMFORT",
+      "synonyms": [
+        "pilot automat adaptiv",
+        "distronic",
+        "pilot automat adaptiv ( distronic )",
+        "adaptive cruise control predictive",
+        "controlul distantei",
+        "asistenta ambuteiaj"
+      ]
+    },
+    {
+      "slug": "asistenta-panta",
+      "name": "Asistență pornire în pantă",
+      "group": "SAFETY",
+      "synonyms": [
+        "asistenta in rampa",
+        "asistenta in panta"
+      ]
+    },
+    {
+      "slug": "presiune-pneuri",
+      "name": "Monitorizare presiune pneuri",
+      "group": "SAFETY",
+      "synonyms": [
+        "monitorizare presiune pneuri",
+        "senzori presiune pneuri",
+        "senzori presiune roti"
+      ]
+    },
+    {
+      "slug": "apelare-112",
+      "name": "Apelare automată 112",
+      "group": "SAFETY",
+      "synonyms": [
+        "apelare automata 112",
+        "asistenta telefonica urgenta"
+      ]
+    },
+    {
+      "slug": "scaune-incalzite",
+      "name": "Scaune încălzite",
+      "group": "COMFORT",
+      "synonyms": [
+        "scaune incalzite",
+        "incalzire scaune",
+        "incalzire in scaune",
+        "incalzire scaun sofer",
+        "incalzire scaun pasager",
+        "incalzire scaune spate"
+      ]
+    },
+    {
+      "slug": "scaune-ventilate",
+      "name": "Scaune ventilate",
+      "group": "COMFORT",
+      "synonyms": [
+        "scaune ventilate",
+        "scaune fata ventilate",
+        "scaune spate ventilate"
+      ]
+    },
+    {
+      "slug": "scaune-masaj",
+      "name": "Scaune cu masaj",
+      "group": "COMFORT",
+      "synonyms": [
+        "masaj in scaune",
+        "scaune fata cu masaj",
+        "scaune spate cu masaj"
+      ]
+    },
+    {
+      "slug": "scaune-electrice",
+      "name": "Scaune reglabile electric",
+      "group": "COMFORT",
+      "synonyms": [
+        "scaune reglabile electric",
+        "scaun sofer ajustabil electric",
+        "scaun pasager ajustabil electric",
+        "suport lombar electric scaun sofer",
+        "suport lombar electric scaun pasager",
+        "suport lombar"
+      ]
+    },
+    {
+      "slug": "scaune-memorie",
+      "name": "Scaune cu memorie",
+      "group": "COMFORT",
+      "synonyms": [
+        "scaun cu memorie",
+        "scaune cu memorie"
+      ]
+    },
+    {
+      "slug": "volan-incalzit",
+      "name": "Volan încălzit",
+      "group": "COMFORT",
+      "synonyms": [
+        "volan incalzit",
+        "incalzire volan"
+      ]
+    },
+    {
+      "slug": "keyless",
+      "name": "Keyless Entry/Go",
+      "group": "COMFORT",
+      "synonyms": [
+        "keyless go",
+        "keyless entry",
+        "pornire motor keyless",
+        "cheie digitala"
+      ]
+    },
+    {
+      "slug": "trapa",
+      "name": "Trapă",
+      "group": "COMFORT",
+      "synonyms": [
+        "trapa",
+        "trapa electrica"
+      ]
+    },
+    {
+      "slug": "plafon-panoramic",
+      "name": "Plafon panoramic",
+      "group": "COMFORT",
+      "synonyms": [
+        "plafon panoramic",
+        "trapa / panorama",
+        "trapa panoramica",
+        "acoperis panoramic",
+        "trapa / plafon panoramic"
+      ]
+    },
+    {
+      "slug": "geamuri-electrice",
+      "name": "Geamuri electrice",
+      "group": "COMFORT",
+      "synonyms": [
+        "geamuri electrice",
+        "geamuri electrice fata",
+        "geamuri electrice spate"
+      ]
+    },
+    {
+      "slug": "oglinzi-electrice",
+      "name": "Oglinzi electrice",
+      "group": "COMFORT",
+      "synonyms": [
+        "oglinzi electrice",
+        "oglinzi exterioare cu reglare electrica",
+        "oglinzi exterioare incalzite",
+        "oglinzi exterioare rabatabile electric",
+        "oglinda heliomata"
+      ]
+    },
+    {
+      "slug": "cotiera",
+      "name": "Cotieră",
+      "group": "COMFORT",
+      "synonyms": [
+        "cotiera",
+        "cotiera (fata)",
+        "cotiera (spate)"
+      ]
+    },
+    {
+      "slug": "incalzire-auxiliara",
+      "name": "Încălzire auxiliară (Webasto)",
+      "group": "COMFORT",
+      "synonyms": [
+        "incalzire auxiliara",
+        "incalzire cu reglare automata",
+        "parbriz cu incalzire"
+      ]
+    },
+    {
+      "slug": "suspensie-pneumatica",
+      "name": "Suspensie pneumatică",
+      "group": "COMFORT",
+      "synonyms": [
+        "suspensie pneumatica",
+        "suspensie hidropneumatica",
+        "suspensie reglabila",
+        "suspensie controlata electronic",
+        "suspensie confort"
+      ]
+    },
+    {
+      "slug": "portbagaj-electric",
+      "name": "Portbagaj electric",
+      "group": "COMFORT",
+      "synonyms": [
+        "portbagaj electric",
+        "soft close"
+      ]
+    },
+    {
+      "slug": "start-stop",
+      "name": "Sistem Start/Stop",
+      "group": "COMFORT",
+      "synonyms": [
+        "sistem start/stop",
+        "start stop"
+      ]
+    },
+    {
+      "slug": "frana-parcare-electrica",
+      "name": "Frână de parcare electrică",
+      "group": "COMFORT",
+      "synonyms": [
+        "frana parcare electrica"
+      ]
+    },
+    {
+      "slug": "computer-bord",
+      "name": "Computer de bord",
+      "group": "COMFORT",
+      "synonyms": [
+        "computer de bord"
+      ]
+    },
+    {
+      "slug": "volan-multifunctional",
+      "name": "Volan multifuncțional",
+      "group": "COMFORT",
+      "synonyms": [
+        "volan cu comenzi",
+        "volan multifunctional",
+        "volan piele",
+        "volan reglabil electric",
+        "volan cu schimbator de viteze",
+        "schimbator viteze piele"
+      ]
+    },
+    {
+      "slug": "navigatie",
+      "name": "Navigație",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "navigatie",
+        "sistem navigatie",
+        "navigatie gps",
+        "monitor cu touch screen"
+      ]
+    },
+    {
+      "slug": "bluetooth",
+      "name": "Bluetooth / Hands-free",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "bluetooth",
+        "bluetooth / hands-free",
+        "bluetooth hands-free",
+        "sistem hands-free",
+        "conectivitate smartphone"
+      ]
+    },
+    {
+      "slug": "apple-carplay",
+      "name": "Apple CarPlay",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "apple carplay"
+      ]
+    },
+    {
+      "slug": "android-auto",
+      "name": "Android Auto",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "android auto"
+      ]
+    },
+    {
+      "slug": "carplay-android",
+      "name": "CarPlay + Android Auto",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "apple carplay/android auto",
+        "apple carplay / android auto",
+        "carplay android auto"
+      ]
+    },
+    {
+      "slug": "head-up-display",
+      "name": "Head-Up Display",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "head-up display"
+      ]
+    },
+    {
+      "slug": "bord-digital",
+      "name": "Bord digital",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "bord digital"
+      ]
+    },
+    {
+      "slug": "audio-premium",
+      "name": "Sistem audio premium",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "sistem audio premium",
+        "sistem audio",
+        "radio"
+      ]
+    },
+    {
+      "slug": "wireless-charging",
+      "name": "Încărcare wireless",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "wireless charging",
+        "incarcare wireless"
+      ]
+    },
+    {
+      "slug": "usb",
+      "name": "Port USB",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "port usb"
+      ]
+    },
+    {
+      "slug": "control-vocal",
+      "name": "Control vocal",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "control vocal"
+      ]
+    },
+    {
+      "slug": "internet",
+      "name": "Conexiune internet",
+      "group": "MULTIMEDIA",
+      "synonyms": [
+        "conexiune internet"
+      ]
+    },
+    {
+      "slug": "faruri-led",
+      "name": "Faruri LED",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "faruri led",
+        "lumini de zi led",
+        "stopuri led",
+        "iluminare interioara led",
+        "lumini de zi",
+        "faruri ceata led"
+      ]
+    },
+    {
+      "slug": "faruri-xenon",
+      "name": "Faruri Xenon",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "faruri xenon",
+        "faruri bi-xenon",
+        "faruri xenon/led"
+      ]
+    },
+    {
+      "slug": "faruri-laser",
+      "name": "Faruri Laser",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "faruri laser"
+      ]
+    },
+    {
+      "slug": "faruri-adaptive",
+      "name": "Faruri adaptive/direcționale",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "faruri autoadaptive",
+        "faruri directionale",
+        "faruri directionale dinamice",
+        "asistenta faza lunga",
+        "faruri cu temporizator",
+        "follow me home"
+      ]
+    },
+    {
+      "slug": "proiectoare-ceata",
+      "name": "Proiectoare ceață",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "proiectoare ceata",
+        "faruri ceata"
+      ]
+    },
+    {
+      "slug": "jante-aliaj",
+      "name": "Jante aliaj",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "prefix:jante aliaj"
+      ]
+    },
+    {
+      "slug": "geamuri-fumurii",
+      "name": "Geamuri fumurii",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "geamuri fumurii",
+        "privacy glass",
+        "jaluzele electrice geamuri spate",
+        "jaluzele manuale geamuri spate"
+      ]
+    },
+    {
+      "slug": "senzor-ploaie",
+      "name": "Senzori ploaie/lumini",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "senzor ploaie",
+        "senzori ploaie",
+        "senzori ploaie/lumini",
+        "senzori lumini",
+        "stergatoare parbriz"
+      ]
+    },
+    {
+      "slug": "spalatoare-faruri",
+      "name": "Spălătoare faruri",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "spalatoare faruri",
+        "spalare faruri"
+      ]
+    },
+    {
+      "slug": "carlig-remorcare",
+      "name": "Cârlig remorcare",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "carlig remorcare"
+      ]
+    },
+    {
+      "slug": "bare-portbagaj",
+      "name": "Bare portbagaj",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "bare portbagaj"
+      ]
+    },
+    {
+      "slug": "run-flat",
+      "name": "Cauciucuri Run-Flat",
+      "group": "EXTERIOR",
+      "synonyms": [
+        "cauciucuri run-flat"
+      ]
+    },
+    {
+      "slug": "livrare-domiciliu",
+      "name": "Livrare la domiciliu",
+      "group": "SERVICES",
+      "synonyms": [
+        "livrare la domiciliu"
+      ]
+    },
+    {
+      "slug": "test-drive",
+      "name": "Disponibil test drive",
+      "group": "SERVICES",
+      "synonyms": [
+        "disponibil test drive"
+      ]
+    },
+    {
+      "slug": "garantie-inclusa",
+      "name": "Garanție inclusă",
+      "group": "SERVICES",
+      "synonyms": [
+        "garantie inclusa",
+        "garantie dealer"
+      ]
+    }
+  ]
+}

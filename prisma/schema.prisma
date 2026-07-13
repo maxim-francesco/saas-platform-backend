@@ -1,3 +1,9 @@
+// ============================================================
+// SCHEMA V2 — SaaS Auto Dealerships (propunere design, M3)
+// Proiectată pe datele reale din inventarul M2 (28 tenants whitelist)
+// EAV (Category/Attribute/AttributeGroup/AttributeValue) = ELIMINAT
+// ============================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,27 +13,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Business {
-  id                   String           @id @default(cuid())
-  name                 String           @unique
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  bannerUrl            String?
-  listingUrlPattern    String?
-  bestAutoApiKey       String?
-  attributeGroups      AttributeGroup[]
-  categories           Category[]
-  listings             Listing[]
-  messages             Message[]
-  reviews              Review[]
-  users                User[]
-  views                View[]
+// ===================== TENANT & USERS =====================
 
-  autovitClientId      String?
-  autovitClientSecret  String?
-  autovitUsername      String?
-  autovitPassword      String?
-  blogPosts            BlogPost[]
+model Business {
+  id                  String     @id @default(cuid())
+  name                String     @unique
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+  bannerUrl           String?
+  listingUrlPattern   String?
+  bestAutoApiKey      String?
+  autovitClientId     String?
+  autovitClientSecret String?
+  autovitUsername     String?
+  autovitPassword     String?
+  users               User[]
+  listings            Listing[]
+  messages            Message[]
+  reviews             Review[]
+  views               View[]
+  blogPosts           BlogPost[]
 }
 
 model User {
@@ -42,37 +47,126 @@ model User {
   business     Business @relation(fields: [businessId], references: [id])
 }
 
-model Category {
-  id         String      @id @default(cuid())
-  name       String
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+// ============ DICȚIONARE GLOBALE (administrate din Super Admin) ============
+
+model Make {
+  id          String     @id @default(cuid())
+  name        String     @unique // "BMW"
+  slug        String     @unique // "bmw" — identic cu codul Autovit
+  autovitCode String?    @unique // redundant cu slug azi, dar decuplat pt viitor
+  models      CarModel[]
+  listings    Listing[]
+}
+
+model CarModel {
+  id          String    @id @default(cuid())
+  name        String // "Seria 3"
+  slug        String // "seria-3"
+  makeId      String
+  make        Make      @relation(fields: [makeId], references: [id])
+  autovitCode String?
+  listings    Listing[]
+
+  @@unique([makeId, slug])
+}
+
+model Feature {
+  id       String       @id @default(cuid())
+  name     String // "Scaune încălzite"
+  slug     String       @unique // "scaune-incalzite"
+  group    FeatureGroup
+  listings Listing[] // m2m implicit (tabela _FeatureToListing)
+}
+
+// ===================== LISTING (VEHICUL) =====================
+
+model Listing {
+  id         String   @id @default(cuid())
   businessId String
-  attributes Attribute[]
-  business   Business    @relation(fields: [businessId], references: [id])
-  listings   Listing[]
+  business   Business @relation(fields: [businessId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  status      ListingStatus @default(AVAILABLE)
+  title       String // pre-generat din marcă+model+variant+an, rămâne editabil
+  slug        String?
+  description String?       @db.Text
+
+  // --- Identitate vehicul ---
+  makeId              String?
+  make                Make?     @relation(fields: [makeId], references: [id])
+  modelId             String?
+  model               CarModel? @relation(fields: [modelId], references: [id])
+  variant             String? // "320d xDrive M Sport" — text liber
+  year                Int? // an fabricație
+  vin                 String?
+  firstRegistrationAt DateTime? // prima înmatriculare (precizie lună)
+  countryOfOrigin     String?   @db.VarChar(2) // ISO-3166-1: DE, IT, FR, RO...
+  registeredInRo      Boolean? // înmatriculat(ă) în RO
+
+  // --- Tehnic ---
+  mileage         Int?
+  fuelType        FuelType?
+  gearbox         GearboxType?
+  drivetrain      Drivetrain?
+  bodyType        BodyType?
+  engineCapacity  Int? // cm³
+  powerHp         Int? // CP
+  pollutionNorm   PollutionNorm?
+  co2Emissions    Int? // g/km
+  color           CarColor?
+  colorDetail     String? // "Gri Selenit metalizat" — textul original al dealerului
+  upholstery      Upholstery?
+  airConditioning AirConditioning?
+  doors           Int?
+  seats           Int?
+
+  // --- Istoric & comercial ---
+  vatDeductible  Boolean? // TVA deductibil — foarte folosit (427 în v1)
+  noAccidents    Boolean?
+  serviceBook    Boolean? // carte service
+  firstOwner     Boolean?
+  ownerCount     Int?
+  warrantyMonths Int?
+
+  // --- Preț & intern (păstrate 1:1 din v1) ---
+  price         Float? // prețul public
+  purchasePrice Float?
+  sellingPrice  Float?
+  otherCosts    Float?
+  soldAt        DateTime?
+  internalNotes String?
+
+  // --- Integrare & media (păstrate din v1) ---
+  youtubeVideoId String?
+  autovitId      BigInt?
+  autovitStatus  String? // "active" | "inactive" | null
+
+  // --- Supapa de siguranță ETL ---
+  extraSpecs Json? // orice atribut v1 nemapat curat; de golit/eliminat post-migrare
+
+  features Feature[]
+  images   ListingImage[]
+  views    View[]
+
+  @@index([businessId, status])
+  @@index([price])
+  @@index([mileage])
+  @@index([year])
+  @@index([makeId])
+  @@index([modelId])
+  @@index([fuelType])
 }
 
-model AttributeGroup {
-  id         String      @id @default(cuid())
-  name       String
-  businessId String
-  attributes Attribute[]
-  business   Business    @relation(fields: [businessId], references: [id])
-
-  @@unique([name, businessId])
+model ListingImage {
+  id        String  @id @default(cuid())
+  url       String
+  listingId String
+  order     Int     @default(0)
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 
-model Attribute {
-  id               String           @id @default(cuid())
-  name             String
-  type             AttributeType
-  categoryId       String
-  attributeGroupId String?
-  attributeGroup   AttributeGroup?  @relation(fields: [attributeGroupId], references: [id])
-  category         Category         @relation(fields: [categoryId], references: [id])
-  values           AttributeValue[]
-}
+// ============== NESCHIMBATE FUNCȚIONAL FAȚĂ DE V1 ==============
 
 model Message {
   id         String   @id @default(cuid())
@@ -84,59 +178,6 @@ model Message {
   createdAt  DateTime @default(now())
   businessId String
   business   Business @relation(fields: [businessId], references: [id])
-}
-
-model Listing {
-  id              String           @id @default(cuid())
-  title           String
-  description     String?
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  businessId      String
-  categoryId      String
-  mileage         Int?
-  price           Float?
-  otherCosts      Float?
-  purchasePrice   Float?
-  sellingPrice    Float?
-  soldAt          DateTime?
-  status          ListingStatus    @default(AVAILABLE)
-  slug            String?
-  attributeValues AttributeValue[]
-  business        Business         @relation(fields: [businessId], references: [id])
-  category        Category         @relation(fields: [categoryId], references: [id])
-  images          ListingImage[]
-  views           View[]
-
-  youtubeVideoId String?  // <--- Adaugă această linie
-  internalNotes  String?
-  autovitId   BigInt?
-  autovitStatus String?  // "active", "inactive", null
-
-
-  @@index([price])
-  @@index([mileage])
-}
-
-model AttributeValue {
-  id           String    @id @default(cuid())
-  stringValue  String?
-  numberValue  Float?
-  booleanValue Boolean?
-  listingId    String
-  attributeId  String
-  attribute    Attribute @relation(fields: [attributeId], references: [id])
-  listing      Listing   @relation(fields: [listingId], references: [id])
-
-  @@unique([listingId, attributeId])
-}
-
-model ListingImage {
-  id        String  @id @default(cuid())
-  url       String
-  listingId String
-  order     Int     @default(0)
-  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 }
 
 model View {
@@ -182,18 +223,103 @@ model BlogPost {
   @@index([businessId, isPublished])
 }
 
+// ===================== ENUMS =====================
+
 enum Role {
   SUPER_ADMIN
   ADMIN
 }
 
 enum ListingStatus {
+  INCOMING // "Sosește în curând" — dealerii o inventaseră deja (VIITOR/In Curand)
   AVAILABLE
+  RESERVED
   SOLD
 }
 
-enum AttributeType {
-  STRING
-  NUMBER
-  BOOLEAN
+enum FuelType {
+  PETROL
+  DIESEL
+  PETROL_LPG
+  LPG
+  HYBRID
+  PLUGIN_HYBRID
+  MILD_HYBRID
+  ELECTRIC
+}
+
+enum GearboxType {
+  MANUAL
+  AUTOMATIC
+}
+
+enum Drivetrain {
+  FWD // față
+  RWD // spate
+  AWD // integrală / 4x4
+}
+
+enum BodyType {
+  SUV
+  SEDAN // Limuzina / Berlina / Limousine
+  HATCHBACK
+  BREAK // Combi / Kombi
+  COUPE
+  CABRIO
+  MONOVOLUM
+  VAN
+  PICKUP
+}
+
+enum PollutionNorm {
+  NON_EURO
+  EURO_1
+  EURO_2
+  EURO_3
+  EURO_4
+  EURO_5
+  EURO_6
+  EURO_6D
+}
+
+enum CarColor {
+  BLACK
+  GREY
+  WHITE
+  BLUE
+  RED
+  BROWN
+  SILVER
+  ORANGE
+  GREEN
+  PURPLE
+  GOLD
+  BEIGE
+  YELLOW
+  OTHER
+}
+
+enum Upholstery {
+  FABRIC // textil / stofă / pânză
+  VELOUR
+  LEATHER
+  PARTIAL_LEATHER // mixt / semipiele / piele-velur
+  ALCANTARA
+}
+
+enum AirConditioning {
+  NONE
+  MANUAL // "aer condiționat"
+  AUTOMATIC // climatronic / automată
+  DUAL_ZONE // dublu climatronic
+  TRI_ZONE
+  QUAD_ZONE
+}
+
+enum FeatureGroup {
+  SAFETY
+  COMFORT
+  MULTIMEDIA
+  EXTERIOR
+  SERVICES
 }
