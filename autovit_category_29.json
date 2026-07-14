@@ -297,14 +297,19 @@
     },
     {
       "code": "rhd",
-      "type": "checkbox",
+      "type": "toggle",
       "labels": {
-        "ro": "Volan pe dreapta",
-        "en": "RHD"
+        "ro": "Volan",
+        "en": "Steering wheel"
       },
       "required": false,
       "purpose": "both",
-      "options": null
+      "options": {
+        "1": {
+          "ro": "Pe dreapta",
+          "en": "On the right"
+        }
+      }
     },
     {
       "code": "video",
@@ -970,6 +975,34 @@
         "prototip": {
           "ro": "Prototip",
           "en": "Prototip"
+        },
+        "e-go": {
+          "ro": "e.GO",
+          "en": "e.GO"
+        },
+        "avatr": {
+          "ro": "AVATR",
+          "en": "AVATR"
+        },
+        "suda": {
+          "ro": "Suda",
+          "en": "Suda"
+        },
+        "stelato": {
+          "ro": "Stelato",
+          "en": "Stelato"
+        },
+        "onvo": {
+          "ro": "Onvo",
+          "en": "Onvo"
+        },
+        "smart-balance": {
+          "ro": "Smart Balance",
+          "en": "Smart Balance"
+        },
+        "today-sunshine": {
+          "ro": "Today Sunshine",
+          "en": "Today Sunshine"
         }
       }
     },
@@ -1860,20 +1893,20 @@
           "en": "Thar"
         },
         "q6": {
-          "ro": "Q6",
-          "en": "Q6"
+          "ro": "Q6 e-tron",
+          "en": "Q6 e-tron"
         },
         "eny1": {
           "ro": "eNY1",
           "en": "eNY1"
         },
-        "id6": {
-          "ro": "ID.6",
-          "en": "ID.6"
-        },
         "tx500-h": {
           "ro": "TX500 H",
           "en": "TX500 H"
+        },
+        "id6": {
+          "ro": "ID.6",
+          "en": "ID.6"
         },
         "lm": {
           "ro": "LM",
@@ -2371,10 +2404,6 @@
           "ro": "GTX",
           "en": "GTX"
         },
-        "cle": {
-          "ro": "CLE",
-          "en": "CLE"
-        },
         "gt-xr": {
           "ro": "GT-XR",
           "en": "GT-XR"
@@ -2616,8 +2645,8 @@
           "en": "ET5"
         },
         "q4": {
-          "ro": "Q4",
-          "en": "Q4"
+          "ro": "Q4 e-tron",
+          "en": "Q4 e-tron"
         },
         "m8": {
           "ro": "M8",
@@ -3140,28 +3169,28 @@
           "en": "A3"
         },
         "a4": {
-          "ro": "A4",
-          "en": "A4"
+          "ro": "A4 Limuzina",
+          "en": "A4 Limuzina"
         },
         "a4-allroad": {
           "ro": "A4 Allroad",
           "en": "A4 Allroad"
         },
         "a5": {
-          "ro": "A5",
-          "en": "A5"
+          "ro": "A5 Coupé",
+          "en": "A5 Coupé"
         },
         "a6": {
-          "ro": "A6",
-          "en": "A6"
+          "ro": "A6 Limuzina",
+          "en": "A6 Limuzina"
         },
         "a6-allroad": {
           "ro": "A6 Allroad",
           "en": "A6 Allroad"
         },
         "a7": {
-          "ro": "A7",
-          "en": "A7"
+          "ro": "A7 Sportback",
+          "en": "A7 Sportback"
         },
         "acadia": {
           "ro": "Acadia",
@@ -3703,6 +3732,442 @@
           "ro": "Alumi Elite",
           "en": "Alumi Elite"
         },
+        "life-20": {
+          "ro": "Life 20",
+          "en": "Life 20"
+        },
+        "life-40": {
+          "ro": "Life 40",
+          "en": "Life 40"
+        },
+        "life-60": {
+          "ro": "Life 60",
+          "en": "Life 60"
+        },
+        "s9": {
+          "ro": "S9",
+          "en": "S9"
+        },
+        "cl-500": {
+          "ro": "CL 500",
+          "en": "CL 500"
+        },
+        "cl-600": {
+          "ro": "CL 600",
+          "en": "Cl 600"
+        },
+        "cl-55-amg": {
+          "ro": "CL 55 AMG",
+          "en": "CL 55 AMG"
+        },
+        "cl-63-amg": {
+          "ro": "CL 63 AMG",
+          "en": "CL 63 AMG"
+        },
+        "cl-65-amg": {
+          "ro": "CL 65 AMG",
+          "en": "CL 65 AMG"
+        },
+        "cl-420": {
+          "ro": "CL 420",
+          "en": "Cl 420"
+        },
+        "4city": {
+          "ro": "4City",
+          "en": "4City"
+        },
+        "monjaro": {
+          "ro": "Monjaro",
+          "en": "Monjaro"
+        },
+        "s-650-maybach": {
+          "ro": "S 650 Maybach",
+          "en": "S 650 Maybach"
+        },
+        "shark-6": {
+          "ro": "Shark 6",
+          "en": "Shark 6"
+        },
+        "clc-160": {
+          "ro": "CLC 160",
+          "en": "CLC 160"
+        },
+        "clc-180": {
+          "ro": "CLC 180",
+          "en": "CLC 180"
+        },
+        "clc-200": {
+          "ro": "CLC 200",
+          "en": "CLC 200"
+        },
+        "clc-220": {
+          "ro": "CLC 220",
+          "en": "CLC 220"
+        },
+        "clc-230": {
+          "ro": "CLC 230",
+          "en": "CLC 230"
+        },
+        "clc-250": {
+          "ro": "CLC 250",
+          "en": "CLC 250"
+        },
+        "clc-350": {
+          "ro": "CLC 350",
+          "en": "CLC 350"
+        },
+        "cle-180": {
+          "ro": "CLE 180",
+          "en": "CLE 180"
+        },
+        "cle-200": {
+          "ro": "CLE 200",
+          "en": "CLE 200"
+        },
+        "cle-220": {
+          "ro": "CLE 220",
+          "en": "CLE 220"
+        },
+        "cle-300": {
+          "ro": "CLE 300",
+          "en": "CLE 300"
+        },
+        "cle-450": {
+          "ro": "CLE 450",
+          "en": "CLE 450"
+        },
+        "cle-53-amg": {
+          "ro": "CLE 53 AMG",
+          "en": "CLE 53 AMG"
+        },
+        "k4": {
+          "ro": "K4",
+          "en": "K4"
+        },
+        "206-plus": {
+          "ro": "206+",
+          "en": "206+"
+        },
+        "g6": {
+          "ro": "G6",
+          "en": "G6"
+        },
+        "a3-sportback": {
+          "ro": "A3 Sportback",
+          "en": "A3 Sportback"
+        },
+        "a3-limuzina": {
+          "ro": "A3 Limuzina",
+          "en": "A3 Limuzina"
+        },
+        "a3-allstreet": {
+          "ro": "A3 Allstreet",
+          "en": "A3 Allstreet"
+        },
+        "a3-cabrio": {
+          "ro": "A3 Cabrio",
+          "en": "A3 Cabrio"
+        },
+        "s3-cabrio": {
+          "ro": "S3 Cabrio",
+          "en": "S3 Cabrio"
+        },
+        "s3-limuzina": {
+          "ro": "S3 Limuzina",
+          "en": "S3 Limuzina"
+        },
+        "s3-sportback": {
+          "ro": "S3 Sportback",
+          "en": "S3 Sportback"
+        },
+        "rs3-limuzina": {
+          "ro": "RS3 Limuzina",
+          "en": "RS3 Limuzina"
+        },
+        "rs3-sportback": {
+          "ro": "RS3 Sportback",
+          "en": "RS3 Sportback"
+        },
+        "a1-sportback": {
+          "ro": "A1 Sportback",
+          "en": "A1 Sportback"
+        },
+        "s1-sportback": {
+          "ro": "S1 Sportback",
+          "en": "S1 Sportback"
+        },
+        "a1-allstreet": {
+          "ro": "A1 Allstreet",
+          "en": "A1 Allstreet"
+        },
+        "nx8": {
+          "ro": "NX8",
+          "en": "NX8"
+        },
+        "lyriq": {
+          "ro": "Lyriq",
+          "en": "Lyriq"
+        },
+        "clk-200": {
+          "ro": "CLK 200",
+          "en": "CLK 200"
+        },
+        "clk-220": {
+          "ro": "CLK 220",
+          "en": "CLK 220"
+        },
+        "clk-230": {
+          "ro": "CLK 230",
+          "en": "CLK 230"
+        },
+        "clk-240": {
+          "ro": "CLK 240",
+          "en": "CLK 240"
+        },
+        "clk-270": {
+          "ro": "CLK 270",
+          "en": "CLK 270"
+        },
+        "clk-280": {
+          "ro": "CLK 280",
+          "en": "CLK 280"
+        },
+        "clk-320": {
+          "ro": "CLK 320",
+          "en": "CLK 320"
+        },
+        "clk-350": {
+          "ro": "CLK 350",
+          "en": "CLK 350"
+        },
+        "clk-430": {
+          "ro": "CLK 430",
+          "en": "CLK 430"
+        },
+        "clk-500": {
+          "ro": "CLK 500",
+          "en": "CLK 500"
+        },
+        "clk-55-amg": {
+          "ro": "CLK 55 AMG",
+          "en": "CLK 55 AMG"
+        },
+        "clk-63-amg": {
+          "ro": "CLK 63 AMG",
+          "en": "CLK 63 AMG"
+        },
+        "a5-sportback": {
+          "ro": "A5 Sportback",
+          "en": "A5 Sportback"
+        },
+        "a6-sportback-e-tron": {
+          "ro": "A6 Sportback e-tron",
+          "en": "A6 Sportback e-tron"
+        },
+        "e-tron-sportback": {
+          "ro": "e-tron Sportback",
+          "en": "e-tron Sportback"
+        },
+        "q3-sportback": {
+          "ro": "Q3 Sportback",
+          "en": "Q3 Sportback"
+        },
+        "q4-sportback-e-tron": {
+          "ro": "Q4 Sportback e-tron",
+          "en": "Q4 Sportback e-tron"
+        },
+        "q5-sportback": {
+          "ro": "Q5 Sportback",
+          "en": "Q5 Sportback"
+        },
+        "q6-sportback-e-tron": {
+          "ro": "Q6 Sportback e-tron",
+          "en": "Q6 Sportback e-tron"
+        },
+        "q8-sportback-e-tron": {
+          "ro": "Q8 Sportback e-tron",
+          "en": "Q8 Sportback e-tron"
+        },
+        "rs-q3-sportback": {
+          "ro": "RS Q3 Sportback",
+          "en": "RS Q3 Sportback"
+        },
+        "rs5-sportback": {
+          "ro": "RS5 Sportback",
+          "en": "RS5 Sportback"
+        },
+        "s6-sportback-e-tron": {
+          "ro": "S6 Sportback e-tron",
+          "en": "S6 Sportback e-tron"
+        },
+        "sq5-sportback": {
+          "ro": "SQ5 Sportback",
+          "en": "SQ5 Sportback"
+        },
+        "sq6-sportback-e-tron": {
+          "ro": "SQ6 Sportback e-tron",
+          "en": "SQ6 Sportback e-tron"
+        },
+        "js-60": {
+          "ro": "JS 60",
+          "en": "JS 60"
+        },
+        "bz3x": {
+          "ro": "bZ3X",
+          "en": "bZ3X"
+        },
+        "townstar": {
+          "ro": "Townstar",
+          "en": "Townstar"
+        },
+        "q8-e-tron": {
+          "ro": "Q8 e-tron",
+          "en": "Q8 e-tron"
+        },
+        "sq6-e-tron": {
+          "ro": "SQ6 e-tron",
+          "en": "SQ6 e-tron"
+        },
+        "a4-avant": {
+          "ro": "A4 Avant",
+          "en": "A4 Avant"
+        },
+        "a4-cabrio": {
+          "ro": "A4 Cabrio",
+          "en": "A4 Cabrio"
+        },
+        "rs4-avant": {
+          "ro": "RS4 Avant",
+          "en": "RS4 Avant"
+        },
+        "rs4-cabrio": {
+          "ro": "RS4 Cabrio",
+          "en": "RS4 Cabrio"
+        },
+        "s4-avant": {
+          "ro": "S4 Avant",
+          "en": "S4 Avant"
+        },
+        "s4-cabrio": {
+          "ro": "S4 Cabrio",
+          "en": "S4 Cabrio"
+        },
+        "a5-cabrio": {
+          "ro": "A5 Cabrio",
+          "en": "A5 Cabrio"
+        },
+        "a5-avant": {
+          "ro": "A5 Avant",
+          "en": "A5 Avant"
+        },
+        "a5-limuzina": {
+          "ro": "A5 Limuzina",
+          "en": "A5 Limuzina"
+        },
+        "s5-cabrio": {
+          "ro": "S5 Cabrio",
+          "en": "S5 Cabrio"
+        },
+        "s5-avant": {
+          "ro": "S5 Avant",
+          "en": "S5 Avant"
+        },
+        "rs5-cabrio": {
+          "ro": "RS5 Cabrio",
+          "en": "RS5 Cabrio"
+        },
+        "rs5-avant": {
+          "ro": "RS5 Avant",
+          "en": "RS5 Avant"
+        },
+        "s5-limuzina": {
+          "ro": "S5 Limuzina",
+          "en": "S5 Limuzina"
+        },
+        "a6-avant": {
+          "ro": "A6 Avant",
+          "en": "A6 Avant"
+        },
+        "a6-avant-e-tron": {
+          "ro": "A6 Avant e-tron",
+          "en": "A6 Avant e-tron"
+        },
+        "s6-avant": {
+          "ro": "S6 Avant",
+          "en": "S6 Avant"
+        },
+        "logan-mcv": {
+          "ro": "Logan MCV",
+          "en": "Logan MCV"
+        },
+        "w140": {
+          "ro": "W140",
+          "en": "W140"
+        },
+        "8x": {
+          "ro": "8X",
+          "en": "8X"
+        },
+        "temerario": {
+          "ro": "Temerario",
+          "en": "Temerario"
+        },
+        "es90": {
+          "ro": "ES90",
+          "en": "ES90"
+        },
+        "sa01": {
+          "ro": "SA01",
+          "en": "SA01"
+        },
+        "e-s2": {
+          "ro": "e-S2",
+          "en": "e-S2"
+        },
+        "s9t": {
+          "ro": "S9T",
+          "en": "S9T"
+        },
+        "midget": {
+          "ro": "Midget",
+          "en": "Midget"
+        },
+        "santa-cruz": {
+          "ro": "Santa Cruz",
+          "en": "Santa Cruz"
+        },
+        "gx": {
+          "ro": "GX",
+          "en": "GX"
+        },
+        "l60": {
+          "ro": "L60",
+          "en": "L60"
+        },
+        "l80": {
+          "ro": "L80",
+          "en": "L80"
+        },
+        "l90": {
+          "ro": "L90",
+          "en": "L90"
+        },
+        "breeze": {
+          "ro": "Breeze",
+          "en": "Breeze"
+        },
+        "m2plus": {
+          "ro": "M2+",
+          "en": "M2+"
+        },
+        "uncharted": {
+          "ro": "Uncharted",
+          "en": "Uncharted"
+        },
+        "ev2": {
+          "ro": "EV2",
+          "en": "EV2"
+        },
         "barina": {
           "ro": "Barina",
           "en": "Barina"
@@ -4011,10 +4476,6 @@
           "ro": "Cayman",
           "en": "Cayman"
         },
-        "ce": {
-          "ro": "CE",
-          "en": "CE"
-        },
         "ceed": {
           "ro": "Ceed",
           "en": "Ceed"
@@ -4135,17 +4596,9 @@
           "ro": "Clarus",
           "en": "Clarus"
         },
-        "cla": {
-          "ro": "CLA",
-          "en": "CLA"
-        },
         "gle": {
           "ro": "GLE",
           "en": "GLE"
-        },
-        "clc": {
-          "ro": "CLC",
-          "en": "CLC"
         },
         "clio": {
           "ro": "Clio",
@@ -4950,10 +5403,6 @@
         "g37": {
           "ro": "G37",
           "en": "G37"
-        },
-        "g6": {
-          "ro": "G6",
-          "en": "G6"
         },
         "galant": {
           "ro": "Galant",
@@ -6440,8 +6889,8 @@
           "en": "RS6"
         },
         "rs7": {
-          "ro": "RS7",
-          "en": "RS7"
+          "ro": "RS7 Sportback",
+          "en": "RS7 Sportback"
         },
         "rsx": {
           "ro": "RSX",
@@ -6520,8 +6969,8 @@
           "en": "S60"
         },
         "s7": {
-          "ro": "S7",
-          "en": "S7"
+          "ro": "S7 Sportback",
+          "en": "S7 Sportback"
         },
         "s70": {
           "ro": "S70",
@@ -8918,8 +9367,8 @@
           "en": "C8 [2019 - Prezent]"
         },
         "gen-f5-2016": {
-          "ro": "F5 [2016 - Prezent]",
-          "en": "F5 [2016 - Prezent]"
+          "ro": "F5 [2016 - 2024]",
+          "en": "F5 [2016 - 2024]"
         },
         "gen-b9-2016": {
           "ro": "B9 [2016 - Prezent]",
@@ -8966,8 +9415,8 @@
           "en": "C8 [2017 - Prezent]"
         },
         "gen-c8-2018": {
-          "ro": "C8 [2018 - Prezent]",
-          "en": "C8 [2018 - Prezent]"
+          "ro": "C8 [2018 - 2025]",
+          "en": "C8 [2018 - 2025]"
         },
         "gen-b9-2015": {
           "ro": "B9 [2015 - Prezent]",
@@ -9058,8 +9507,8 @@
           "en": "F10/F11/F07 [2010 - 2017]"
         },
         "gen-g30-g31-2017": {
-          "ro": "G30/G31 [2017 - Prezent]",
-          "en": "G30/G31 [2017 - Prezent]"
+          "ro": "G30/G31 [2017 - 2023]",
+          "en": "G30/G31 [2017 - 2023]"
         },
         "gen-e24-1976-1989": {
           "ro": "E24 [1976 - 1989]",
@@ -11316,6 +11765,22 @@
         "gen-x290-2018": {
           "ro": "X290 (2018 - Prezent)",
           "en": "X290 (2018 - Prezent)"
+        },
+        "gen-g60-g61-2023": {
+          "ro": "G60/G61 [2023-Prezent]",
+          "en": "G60/G61 [2023-Prezent]"
+        },
+        "gen-g90-g91-2023": {
+          "ro": "G90/G91 [2023-Prezent]",
+          "en": "G90/G91 [2023-Prezent]"
+        },
+        "gen-b10-2025": {
+          "ro": "B10 [2025 - Prezent]",
+          "en": "B10 [2025 - Prezent]"
+        },
+        "gen-c9-2025": {
+          "ro": "C9 [2025 - Prezent]",
+          "en": "C9 [2025 - Prezent]"
         }
       }
     },
@@ -12214,6 +12679,10 @@
         "cz": {
           "ro": "Cehia",
           "en": "Czech Republic"
+        },
+        "pt": {
+          "ro": "Portugalia",
+          "en": "Portugal"
         },
         "ru": {
           "ro": "Rusia",

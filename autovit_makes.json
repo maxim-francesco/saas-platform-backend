@@ -643,6 +643,34 @@
     "prototip": {
       "ro": "Prototip",
       "en": "Prototip"
+    },
+    "e-go": {
+      "ro": "e.GO",
+      "en": "e.GO"
+    },
+    "avatr": {
+      "ro": "AVATR",
+      "en": "AVATR"
+    },
+    "suda": {
+      "ro": "Suda",
+      "en": "Suda"
+    },
+    "stelato": {
+      "ro": "Stelato",
+      "en": "Stelato"
+    },
+    "onvo": {
+      "ro": "Onvo",
+      "en": "Onvo"
+    },
+    "smart-balance": {
+      "ro": "Smart Balance",
+      "en": "Smart Balance"
+    },
+    "today-sunshine": {
+      "ro": "Today Sunshine",
+      "en": "Today Sunshine"
     }
   }
 }

@@ -34,10 +34,13 @@ function slugify(str) {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim()
+    .replace(/\+/g, ' plus ')
     .replace(/[^a-z0-9\s-]/g, '')
     .replace(/\s+/g, '-')
-    .replace(/-+/g, '-');
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
+
 
 async function main() {
   console.log('Starting CarModel seeding...');
