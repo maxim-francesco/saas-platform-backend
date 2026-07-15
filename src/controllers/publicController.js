@@ -2,6 +2,7 @@
 const prisma = require("../config/prismaClient");
 const { sendContactNotification } = require("../services/emailService");
 const { toLegacyListing } = require("../utils/compatSerializer");
+const { buildListingPublicUrl } = require("../utils/urlHelper");
 
 const COLOR_MAP = {
   BLACK: "Negru",
@@ -461,15 +462,49 @@ const getAttributeStats = async (req, res) => {
 };
 
 const submitContactForm = async (req, res) => {
-  const { businessId, name, email, phone, message } = req.body;
+  const { businessId, name, email, phone, message, type, listingId } = req.body;
 
   if (!businessId || !name || !email || !message) {
     return res.status(400).json({ message: "Toate câmpurile obligatorii trebuie completate." });
   }
 
+  if (listingId) {
+    try {
+      const listing = await prisma.listing.findFirst({
+        where: { id: listingId, businessId: businessId }
+      });
+      if (!listing) {
+        return res.status(400).json({ message: "Anunțul specificat nu există sau nu aparține acestui business." });
+      }
+    } catch (error) {
+      console.error("Eroare la verificarea anunțului în contact:", error);
+      return res.status(500).json({ message: "Eroare la verificarea anunțului." });
+    }
+  }
+
   try {
-    const newMessage = await prisma.message.create({
-      data: { name, email, phone, message, businessId },
+    const newMessage = await prisma.$transaction(async (tx) => {
+      const msg = await tx.message.create({
+        data: {
+          name,
+          email,
+          phone,
+          message,
+          businessId,
+          type: type || "GENERAL",
+          listingId: listingId || null
+        }
+      });
+
+      await tx.messageActivity.create({
+        data: {
+          messageId: msg.id,
+          kind: "CREATED",
+          authorId: null
+        }
+      });
+
+      return msg;
     });
 
     const SEVENCENTER_BUSINESS_EMAIL = process.env.SEVENCENTER_BUSINESS_EMAIL;
@@ -505,6 +540,7 @@ const submitContactForm = async (req, res) => {
     if (error.code === "P2003") {
       return res.status(400).json({ message: "Afacerea specificată nu a fost găsită." });
     }
+    console.error("Eroare la trimiterea mesajului:", error);
     res.status(500).json({ message: "Eroare la trimiterea mesajului." });
   }
 };
@@ -604,16 +640,7 @@ const getListingsCsvFeed = async (req, res) => {
         pret = `${listing.price} EUR`;
       }
 
-      let link = business.listingUrlPattern || "https://example.com/anunt/{id}";
-      if (business.id === "cmhomcpoi02x1ut2cpips3mo3") {
-        link = "https://www.carsleasing.ro/stoc/{id}";
-      }
-      if (link.includes("{slug}")) {
-        link = link.replace("{slug}", listing.slug || listing.id);
-      }
-      if (link.includes("{id}")) {
-        link = link.replace("{id}", listing.id);
-      }
+      let link = buildListingPublicUrl(business, listing);
 
       const imageLink = listing.images?.[0]?.url || "";
       const additionalImageLinks = listing.images

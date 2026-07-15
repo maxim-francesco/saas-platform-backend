@@ -134,6 +134,8 @@ const contactFormSchema = Joi.object({
   email: Joi.string().email().max(255).required(),
   phone: Joi.string().max(20).allow(null, "").optional(),
   message: Joi.string().trim().min(1).max(2000).required(),
+  type: Joi.string().valid("GENERAL", "STOCK", "ORDER", "BUYBACK").default("GENERAL").optional(),
+  listingId: Joi.string().allow(null, "").optional(),
 });
 
 // --- REVIEWS ---
@@ -164,6 +166,15 @@ const assignAttributesSchema = Joi.object({
   attributeIds: Joi.array().items(Joi.string()).min(1).required(),
 });
 
+const createManualLeadSchema = Joi.object({
+  name: Joi.string().trim().min(1).max(100).optional(),
+  email: Joi.string().email().max(255).allow(null, "").optional(),
+  phone: Joi.string().trim().min(1).max(20).required(),
+  message: Joi.string().trim().min(1).max(2000).allow(null, "").optional(),
+  type: Joi.string().valid("GENERAL", "STOCK", "ORDER", "BUYBACK").default("GENERAL").optional(),
+  listingId: Joi.string().allow(null, "").optional(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -173,9 +184,10 @@ module.exports = {
   updateListingSchema,
   markAsSoldSchema,
   contactFormSchema,
+  createManualLeadSchema,
   reviewSchema,
   updateProfileSchema,
   updateSettingsSchema,
   attributeGroupSchema,
   assignAttributesSchema,
-};
+};

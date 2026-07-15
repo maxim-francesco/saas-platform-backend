@@ -148,6 +148,7 @@ model Listing {
   features Feature[]
   images   ListingImage[]
   views    View[]
+  messages Message[]
 
   @@index([businessId, status])
   @@index([price])
@@ -169,15 +170,22 @@ model ListingImage {
 // ============== NESCHIMBATE FUNCȚIONAL FAȚĂ DE V1 ==============
 
 model Message {
-  id         String   @id @default(cuid())
+  id         String            @id @default(cuid())
   name       String
   email      String
   phone      String?
   message    String
-  isRead     Boolean  @default(false)
-  createdAt  DateTime @default(now())
+  isRead     Boolean           @default(false)
+  createdAt  DateTime          @default(now())
   businessId String
-  business   Business @relation(fields: [businessId], references: [id])
+  business   Business          @relation(fields: [businessId], references: [id])
+  type       MessageType       @default(GENERAL)
+  status     LeadStatus        @default(NEW)
+  lostReason LostReason?
+  reminderAt DateTime?
+  listingId  String?
+  listing    Listing?          @relation(fields: [listingId], references: [id])
+  activities MessageActivity[]
 }
 
 model View {
@@ -322,4 +330,50 @@ enum FeatureGroup {
   MULTIMEDIA
   EXTERIOR
   SERVICES
+}
+
+model MessageActivity {
+  id        String       @id @default(cuid())
+  messageId String
+  message   Message      @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  kind      ActivityKind
+  fromValue String?
+  toValue   String?
+  body      String?
+  authorId  String?
+  createdAt DateTime     @default(now())
+}
+
+enum MessageType {
+  GENERAL
+  STOCK
+  ORDER
+  BUYBACK
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  VIEWING
+  OFFER
+  WON
+  LOST
+}
+
+enum LostReason {
+  PRICE
+  BOUGHT_ELSEWHERE
+  UNREACHABLE
+  NOT_SERIOUS
+  OTHER
+}
+
+enum ActivityKind {
+  CREATED
+  STATUS_CHANGED
+  TYPE_CHANGED
+  NOTE
+  REMINDER_SET
+  REMINDER_CLEARED
+  LINKED_LISTING
 }
