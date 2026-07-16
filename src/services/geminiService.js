@@ -9,17 +9,19 @@ function getClient() {
   return ai;
 }
 
-async function generateText({ systemInstruction, prompt }) {
+async function generateText({ systemInstruction, prompt, maxOutputTokens, responseMimeType, temperature }) {
   const client = getClient();
+  const config = {
+    systemInstruction,
+    temperature: temperature ?? 0.7,
+    maxOutputTokens: maxOutputTokens ?? 1024,
+    thinkingConfig: { thinkingBudget: 0 },
+  };
+  if (responseMimeType) config.responseMimeType = responseMimeType;
   const response = await client.models.generateContent({
     model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
     contents: prompt,
-    config: {
-      systemInstruction,
-      temperature: 0.7,
-      maxOutputTokens: 1024,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
+    config,
   });
   const text = response.text;
   if (!text) throw new Error("Empty Gemini response: " + JSON.stringify(response));
