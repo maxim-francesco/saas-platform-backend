@@ -11,6 +11,7 @@ const {
   updateMessageReminder,
   getMessageCounts,
   createMessage,
+  suggestReply,
 } = require("../controllers/messageController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const validate = require("../middlewares/validate");
@@ -33,6 +34,9 @@ router.get("/counts", getMessageCounts);
 
 // GET /api/messages/:messageId — detalii mesaj cu listing și activități
 router.get("/:messageId", getMessageDetail);
+
+// POST /api/messages/:messageId/suggest-reply — generează sugestie de răspuns
+router.post("/:messageId/suggest-reply", suggestReply);
 
 // PATCH /api/messages/:messageId/read — marchează ca citit / necitit (toggle)
 router.patch("/:messageId/read", toggleMessageRead);

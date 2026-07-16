@@ -1,6 +1,8 @@
 // src/controllers/messageController.js
 const prisma = require("../config/prismaClient");
 const { buildListingPublicUrl } = require("../utils/urlHelper");
+const { generateText } = require("../services/geminiService");
+const { buildListingSpec } = require("./aiController");
 
 
 // Funcția pentru a prelua toate mesajele pentru un business
@@ -506,6 +508,69 @@ const createMessage = async (req, res) => {
   }
 };
 
+// POST /:messageId/suggest-reply -> generare sugestie răspuns
+const suggestReply = async (req, res) => {
+  const { messageId } = req.params;
+  const { businessId } = req.user;
+
+  try {
+    const message = await prisma.message.findFirst({
+      where: { id: messageId, businessId },
+      include: { listing: true }
+    });
+
+    if (!message) {
+      return res.status(404).json({ error: "Lead negăsit." });
+    }
+
+    const clientQuestion = message.message;
+    const clientName = message.name;
+
+    let carContext = null;
+    if (message.listing) {
+      const spec = await buildListingSpec(message.listing);
+      carContext = spec || "";
+      if (message.listing.price) {
+        carContext += `\nPreț: ${message.listing.price} €`;
+      }
+      if (message.listing.title) {
+        carContext = `Anunț: ${message.listing.title}\n` + carContext;
+      }
+    }
+
+    const SYSTEM_INSTRUCTION_REPLY =
+      "Ești asistentul unui dealer auto de mașini rulate din România. Redactezi un mesaj de răspuns pe care dealerul îl va trimite clientului pe WhatsApp, ca răspuns la întrebarea/mesajul clientului.\n\n" +
+      "REGULI:\n" +
+      "- Răspunde în limba română, cu diacritice.\n" +
+      "- Ton profesionist dar cald și prietenos: folosește \"dumneavoastră\", fii politicos și la obiect, ca un vânzător serios care scrie pe WhatsApp. Nici rigid-corporatist, nici prea familiar.\n" +
+      "- Lungime ADAPTIVĂ: potrivește lungimea la întrebare. La o întrebare simplă (ex. \"e disponibilă?\") răspunde scurt, 1-2 fraze. La o întrebare complexă, oferă un răspuns mai complet, dar rămâi concis pentru WhatsApp.\n" +
+      "- Folosește EXCLUSIV datele reale despre mașină furnizate. NU inventa dotări, istoric, disponibilitate garantată sau prețuri care nu apar în date. Dacă o informație cerută de client nu există în date, spune politicos că verifici și reveniți, în loc să inventezi.\n" +
+      "- Aspectele care țin de politica dealerului — finanțare/rate, garanție, livrare/transport, buy-back/schimb, programări test drive — NU sunt informații despre mașină și nu ți se furnizează. NU confirma și NU nega astfel de aspecte (nu spune \"acceptăm rate\" sau \"oferim garanție\" dacă nu ți se dă explicit această informație). În schimb, spune politicos că un coleg va reveni cu detalii sau că verificați și confirmați. Poți menționa că ați notat solicitarea.\n" +
+      "- Dacă NU există o mașină asociată, scrie un răspuns politicos care mulțumește pentru mesaj și cere detaliile necesare (ce model caută, buget, an) ca să poți ajuta.\n" +
+      "- Începe direct cu mesajul (ex. \"Bună ziua\"), fără preambul de tipul \"Iată răspunsul:\". Nu adăuga semnătură sau nume de dealer.\n" +
+      "- Scrie DOAR textul mesajului, fără ghilimele, fără markdown.";
+
+    const prompt = carContext
+      ? `Mesajul clientului (${clientName}): "${clientQuestion}"\n\nDatele reale ale mașinii despre care întreabă:\n${carContext}\n\nRedactează răspunsul dealerului.`
+      : `Mesajul clientului (${clientName}): "${clientQuestion}"\n\nNu există o mașină asociată acestui mesaj. Redactează un răspuns politicos care cere detaliile necesare.`;
+
+    const reply = await generateText({
+      systemInstruction: SYSTEM_INSTRUCTION_REPLY,
+      prompt,
+      maxOutputTokens: 600,
+      temperature: 0.7
+    });
+
+    res.json({ reply: reply.trim() });
+  } catch (error) {
+    console.error("[Suggest Reply Error]", error);
+    if (error.message && error.message.includes("GEMINI_API_KEY is not set")) {
+      return res.status(500).json({ error: "Serviciul AI nu este configurat (lipsește cheia)." });
+    }
+    return res.status(502).json({ error: "Nu s-a putut genera răspunsul. Încearcă din nou." });
+  }
+};
+
 module.exports = {
   getMessages,
   toggleMessageRead,
@@ -517,5 +582,7 @@ module.exports = {
   updateMessageReminder,
   getMessageCounts,
   createMessage,
+  suggestReply,
 };
+
 

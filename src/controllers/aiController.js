@@ -531,5 +531,5 @@ async function suggestTopics(req, res) {
   }
 }
 
-module.exports = { generateDescription, generateArticle, suggestTopics };
+module.exports = { generateDescription, generateArticle, suggestTopics, buildListingSpec };
 
