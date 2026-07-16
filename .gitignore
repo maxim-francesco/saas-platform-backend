@@ -41,3 +41,10 @@ setup-selectpro.js
 .env.saasclone.backup
 etl/reports/
 tmp/
+
+# Ephemeral test artifacts
+_ai_shots/
+*_screenshots/
+crm_*/
+prisma/seedTest*.js
+prisma/_dryrun_*.json
