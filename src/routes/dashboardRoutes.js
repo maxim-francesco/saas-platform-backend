@@ -3,7 +3,8 @@ const express = require("express");
 const {
   getStats,
   getListingAnalytics,
-  getViewsChart
+  getViewsChart,
+  getWeeklySummary
 } = require("../controllers/dashboardController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -15,5 +16,6 @@ router.use(isAuthenticated);
 router.get("/stats", getStats);
 router.get("/listing-analytics", getListingAnalytics);
 router.get("/chart", getViewsChart); // Rută nouă: GET /api/dashboard/chart
+router.get("/weekly-summary", getWeeklySummary);
 
 module.exports = router;
