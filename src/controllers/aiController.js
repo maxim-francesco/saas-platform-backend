@@ -104,6 +104,12 @@ const COUNTRY = {
 
 const SYSTEM_INSTRUCTION = "Ești un copywriter specializat în anunțuri auto pentru un dealer de mașini rulate din România. Primești specificațiile reale ale unei mașini și scrii o descriere comercială în limba română.\n\nREGULI STRICTE:\n- Folosește EXCLUSIV informațiile din specificația primită. Nu inventa dotări, istoric, caracteristici tehnice, garanții sau afirmații care nu apar explicit în date.\n- Integrează ACTIV datele concrete primite. Menționează explicit, atunci când apar în specificație, informațiile pe care le caută un cumpărător de mașini rulate: anul de fabricație, rulajul în km, motorizarea (combustibil, capacitate cilindrică, putere) și cutia de viteze. Acestea sunt principalele argumente de vânzare — prezintă-le clar, nu le trata ca detalii minore și nu le omite dacă există în date.\n- Dacă o informație lipsește, pur și simplu nu o menționa. Nu presupune și nu completa cu valori tipice.\n- Nu inventa prețuri, promoții sau oferte.\n- Evită superlativele nefondate, clișeele goale (ex. „cea mai bună mașină din țară\", „ideală pentru oraș\") și formulările vagi care înlocuiesc datele reale. Preferă faptele concrete din specificație în locul frazelor generice.\n- Ton profesionist, curat, atractiv, dar factual și credibil.\n- Scrie DOAR text simplu, în paragrafe separate printr-o linie goală. FĂRĂ markdown, fără titluri, fără liste cu buline sau simboluri.\n- Lungime: 2-4 paragrafe scurte.\n- Scrie în limba română corectă, cu diacritice.";
 
+// --- #5: Praguri diagnostic anunț (relative la media stocului businessului) ---
+const DIAG_MIN_STOCK = 4;           // sub atât, stocul e prea mic pt. medie relevantă
+const DIAG_HIGH_VIEWS_MULT = 1.3;   // views >= 1.3x media => "multe views"
+const DIAG_LOW_VIEWS_MULT = 0.5;    // views <= 0.5x media => "puține views"
+const DIAG_STALE_DAYS = 45;         // zile pe stoc pt. "stă demult"
+const DIAG_TOO_NEW_DAYS = 7;        // sub atât, prea nou pt. concluzii
 
 async function buildListingSpec(body) {
   let makeName = "";
@@ -531,5 +537,169 @@ async function suggestTopics(req, res) {
   }
 }
 
-module.exports = { generateDescription, generateArticle, suggestTopics, buildListingSpec };
+async function diagnoseListing(req, res) {
+  try {
+    const { businessId } = req.user;
+    const { listingId } = req.params;
+
+    const listing = await prisma.listing.findFirst({
+      where: { id: listingId, businessId },
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
+      }
+    });
+
+    if (!listing) {
+      return res.status(404).json({ error: "Anunțul nu a fost găsit." });
+    }
+
+    const now = new Date();
+    const date30DaysAgo = new Date();
+    date30DaysAgo.setDate(date30DaysAgo.getDate() - 30);
+
+    const myViews30 = await prisma.view.count({
+      where: {
+        listingId,
+        viewedAt: { gte: date30DaysAgo }
+      }
+    });
+
+    const totalBusinessViews30 = await prisma.view.count({
+      where: {
+        businessId,
+        viewedAt: { gte: date30DaysAgo }
+      }
+    });
+
+    const stockSize = await prisma.listing.count({
+      where: {
+        businessId,
+        status: "AVAILABLE"
+      }
+    });
+
+    const avgViews30 = stockSize > 0 ? (totalBusinessViews30 / stockSize) : 0;
+
+    const myLeads = await prisma.message.count({
+      where: {
+        listingId
+      }
+    });
+
+    const daysOnStock = Math.floor((now - new Date(listing.createdAt)) / (1000 * 60 * 60 * 24));
+
+    let verdictCode = "HEALTHY";
+
+    if (stockSize < DIAG_MIN_STOCK || totalBusinessViews30 === 0) {
+      verdictCode = "INSUFFICIENT_DATA";
+    } else if (daysOnStock < DIAG_TOO_NEW_DAYS) {
+      verdictCode = "TOO_NEW";
+    } else if (myViews30 >= DIAG_HIGH_VIEWS_MULT * avgViews30 && myLeads === 0) {
+      verdictCode = "HIGH_VIEWS_NO_LEADS";
+    } else if (myViews30 <= DIAG_LOW_VIEWS_MULT * avgViews30) {
+      verdictCode = "LOW_VIEWS";
+    } else if (daysOnStock >= DIAG_STALE_DAYS) {
+      verdictCode = "STALE_NORMAL_TRAFFIC";
+    }
+
+    const featureIds = listing.features ? listing.features.map(f => f.id) : [];
+    const specInput = {
+      ...listing,
+      featureIds
+    };
+    const spec = await buildListingSpec(specInput);
+
+    let fallbackText = "";
+    switch (verdictCode) {
+      case "INSUFFICIENT_DATA":
+        fallbackText = "Nu există suficiente date pentru a genera o diagnoză. Stocul este prea mic sau anunțurile nu au vizualizări.";
+        break;
+      case "TOO_NEW":
+        fallbackText = "Anunțul este prea nou pentru a trage concluzii relevante. Reveniți peste câteva zile.";
+        break;
+      case "HIGH_VIEWS_NO_LEADS":
+        fallbackText = "Anunțul are un interes ridicat (multe vizualizări), dar niciun client nu a trimis mesaj. Verificați prețul și calitatea pozelor.";
+        break;
+      case "LOW_VIEWS":
+        fallbackText = "Anunțul are puține vizualizări comparativ cu media stocului. Verificați titlul și asigurați-vă că este promovat corespunzător.";
+        break;
+      case "STALE_NORMAL_TRAFFIC":
+        fallbackText = "Anunțul are trafic normal, dar se află pe stoc de peste 45 de zile. O mică reducere de preț sau refacerea descrierii ar putea ajuta.";
+        break;
+      case "HEALTHY":
+      default:
+        fallbackText = "Anunțul performează în parametri normali. Traficul și mesajele primite sunt aliniate cu restul stocului.";
+        break;
+    }
+
+    const systemInstruction = `Ești un asistent de vânzări auto specializat în mașini rulate în România. Analizezi performanța unui anunț auto.
+Primești un cod de diagnostic (verdictCode), metricile de trafic ale anunțului și detaliile mașinii (specificațiile).
+Sarcina ta este să scrii o diagnoză scurtă de 2-3 propoziții în limba română pentru dealer.
+
+REGULI CRITICE:
+- Folosește un ton cald, profesionist și adresează-te la persoana a doua (ex: „Anunțul tău...”, „Îți recomandăm...”).
+- Explică pe scurt ce se întâmplă și propune 1-2 acțiuni concrete adaptate diagnosticului primit (verdictCode).
+- NU schimba, NU contrazice și NU trece peste diagnosticul deja decis (verdictCode).
+- Folosește strict cifrele/metricile transmise în prompt. Nu inventa alte numere, vizualizări sau date istorice.
+- FĂRĂ emoji-uri și FĂRĂ formatare markdown (nu folosi *, #, sau liste). Scrie doar text simplu.
+- Limba română corectă, cu diacritice.
+
+Ghidaj în funcție de verdictCode:
+1. INSUFFICIENT_DATA: Spune clar că nu sunt destule date în stoc sau vizualizări pentru concluzii. Nu inventa o problemă. Recomandă generarea de trafic sau adăugarea de noi anunțuri.
+2. TOO_NEW: Spune că anunțul este proaspăt adăugat (sub 7 zile) și trebuie lăsat să acumuleze trafic înainte de a trage concluzii.
+3. HIGH_VIEWS_NO_LEADS: Explică faptul că mașina atrage atenția (are multe vizualizări), dar nu generează lead-uri/mesaje. Recomandă verificarea prețului comparativ cu piața, îmbunătățirea pozelor sau a descrierii.
+4. LOW_VIEWS: Explică faptul că traficul este redus sub media stocului. Recomandă optimizarea titlului, verificarea vizibilității sau promovarea anunțului.
+5. STALE_NORMAL_TRAFFIC: Menționează că mașina are trafic normal dar stă de mult pe stoc (peste 45 de zile). Sugerează o ușoară reducere de preț sau actualizarea anunțului.
+6. HEALTHY: Felicită dealerul pentru că anunțul este în parametri optimi. Menționează că are un comportament sănătos în ceea ce privește vizualizările și mesajele.`;
+
+    const prompt = `Cod diagnostic (verdictCode): ${verdictCode}
+Metrici:
+- Vizualizări anunț (ultimele 30 zile): ${myViews30}
+- Media vizualizărilor pe stoc (ultimele 30 zile): ${avgViews30.toFixed(1)}
+- Mesaje/lead-uri primite (all-time): ${myLeads}
+- Zile pe stoc: ${daysOnStock}
+- Dimensiune stoc disponibil: ${stockSize}
+
+Specificații mașină:
+${spec || "Fără specificații disponibile."}`;
+
+    let text = fallbackText;
+    let source = "fallback";
+
+    try {
+      const response = await generateText({
+        systemInstruction,
+        prompt
+      });
+      if (response && response.trim()) {
+        text = response.trim();
+        source = "ai";
+      }
+    } catch (geminiError) {
+      console.error("[Diagnose Gemini Error]", geminiError.message || geminiError);
+    }
+
+    res.json({
+      verdictCode,
+      text,
+      source,
+      metrics: {
+        myViews30,
+        avgViews30: Number(avgViews30.toFixed(2)),
+        myLeads,
+        daysOnStock,
+        stockSize
+      }
+    });
+
+  } catch (error) {
+    console.error("[diagnoseListing Error]", error);
+    return res.status(502).json({ error: "Diagnoza a eșuat. Încearcă din nou." });
+  }
+}
+
+module.exports = { generateDescription, generateArticle, suggestTopics, buildListingSpec, diagnoseListing };
 
