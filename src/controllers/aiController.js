@@ -701,5 +701,112 @@ ${spec || "Fără specificații disponibile."}`;
   }
 }
 
-module.exports = { generateDescription, generateArticle, suggestTopics, buildListingSpec, diagnoseListing };
+
+function getPriceLine(price) {
+  if (price === undefined || price === null || price === "") return "";
+  const val = Number(price);
+  if (isNaN(val) || val <= 0) return "";
+  return `Preț: ${val.toLocaleString("ro-RO")} €`;
+}
+
+const MKT_FACEBOOK = `Ești un copywriter specializat în anunțuri auto pentru un dealer de mașini rulate din România. Scrie o postare de Facebook pentru mașina primită.
+Postarea trebuie să fie caldă, antrenantă și ușor de citit (scannable).
+Folosește un număr redus de emoji-uri (2-4 emoji-uri de bun gust, de exemplu: 🚗📍✅).
+Adaugă câteva hashtag-uri relevante la sfârșit.
+Include un îndemn clar la acțiune ("Sună-ne / Scrie-ne pentru detalii").
+Dacă prețul este furnizat, menționează-l în euro.
+Postarea trebuie să aibă 2-3 paragrafe scurte.
+FĂRĂ formatare markdown.
+Folosește EXCLUSIV informațiile din specificația primită. Nu inventa dotări, istoric, garanții, prețuri sau caracteristici. Scrie în română corectă cu diacritice. REGULĂ IMPORTANTĂ DESPRE LOCAȚIE: NU inventa și NU include hashtag-uri sau mențiuni de localitate, oraș, județ sau zonă geografică (ex: #Bucuresti, #Cluj, 'în București'). Locația NU este furnizată în date. Hashtag-urile trebuie să se refere DOAR la marcă, model, tip de caroserie, combustibil și caracteristici reale din specificație.`;
+
+const MKT_WHATSAPP = `Ești un copywriter specializat în anunțuri auto pentru un dealer de mașini rulate din România. Scrie un mesaj scurt de WhatsApp pentru a fi trimis unui client interesat.
+Mesajul trebuie să fie direct, prietenos și concis (maximum 3-5 linii).
+Începe direct cu marca, modelul, anul de fabricație și rulajul (km).
+Prezintă punctele forte cheie ale mașinii.
+Dacă prețul este furnizat, menționează-l în euro.
+Încheie cu o invitație de a răspunde sau de a suna.
+Folosește un număr minim sau deloc de emoji-uri. Fără hashtag-uri.
+FĂRĂ formatare markdown.
+Folosește EXCLUSIV informațiile din specificația primită. Nu inventa dotări, istoric, garanții, prețuri sau caracteristici. Scrie în română corectă cu diacritice.`;
+
+const MKT_OLX = `Ești un copywriter specializat în anunțuri auto pentru un dealer de mașini rulate din România. Scrie un anunț de tip OLX.
+Începe cu un titlu scurt și atractiv.
+Apoi oferă o descriere factuală și concisă, concentrată pe specificațiile pe care le caută un cumpărător (an, km, motor, cutie de viteze, stare).
+Dacă prețul este furnizat, menționează-l în euro.
+Fără emoji-uri, fără hashtag-uri. Text simplu, sobru și de încredere.
+FĂRĂ formatare markdown.
+Folosește EXCLUSIV informațiile din specificația primită. Nu inventa dotări, istoric, garanții, prețuri sau caracteristici. Scrie în română corectă cu diacritice.`;
+
+const MKT_INSTAGRAM = `Ești un copywriter specializat în anunțuri auto pentru un dealer de mașini rulate din România. Scrie o descriere (caption) de Instagram pentru mașina primită.
+Stilul trebuie să fie vizual, axat pe lifestyle și cu o primă linie de impact (punchy).
+Folosește emoji-uri cu gust.
+Dacă prețul este furnizat, menționarea lui este opțională (în euro).
+Adaugă la sfârșit un bloc de hashtag-uri relevante (între 8 și 15 hashtag-uri, amestecând hashtag-uri auto generale cu detalii specifice ale mașinii).
+FĂRĂ formatare markdown.
+Folosește EXCLUSIV informațiile din specificația primită. Nu inventa dotări, istoric, garanții, prețuri sau caracteristici. Scrie în română corectă cu diacritice. REGULĂ IMPORTANTĂ DESPRE LOCAȚIE: NU inventa și NU include hashtag-uri sau mențiuni de localitate, oraș, județ sau zonă geografică (ex: #Bucuresti, #Cluj, 'în București'). Locația NU este furnizată în date. Hashtag-urile trebuie să se refere DOAR la marcă, model, tip de caroserie, combustibil și caracteristici reale din specificație.`;
+
+async function generateMarketing(req, res) {
+  try {
+    const { format } = req.body;
+    const allowedFormats = ["facebook", "whatsapp", "olx", "instagram"];
+    if (!format || !allowedFormats.includes(format)) {
+      return res.status(400).json({ error: "Format invalid." });
+    }
+
+    const spec = await buildListingSpec(req.body);
+    if (!spec) {
+      return res.status(400).json({ error: "Date insuficiente. Completează măcar marca, modelul și anul." });
+    }
+
+    const priceLine = getPriceLine(req.body.price);
+    let specWithPrice = spec;
+    if (priceLine) {
+      const priceVal = Number(req.body.price);
+      const formatted = priceVal.toLocaleString("ro-RO");
+      specWithPrice = spec + "\nPreț public: " + formatted + " €";
+    }
+
+    let systemInstruction = "";
+    switch (format) {
+      case "facebook":
+        systemInstruction = MKT_FACEBOOK;
+        break;
+      case "whatsapp":
+        systemInstruction = MKT_WHATSAPP;
+        break;
+      case "olx":
+        systemInstruction = MKT_OLX;
+        break;
+      case "instagram":
+        systemInstruction = MKT_INSTAGRAM;
+        break;
+    }
+
+    const prompt = "Generează textul pentru următoarea mașină:\n\n" + specWithPrice;
+    const result = await generateText({
+      systemInstruction,
+      prompt,
+      maxOutputTokens: 1024,
+      temperature: 0.8
+    });
+
+    res.json({ format, text: result.trim() });
+  } catch (error) {
+    console.error("[Gemini API Error]", error);
+    if (error.message && error.message.includes("GEMINI_API_KEY is not set")) {
+      return res.status(500).json({ error: "Serviciul AI nu este configurat (lipsește cheia)." });
+    }
+    return res.status(502).json({ error: "Generarea a eșuat. Încearcă din nou." });
+  }
+}
+
+module.exports = {
+  generateDescription,
+  generateArticle,
+  suggestTopics,
+  buildListingSpec,
+  diagnoseListing,
+  generateMarketing
+};
+
 
