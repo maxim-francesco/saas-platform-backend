@@ -1,5 +1,6 @@
 // src/controllers/publicController.js
 const prisma = require("../config/prismaClient");
+const { generateText } = require("../services/geminiService");
 const { sendContactNotification } = require("../services/emailService");
 const { toLegacyListing } = require("../utils/compatSerializer");
 const { buildListingPublicUrl } = require("../utils/urlHelper");
@@ -461,6 +462,215 @@ const getAttributeStats = async (req, res) => {
   }
 };
 
+// #7: apel Gemini cu timeout local (geminiService nu are timeout propriu)
+function generateTextWithTimeout(opts, timeoutMs = 15000) {
+  return Promise.race([
+    generateText(opts),
+    new Promise((_, reject) => setTimeout(() => reject(new Error("Gemini timeout")), timeoutMs)),
+  ]);
+}
+
+// #7: clasificare + asociere async, fire-and-forget
+async function classifyContactMessageAsync({ messageId, businessId, messageText, hasContextListing }) {
+  console.log(`[#7 classify] START classify for messageId=${messageId}, businessId=${businessId}, hasContextListing=${hasContextListing}`);
+  try {
+    const trimmed = (messageText || "").trim();
+    if (trimmed.length < 15) {
+      console.log(`[#7 classify] SKIP: message too short (${trimmed.length} characters)`);
+      return;
+    }
+
+    console.log(`[#7 classify] Fetching AVAILABLE stock for business ${businessId}...`);
+    const listings = await prisma.listing.findMany({
+      where: { businessId, status: "AVAILABLE" },
+      include: { make: true, model: true }
+    });
+
+    const stockList = listings
+      .filter(l => l.make?.name && l.model?.name)
+      .map(l => {
+        const year = l.year ? String(l.year) : "";
+        return `${l.make.name} ${l.model.name}${year ? " " + year : ""}`.trim();
+      });
+
+    console.log(`[#7 classify] Stock whitelist: [${stockList.join(", ")}]`);
+
+    const systemInstruction = `Ești un lead classifier pentru un dealer de mașini rulate.
+Primești mesajul primit de la un client și lista stocului disponibil al dealerului.
+Trebuie să returnezi EXCLUSIV un obiect JSON de forma:
+{
+  "type": "GENERAL|STOCK|ORDER|BUYBACK",
+  "make": "...",
+  "model": "...",
+  "year": ...
+}
+
+Reguli pentru tip ("type"):
+- type TREBUIE să fie una dintre aceste 4 valori: GENERAL, STOCK, ORDER, BUYBACK.
+- STOCK = întreabă despre o mașină din stocul de mai jos;
+- ORDER = dorește să comande/importe o mașină specifică, nu neapărat în stoc;
+- BUYBACK = dorește să își VÂNDĂ mașina proprie dealerului;
+- GENERAL = orice altceva (orar, contact general etc.).
+
+Reguli pentru make/model/year:
+- Completează-le DOAR dacă clientul numește clar o mașină; altfel folosește null.
+- Nu inventa o mașină și nu ghici.
+- Propune doar make/model care se potrivește plauzibil cu lista de stoc de mai jos.
+- Nu folosi markdown, returnează doar JSON-ul simplu.`;
+
+    const prompt = `Mesaj client: "${trimmed}"\nStoc disponibil: [${stockList.join(", ")}]`;
+
+    console.log(`[#7 classify] Calling Gemini with prompt:\n${prompt}`);
+    const rawRes = await generateTextWithTimeout({
+      systemInstruction,
+      prompt,
+      maxOutputTokens: 256,
+      responseMimeType: "application/json",
+      temperature: 0
+    });
+
+    console.log(`[#7 classify] RAW Gemini response: "${rawRes}"`);
+
+    let cleanRaw = rawRes.trim();
+    if (cleanRaw.startsWith("```")) {
+      cleanRaw = cleanRaw.replace(/^```(json)?\n?/, "");
+      cleanRaw = cleanRaw.replace(/\n?```$/, "");
+      cleanRaw = cleanRaw.trim();
+    }
+
+    console.log(`[#7 classify] Cleaned JSON string: "${cleanRaw}"`);
+
+    let parsed;
+    try {
+      parsed = JSON.parse(cleanRaw);
+    } catch (parseErr) {
+      console.error(`[#7 classify] JSON Parse Failed for: "${cleanRaw}"`, parseErr.message);
+      return;
+    }
+
+    console.log(`[#7 classify] Parsed AI output:`, parsed);
+
+    const allowedTypes = ["GENERAL", "STOCK", "ORDER", "BUYBACK"];
+    const proposedType = parsed.type;
+
+    const currentMessage = await prisma.message.findUnique({
+      where: { id: messageId }
+    });
+
+    if (!currentMessage) {
+      console.error(`[#7 classify] Message not found: ${messageId}`);
+      return;
+    }
+
+    const currentType = currentMessage.type;
+    const newType = (proposedType && allowedTypes.includes(proposedType)) ? proposedType : currentType;
+    const typeChanged = newType !== currentType;
+
+    console.log(`[#7 classify] Message type: current=${currentType}, proposed=${proposedType}, final=${newType}, changed=${typeChanged}`);
+
+    let matchedListingId = null;
+    const proposedMake = parsed.make;
+    const proposedModel = parsed.model;
+    const proposedYear = parsed.year;
+
+    if (!hasContextListing && proposedMake && proposedModel) {
+      console.log(`[#7 classify] Checking deterministic association for: ${proposedMake} ${proposedModel} (${proposedYear || "no year"})`);
+      const baseWhere = {
+        businessId,
+        status: "AVAILABLE",
+        make: {
+          name: {
+            equals: proposedMake,
+            mode: "insensitive"
+          }
+        },
+        model: {
+          name: {
+            equals: proposedModel,
+            mode: "insensitive"
+          }
+        }
+      };
+
+      const countWithoutYear = await prisma.listing.count({
+        where: baseWhere
+      });
+      console.log(`[#7 classify] Count without year: ${countWithoutYear}`);
+
+      if (!proposedYear && countWithoutYear > 1) {
+        console.log(`[#7 classify] Ambiguous: No year proposed by AI, and multiple listings (${countWithoutYear}) found without year filter.`);
+      } else {
+        const queryWhere = {
+          ...baseWhere,
+          ...(proposedYear ? { year: Number(proposedYear) } : {})
+        };
+
+        const countWithQuery = await prisma.listing.count({
+          where: queryWhere
+        });
+        console.log(`[#7 classify] Count with exact query: ${countWithQuery}`);
+
+        if (countWithQuery === 1) {
+          const match = await prisma.listing.findFirst({
+            where: queryWhere
+          });
+          if (match) {
+            matchedListingId = match.id;
+            console.log(`[#7 classify] Confident match found! listingId=${matchedListingId}`);
+          }
+        } else {
+          console.log(`[#7 classify] Match not unique or zero. Count: ${countWithQuery}`);
+        }
+      }
+    } else {
+      console.log(`[#7 classify] Association skipped: hasContextListing=${hasContextListing}, proposedMake=${proposedMake}, proposedModel=${proposedModel}`);
+    }
+
+    if (typeChanged || matchedListingId) {
+      const updateData = {};
+      if (typeChanged) updateData.type = newType;
+      if (matchedListingId) updateData.listingId = matchedListingId;
+
+      console.log(`[#7 classify] Updating message ${messageId} in transaction...`);
+      await prisma.$transaction(async (tx) => {
+        await tx.message.update({
+          where: { id: messageId },
+          data: updateData
+        });
+
+        if (typeChanged) {
+          await tx.messageActivity.create({
+            data: {
+              messageId,
+              kind: "TYPE_CHANGED",
+              fromValue: currentType,
+              toValue: newType,
+              authorId: null
+            }
+          });
+        }
+
+        if (matchedListingId) {
+          await tx.messageActivity.create({
+            data: {
+              messageId,
+              kind: "LINKED_LISTING",
+              toValue: matchedListingId,
+              authorId: null
+            }
+          });
+        }
+      });
+      console.log(`[#7 classify] Transaction committed successfully.`);
+    } else {
+      console.log(`[#7 classify] No DB update required.`);
+    }
+
+  } catch (err) {
+    console.error("[#7 classify] esuat:", err.message);
+  }
+}
+
 const submitContactForm = async (req, res) => {
   const { businessId, name, email, phone, message, type, listingId } = req.body;
 
@@ -536,6 +746,14 @@ const submitContactForm = async (req, res) => {
       message: "Mesajul tău a fost trimis cu succes!",
       data: newMessage,
     });
+
+    // #7: clasificare + asociere async, fire-and-forget (nu blocheaza raspunsul clientului)
+    classifyContactMessageAsync({
+      messageId: newMessage.id,
+      businessId,
+      messageText: message,
+      hasContextListing: !!listingId,
+    }).catch((err) => console.error("[#7 classify] unhandled:", err.message));
   } catch (error) {
     if (error.code === "P2003") {
       return res.status(400).json({ message: "Afacerea specificată nu a fost găsită." });
