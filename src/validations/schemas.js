@@ -184,6 +184,15 @@ const createManualLeadSchema = Joi.object({
   listingId: Joi.string().allow(null, "").optional(),
 });
 
+const createOfferSchema = Joi.object({
+  listingId:    Joi.string().max(100).required(),
+  clientName:   Joi.string().trim().min(2).max(150).required(),
+  clientPhone:  Joi.string().trim().min(4).max(30).required(),
+  offerPrice:   Joi.number().min(0).required(),
+  listPrice:    Joi.number().min(0).allow(null).optional(),
+  validityDays: Joi.number().integer().min(1).max(90).default(5),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -200,4 +209,5 @@ module.exports = {
   updateIdentitySchema,
   attributeGroupSchema,
   assignAttributesSchema,
+  createOfferSchema,
 };

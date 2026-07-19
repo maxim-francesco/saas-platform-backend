@@ -16,11 +16,13 @@ const viewRoutes = require("./routes/viewRoutes");
 const reportsRoutes = require("./routes/reportsRoutes"); // <-- ADAUGĂ ASTA
 const superAdminRoutes = require("./routes/superAdminRoutes");
 const ogRoutes = require("./routes/ogRoutes");
+const offerPublicRoutes = require("./routes/offerPublicRoutes");
 const autovitRoutes = require("./routes/autovitRoutes");
 const blogRoutes = require("./routes/blogRoutes");
 const publicBlogRoutes = require("./routes/publicBlogRoutes");
 const catalogRoutes = require("./routes/catalogRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const offerRoutes = require("./routes/offerRoutes");
 
 
 
@@ -90,11 +92,13 @@ app.use("/api/views", viewRoutes);
 app.use("/api/reports", reportsRoutes); // <-- ADAUGĂ ASTA
 app.use("/api/super-admin", superAdminRoutes);
 app.use("/og", ogRoutes);
+app.use("/oferta", offerPublicRoutes);
 app.use("/api/autovit", autovitRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/public/blog", publicBlogRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/offers", offerRoutes);
 
 
 

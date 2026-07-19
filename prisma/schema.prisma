@@ -41,6 +41,7 @@ model Business {
   reviews             Review[]
   views               View[]
   blogPosts           BlogPost[]
+  offers              Offer[]
 }
 
 model User {
@@ -157,6 +158,7 @@ model Listing {
   images   ListingImage[]
   views    View[]
   messages Message[]
+  offers   Offer[]
 
   @@index([businessId, status])
   @@index([price])
@@ -173,6 +175,31 @@ model ListingImage {
   listingId String
   order     Int     @default(0)
   listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+}
+
+model Offer {
+  id                    String   @id @default(cuid())
+  token                 String?  @unique
+  code                  String?  @unique
+  bizSlug               String?
+  businessId            String
+  business              Business @relation(fields: [businessId], references: [id])
+  listingId             String?
+  listing               Listing? @relation(fields: [listingId], references: [id])
+  clientName            String
+  clientPhone           String
+  offerPrice            Float
+  listPrice             Float?
+  validityDays          Int      @default(5)
+  listingTitleSnapshot  String
+  listingImageSnapshot  String?
+  createdAt             DateTime @default(now())
+  expiresAt             DateTime
+  viewedAt              DateTime?
+
+  @@index([businessId])
+  @@index([token])
+  @@index([code])
 }
 
 // ============== NESCHIMBATE FUNCȚIONAL FAȚĂ DE V1 ==============
