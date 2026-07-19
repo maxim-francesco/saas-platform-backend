@@ -22,6 +22,14 @@ model Business {
   updatedAt           DateTime   @updatedAt
   bannerUrl           String?
   listingUrlPattern   String?
+  // --- Date firmă (identitate juridică & contact, folosite în oferte/contracte) ---
+  companyPhone    String?
+  companyEmail    String?
+  companyAddress  String?
+  companyCui      String?   // CUI / CIF
+  companyRegCom   String?   // Nr. Registrul Comerțului
+  companyLegalRep String?   // Reprezentant legal
+  companyLogoUrl  String?   // rezervat fazei 2 (upload logo)
   bestAutoApiKey      String?
   autovitClientId     String?
   autovitClientSecret String?

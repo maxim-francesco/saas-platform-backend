@@ -144,10 +144,32 @@ const updateBusinessProfile = async (req, res) => {
   }
 };
 
+const updateBusinessIdentity = async (req, res) => {
+  const { businessId } = req.user;
+  const {
+    companyPhone, companyEmail, companyAddress,
+    companyCui, companyRegCom, companyLegalRep,
+  } = req.body;
+  try {
+    const updatedBusiness = await prisma.business.update({
+      where: { id: businessId },
+      data: {
+        companyPhone, companyEmail, companyAddress,
+        companyCui, companyRegCom, companyLegalRep,
+      },
+    });
+    res.status(200).json(updatedBusiness);
+  } catch (error) {
+    console.error("Eroare la actualizarea datelor firmei:", error);
+    res.status(500).json({ message: "Eroare la actualizarea datelor firmei." });
+  }
+};
+
 module.exports = { 
   uploadBanner, 
   getMyBusiness, 
   deleteBanner, 
   updateBusinessProfile,
-  updateBusinessSettings
+  updateBusinessSettings,
+  updateBusinessIdentity
 };

@@ -157,6 +157,15 @@ const updateSettingsSchema = Joi.object({
   listingUrlPattern: Joi.string().max(500).allow(null, "").optional(),
 });
 
+const updateIdentitySchema = Joi.object({
+  companyPhone:    Joi.string().max(30).allow(null, "").optional(),
+  companyEmail:    Joi.string().email().max(255).allow(null, "").optional(),
+  companyAddress:  Joi.string().max(500).allow(null, "").optional(),
+  companyCui:      Joi.string().max(50).allow(null, "").optional(),
+  companyRegCom:   Joi.string().max(50).allow(null, "").optional(),
+  companyLegalRep: Joi.string().max(150).allow(null, "").optional(),
+});
+
 // --- ATTRIBUTE GROUPS ---
 const attributeGroupSchema = Joi.object({
   name: Joi.string().trim().min(1).max(100).required(),
@@ -188,6 +197,7 @@ module.exports = {
   reviewSchema,
   updateProfileSchema,
   updateSettingsSchema,
+  updateIdentitySchema,
   attributeGroupSchema,
   assignAttributesSchema,
 };
