@@ -23,6 +23,7 @@ const publicBlogRoutes = require("./routes/publicBlogRoutes");
 const catalogRoutes = require("./routes/catalogRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const offerRoutes = require("./routes/offerRoutes");
+const contractRoutes = require("./routes/contractRoutes");
 
 
 
@@ -99,6 +100,7 @@ app.use("/api/public/blog", publicBlogRoutes);
 app.use("/api/catalog", catalogRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/offers", offerRoutes);
+app.use("/api/contracts", contractRoutes);
 
 
 

@@ -42,6 +42,8 @@ model Business {
   views               View[]
   blogPosts           BlogPost[]
   offers              Offer[]
+  buyers              Buyer[]
+  contracts           Contract[]
 }
 
 model User {
@@ -159,6 +161,7 @@ model Listing {
   views    View[]
   messages Message[]
   offers   Offer[]
+  contracts Contract[]
 
   @@index([businessId, status])
   @@index([price])
@@ -200,6 +203,69 @@ model Offer {
   @@index([businessId])
   @@index([token])
   @@index([code])
+}
+
+enum BuyerType {
+  INDIVIDUAL
+  COMPANY
+}
+
+model Buyer {
+  id         String    @id @default(cuid())
+  businessId String
+  business   Business  @relation(fields: [businessId], references: [id])
+  type       BuyerType @default(INDIVIDUAL)
+  name       String
+  address    String?
+  phone      String?
+  email      String?
+  cnp        String?
+  ciSeries   String?
+  ciNumber   String?
+  cui        String?
+  regCom     String?
+  legalRep   String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  contracts  Contract[]
+
+  @@index([businessId])
+  @@index([businessId, cnp])
+  @@index([businessId, cui])
+}
+
+model Contract {
+  id              String   @id @default(cuid())
+  contractNumber  Int
+  businessId      String
+  business        Business @relation(fields: [businessId], references: [id])
+  buyerId         String
+  buyer           Buyer    @relation(fields: [buyerId], references: [id])
+  listingId       String?
+  listing         Listing? @relation(fields: [listingId], references: [id])
+  salePrice       Float
+  saleDate        DateTime
+  vin             String?
+  plateNumber     String?
+  mileageAtSale   Int?
+  sellerSnapshot  Json
+  buyerSnapshot   Json
+  vehicleSnapshot Json
+  clauses         String?  @db.Text
+  handoverDate    DateTime?
+  handoverMileage Int?
+  handoverNotes   String?  @db.Text
+  handoverItems   Json?
+  token           String?  @unique
+  code            String?  @unique
+  bizSlug         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([buyerId])
+  @@index([code])
+  @@unique([businessId, contractNumber])
 }
 
 // ============== NESCHIMBATE FUNCȚIONAL FAȚĂ DE V1 ==============

@@ -193,6 +193,33 @@ const createOfferSchema = Joi.object({
   validityDays: Joi.number().integer().min(1).max(90).default(5),
 });
 
+const createContractSchema = Joi.object({
+  listingId:     Joi.string().max(100).required(),
+  buyerType:     Joi.string().valid("INDIVIDUAL", "COMPANY").required(),
+  buyerName:     Joi.string().trim().min(2).max(200).required(),
+  buyerAddress:  Joi.string().trim().max(500).allow(null, "").optional(),
+  buyerPhone:    Joi.string().trim().max(30).allow(null, "").optional(),
+  buyerEmail:    Joi.string().email().max(255).allow(null, "").optional(),
+  buyerCnp:      Joi.string().trim().max(20).allow(null, "").optional(),
+  buyerCiSeries: Joi.string().trim().max(10).allow(null, "").optional(),
+  buyerCiNumber: Joi.string().trim().max(20).allow(null, "").optional(),
+  buyerCui:      Joi.string().trim().max(50).allow(null, "").optional(),
+  buyerRegCom:   Joi.string().trim().max(50).allow(null, "").optional(),
+  buyerLegalRep: Joi.string().trim().max(150).allow(null, "").optional(),
+  salePrice:     Joi.number().min(0).required(),
+  saleDate:      Joi.date().iso().required(),
+  plateNumber:   Joi.string().trim().max(20).allow(null, "").optional(),
+  mileageAtSale: Joi.number().integer().min(0).allow(null).optional(),
+  clauses:       Joi.string().max(10000).allow(null, "").optional(),
+});
+
+const handoverSchema = Joi.object({
+  handoverDate:    Joi.date().iso().allow(null).optional(),
+  handoverMileage: Joi.number().integer().min(0).allow(null).optional(),
+  handoverNotes:   Joi.string().max(5000).allow(null, "").optional(),
+  handoverItems:   Joi.object().unknown(true).allow(null).optional(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -210,4 +237,6 @@ module.exports = {
   attributeGroupSchema,
   assignAttributesSchema,
   createOfferSchema,
+  createContractSchema,
+  handoverSchema,
 };
