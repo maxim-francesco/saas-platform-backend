@@ -44,6 +44,7 @@ model Business {
   offers              Offer[]
   buyers              Buyer[]
   contracts           Contract[]
+  reservations        Reservation[]
 }
 
 model User {
@@ -162,6 +163,7 @@ model Listing {
   messages Message[]
   offers   Offer[]
   contracts Contract[]
+  reservations Reservation[]
 
   @@index([businessId, status])
   @@index([price])
@@ -477,4 +479,31 @@ enum ActivityKind {
   REMINDER_SET
   REMINDER_CLEARED
   LINKED_LISTING
+}
+
+enum ReservationStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+model Reservation {
+  id            String   @id @default(cuid())
+  businessId    String
+  business      Business @relation(fields: [businessId], references: [id])
+  listingId     String
+  listing       Listing  @relation(fields: [listingId], references: [id])
+  clientName    String
+  clientPhone   String
+  depositAmount Float
+  startDate     DateTime @default(now())
+  expiresAt     DateTime
+  status        ReservationStatus @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([businessId])
+  @@index([listingId])
+  @@index([status])
 }

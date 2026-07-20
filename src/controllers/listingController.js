@@ -341,8 +341,11 @@ const createListing = async (req, res) => {
 const getListings = async (req, res) => {
   const { businessId } = req.user;
   try {
+    const { releaseExpiredReservations } = require("./reservationController");
+    await releaseExpiredReservations(businessId);
+
     const listings = await prisma.listing.findMany({
-      where: { businessId, status: "AVAILABLE" },
+      where: { businessId, status: { in: ["AVAILABLE", "RESERVED"] } },
       include: {
         make: true,
         model: true,

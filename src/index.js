@@ -24,6 +24,7 @@ const catalogRoutes = require("./routes/catalogRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const offerRoutes = require("./routes/offerRoutes");
 const contractRoutes = require("./routes/contractRoutes");
+const reservationRoutes = require("./routes/reservationRoutes");
 
 
 
@@ -101,6 +102,7 @@ app.use("/api/catalog", catalogRoutes);
 app.use("/api/ai", aiRoutes);
 app.use("/api/offers", offerRoutes);
 app.use("/api/contracts", contractRoutes);
+app.use("/api/reservations", reservationRoutes);
 
 
 

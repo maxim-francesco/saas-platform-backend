@@ -220,6 +220,14 @@ const handoverSchema = Joi.object({
   handoverItems:   Joi.object().unknown(true).allow(null).optional(),
 });
 
+const createReservationSchema = Joi.object({
+  listingId:     Joi.string().max(100).required(),
+  clientName:    Joi.string().trim().min(2).max(150).required(),
+  clientPhone:   Joi.string().trim().min(4).max(30).required(),
+  depositAmount: Joi.number().min(0).required(),
+  reservationDays: Joi.number().integer().min(1).max(365).default(7),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -239,4 +247,5 @@ module.exports = {
   createOfferSchema,
   createContractSchema,
   handoverSchema,
+  createReservationSchema,
 };
