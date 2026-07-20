@@ -45,6 +45,7 @@ model Business {
   buyers              Buyer[]
   contracts           Contract[]
   reservations        Reservation[]
+  appointments        Appointment[]
 }
 
 model User {
@@ -164,6 +165,7 @@ model Listing {
   offers   Offer[]
   contracts Contract[]
   reservations Reservation[]
+  appointments Appointment[]
 
   @@index([businessId, status])
   @@index([price])
@@ -507,3 +509,39 @@ model Reservation {
   @@index([listingId])
   @@index([status])
 }
+
+enum AppointmentType {
+  TEST_DRIVE
+  VIEWING
+  HANDOVER
+  MEETING
+  OTHER
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+}
+
+model Appointment {
+  id          String            @id @default(cuid())
+  businessId  String
+  business    Business          @relation(fields: [businessId], references: [id])
+  title       String
+  type        AppointmentType   @default(OTHER)
+  status      AppointmentStatus @default(SCHEDULED)
+  startAt     DateTime
+  endAt       DateTime
+  clientName  String?
+  clientPhone String?
+  listingId   String?
+  listing     Listing?          @relation(fields: [listingId], references: [id])
+  notes       String?           @db.Text
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([businessId])
+  @@index([businessId, startAt])
+}
+

@@ -228,6 +228,29 @@ const createReservationSchema = Joi.object({
   reservationDays: Joi.number().integer().min(1).max(365).default(7),
 });
 
+const createAppointmentSchema = Joi.object({
+  title: Joi.string().trim().min(1).max(200).required(),
+  type: Joi.string().valid("TEST_DRIVE","VIEWING","HANDOVER","MEETING","OTHER").default("OTHER"),
+  startAt: Joi.date().iso().required(),
+  endAt: Joi.date().iso().required(),
+  clientName: Joi.string().trim().max(150).allow(null, "").optional(),
+  clientPhone: Joi.string().trim().max(30).allow(null, "").optional(),
+  listingId: Joi.string().max(100).allow(null, "").optional(),
+  notes: Joi.string().max(5000).allow(null, "").optional(),
+});
+
+const updateAppointmentSchema = Joi.object({
+  title: Joi.string().trim().min(1).max(200).optional(),
+  type: Joi.string().valid("TEST_DRIVE","VIEWING","HANDOVER","MEETING","OTHER").optional(),
+  status: Joi.string().valid("SCHEDULED","COMPLETED","CANCELLED").optional(),
+  startAt: Joi.date().iso().optional(),
+  endAt: Joi.date().iso().optional(),
+  clientName: Joi.string().trim().max(150).allow(null, "").optional(),
+  clientPhone: Joi.string().trim().max(30).allow(null, "").optional(),
+  listingId: Joi.string().max(100).allow(null, "").optional(),
+  notes: Joi.string().max(5000).allow(null, "").optional(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -248,4 +271,6 @@ module.exports = {
   createContractSchema,
   handoverSchema,
   createReservationSchema,
+  createAppointmentSchema,
+  updateAppointmentSchema,
 };
