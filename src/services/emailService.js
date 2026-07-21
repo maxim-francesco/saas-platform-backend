@@ -32,4 +32,31 @@ const sendContactNotification = async ({ toEmail, name, email, phone, message })
   await transporter.sendMail(mailOptions);
 };
 
-module.exports = { sendContactNotification };
+const sendTransportInterestNotification = async ({ toEmail, fromDealerName, fromCity, toCity, seatsRequested, note }) => {
+  if (!toEmail) return;
+
+  const mailOptions = {
+    from: `"Platformă SaaS" <${process.env.GMAIL_USER}>`,
+    to: toEmail,
+    subject: `Interes nou pentru cursa ${fromCity} - ${toCity}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #333;">Interes nou de transport</h2>
+        <hr/>
+        <p><strong>Dealer interesat:</strong> ${fromDealerName}</p>
+        <p><strong>Traseu cursă:</strong> ${fromCity} - ${toCity}</p>
+        <p><strong>Locuri solicitate:</strong> ${seatsRequested}</p>
+        ${note ? `<p><strong>Mesaj/Notă:</strong> ${note}</p>` : ""}
+        <hr/>
+        <small style="color: #999;">Mesaj trimis automat de platforma SaaS</small>
+      </div>
+    `,
+  };
+
+  await transporter.sendMail(mailOptions);
+};
+
+module.exports = {
+  sendContactNotification,
+  sendTransportInterestNotification,
+};

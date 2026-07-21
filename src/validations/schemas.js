@@ -4,12 +4,12 @@ const Joi = require("joi");
 // --- AUTH ---
 const registerSchema = Joi.object({
   businessName: Joi.string().trim().min(2).max(100).required(),
-  email: Joi.string().email().max(255).required(),
+  email: Joi.string().email({ tlds: { allow: false } }).max(255).required(),
   password: Joi.string().min(6).max(128).required(),
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().max(255).required(),
+  email: Joi.string().email({ tlds: { allow: false } }).max(255).required(),
   password: Joi.string().max(128).required(),
 });
 
@@ -251,6 +251,68 @@ const updateAppointmentSchema = Joi.object({
   notes: Joi.string().max(5000).allow(null, "").optional(),
 });
 
+const updateNetworkSettingsSchema = Joi.object({
+  networkEnabled: Joi.boolean().optional(),
+  city: Joi.string().max(200).allow(null, "").optional(),
+  networkDisplayName: Joi.string().max(200).allow(null, "").optional(),
+  networkContactPhone: Joi.string().max(200).allow(null, "").optional(),
+  networkContactEmail: Joi.string().max(200).allow(null, "").optional(),
+});
+
+const createTransportRunSchema = Joi.object({
+  fromCity: Joi.string().trim().min(2).max(100).required(),
+  toCity: Joi.string().trim().min(2).max(100).required(),
+  departureDate: Joi.date().iso().required(),
+  seatsTotal: Joi.number().integer().min(1).max(100).required(),
+  pricePerCar: Joi.number().min(0).allow(null).optional(),
+  notes: Joi.string().max(2000).allow(null, "").optional(),
+  kind: Joi.string().valid('OFFER','REQUEST').default('OFFER'),
+  transportType: Joi.string().valid('PLATFORM_OPEN','ENCLOSED','TARP').allow(null).optional(),
+  acceptsNonRunning: Joi.boolean().default(false),
+  fromCountry: Joi.string().length(2).uppercase().allow(null,'').optional(),
+  departureDateEnd: Joi.date().iso().min(Joi.ref('departureDate')).allow(null).optional()
+});
+
+const expressInterestSchema = Joi.object({
+  seatsRequested: Joi.number().integer().min(1).max(100).default(1),
+  note: Joi.string().max(1000).allow(null, "").optional(),
+});
+
+const updateTransportRunSchema = Joi.object({
+  status: Joi.string().valid("OPEN", "CLOSED").optional(),
+  seatsAvailable: Joi.number().integer().min(0).optional(),
+  notes: Joi.string().max(2000).allow(null, "").optional(),
+  pricePerCar: Joi.number().min(0).allow(null).optional(),
+  transportType: Joi.string().valid('PLATFORM_OPEN','ENCLOSED','TARP').allow(null).optional(),
+  acceptsNonRunning: Joi.boolean().optional(),
+  fromCountry: Joi.string().length(2).uppercase().allow(null,'').optional(),
+  departureDateEnd: Joi.date().iso().allow(null).optional(),
+});
+
+const getOrCreateConversationSchema = Joi.object({
+  otherBusinessId: Joi.string().required(),
+  contextType: Joi.string().valid('GENERAL','TRANSPORT','TRADE').optional(),
+  contextId: Joi.string().allow(null, '').optional(),
+});
+
+const sendMessageSchema = Joi.object({
+  body: Joi.string().trim().min(1).max(4000).required(),
+});
+
+const exposeTradeSchema = Joi.object({
+  listingId: Joi.string().required(),
+  b2bPrice: Joi.number().min(0).allow(null).optional(),
+  acceptsTrade: Joi.boolean().default(false),
+  note: Joi.string().max(2000).allow(null, '').optional(),
+});
+
+const updateTradeSchema = Joi.object({
+  b2bPrice: Joi.number().min(0).allow(null).optional(),
+  acceptsTrade: Joi.boolean().optional(),
+  note: Joi.string().max(2000).allow(null, '').optional(),
+  status: Joi.string().valid('ACTIVE', 'CLOSED').optional(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -273,4 +335,12 @@ module.exports = {
   createReservationSchema,
   createAppointmentSchema,
   updateAppointmentSchema,
+  updateNetworkSettingsSchema,
+  createTransportRunSchema,
+  expressInterestSchema,
+  updateTransportRunSchema,
+  getOrCreateConversationSchema,
+  sendMessageSchema,
+  exposeTradeSchema,
+  updateTradeSchema,
 };

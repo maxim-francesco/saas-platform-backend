@@ -26,6 +26,9 @@ const offerRoutes = require("./routes/offerRoutes");
 const contractRoutes = require("./routes/contractRoutes");
 const reservationRoutes = require("./routes/reservationRoutes");
 const appointmentRoutes = require("./routes/appointmentRoutes");
+const customerRoutes = require("./routes/customerRoutes");
+const networkRoutes = require("./routes/networkRoutes");
+const transportRoutes = require("./routes/transportRoutes");
 
 
 
@@ -105,6 +108,13 @@ app.use("/api/offers", offerRoutes);
 app.use("/api/contracts", contractRoutes);
 app.use("/api/reservations", reservationRoutes);
 app.use("/api/appointments", appointmentRoutes);
+app.use("/api/customers", customerRoutes);
+app.use("/api/network/transport", transportRoutes);
+const conversationRoutes = require("./routes/conversationRoutes");
+app.use("/api/network/conversations", conversationRoutes);
+const tradeRoutes = require("./routes/tradeRoutes");
+app.use("/api/network/trade", tradeRoutes);
+app.use("/api/network", networkRoutes);
 
 
 

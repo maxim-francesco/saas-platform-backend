@@ -30,6 +30,12 @@ model Business {
   companyRegCom   String?   // Nr. Registrul Comerțului
   companyLegalRep String?   // Reprezentant legal
   companyLogoUrl  String?   // rezervat fazei 2 (upload logo)
+  // --- Dealer Network (M1) ---
+  networkEnabled       Boolean  @default(true)
+  city                 String?
+  networkDisplayName   String?
+  networkContactPhone  String?
+  networkContactEmail  String?
   bestAutoApiKey      String?
   autovitClientId     String?
   autovitClientSecret String?
@@ -46,6 +52,12 @@ model Business {
   contracts           Contract[]
   reservations        Reservation[]
   appointments        Appointment[]
+  transportRuns       TransportRun[]
+  transportInterests  TransportInterest[]
+  conversationsA   Conversation[]  @relation("ConversationBusinessA")
+  conversationsB   Conversation[]  @relation("ConversationBusinessB")
+  dealerMessages   DealerMessage[]
+  tradeListings   NetworkTradeListing[]
 }
 
 model User {
@@ -166,6 +178,7 @@ model Listing {
   contracts Contract[]
   reservations Reservation[]
   appointments Appointment[]
+  tradeListing    NetworkTradeListing?
 
   @@index([businessId, status])
   @@index([price])
@@ -338,10 +351,38 @@ model BlogPost {
 
 // ===================== ENUMS =====================
 
+enum ConversationContext {
+  GENERAL
+  TRANSPORT
+  TRADE
+}
+
+enum TradeListingStatus {
+  ACTIVE
+  CLOSED
+}
+
 enum Role {
   SUPER_ADMIN
   ADMIN
 }
+
+enum TransportRunStatus {
+  OPEN
+  CLOSED
+}
+
+enum TransportKind {
+  OFFER
+  REQUEST
+}
+
+enum TransportType {
+  PLATFORM_OPEN
+  ENCLOSED
+  TARP
+}
+
 
 enum ListingStatus {
   INCOMING // "Sosește în curând" — dealerii o inventaseră deja (VIITOR/In Curand)
@@ -543,5 +584,93 @@ model Appointment {
 
   @@index([businessId])
   @@index([businessId, startAt])
+}
+
+model TransportRun {
+  id             String   @id @default(cuid())
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id])
+  fromCity       String
+  toCity         String
+  departureDate  DateTime
+  seatsTotal     Int
+  seatsAvailable Int
+  pricePerCar    Float?
+  notes          String?  @db.Text
+  status         TransportRunStatus @default(OPEN)
+  kind             TransportKind  @default(OFFER)
+  transportType    TransportType?
+  acceptsNonRunning Boolean       @default(false)
+  fromCountry      String?        @db.VarChar(2)
+  departureDateEnd DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  interests      TransportInterest[]
+
+  @@index([businessId])
+  @@index([status, departureDate])
+}
+
+model TransportInterest {
+  id             String   @id @default(cuid())
+  runId          String
+  run            TransportRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  businessId     String
+  business       Business @relation(fields: [businessId], references: [id])
+  seatsRequested Int      @default(1)
+  note           String?
+  isSeen         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@unique([runId, businessId])
+  @@index([businessId])
+}
+
+model Conversation {
+  id           String   @id @default(cuid())
+  // participants stored in canonical order: businessAId < businessBId (string compare)
+  businessAId  String
+  businessA    Business @relation("ConversationBusinessA", fields: [businessAId], references: [id])
+  businessBId  String
+  businessB    Business @relation("ConversationBusinessB", fields: [businessBId], references: [id])
+  contextType  ConversationContext @default(GENERAL)
+  contextId    String?
+  lastMessageAt DateTime @default(now())
+  createdAt    DateTime @default(now())
+  messages     DealerMessage[]
+
+  @@unique([businessAId, businessBId, contextType, contextId])
+  @@index([businessAId, lastMessageAt])
+  @@index([businessBId, lastMessageAt])
+}
+
+model DealerMessage {
+  id               String   @id @default(cuid())
+  conversationId   String
+  conversation     Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderBusinessId String
+  sender           Business @relation(fields: [senderBusinessId], references: [id])
+  body             String   @db.Text
+  isRead           Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+}
+
+model NetworkTradeListing {
+  id           String   @id @default(cuid())
+  businessId   String
+  business     Business @relation(fields: [businessId], references: [id])
+  listingId    String   @unique
+  listing      Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  b2bPrice     Float?
+  acceptsTrade Boolean  @default(false)
+  note         String?  @db.Text
+  status       TradeListingStatus @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([businessId, status])
+  @@index([status])
 }
 
