@@ -313,6 +313,21 @@ const updateTradeSchema = Joi.object({
   status: Joi.string().valid('ACTIVE', 'CLOSED').optional(),
 });
 
+const createProposalSchema = Joi.object({
+  tradeListingId: Joi.string().required(),
+  kind: Joi.string().valid('BUY', 'EXCHANGE').required(),
+  offeredPrice: Joi.number().min(0).allow(null).optional(),
+  offeredListingId: Joi.string().allow(null, '').optional(),
+  note: Joi.string().max(2000).allow(null, '').optional(),
+});
+
+const counterProposalSchema = Joi.object({
+  kind: Joi.string().valid('BUY', 'EXCHANGE').required(),
+  offeredPrice: Joi.number().min(0).allow(null).optional(),
+  offeredListingId: Joi.string().allow(null, '').optional(),
+  note: Joi.string().max(2000).allow(null, '').optional(),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
@@ -343,4 +358,6 @@ module.exports = {
   sendMessageSchema,
   exposeTradeSchema,
   updateTradeSchema,
+  createProposalSchema,
+  counterProposalSchema,
 };

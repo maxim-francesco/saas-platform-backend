@@ -100,6 +100,59 @@ function toTradeListing(tl) {
   };
 }
 
+function tradeCarShape(listing) {
+  return listing ? {
+    title: listing.title,
+    make: listing.make?.name || null,
+    model: listing.model?.name || null,
+    year: listing.year,
+    mileage: listing.mileage,
+    price: listing.price,
+    image: listing.images?.[0]?.url || null
+  } : null;
+}
+
+function toTradeProposal(p, myId) {
+  if (!p) return null;
+  return {
+    id: p.id,
+    kind: p.kind,
+    offeredPrice: p.offeredPrice,
+    note: p.note,
+    status: p.status,
+    createdAt: p.createdAt,
+    fromMe: p.proposerBusinessId === myId,
+    proposer: p.proposer ? toNetworkDealer(p.proposer) : null,
+    offeredCar: tradeCarShape(p.offeredListing)
+  };
+}
+
+function toNegotiationSummary(n, myId) {
+  if (!n) return null;
+  return {
+    id: n.id,
+    status: n.status,
+    createdAt: n.createdAt,
+    updatedAt: n.updatedAt,
+    role: n.ownerBusinessId === myId ? 'SELLER' : 'BUYER',
+    car: tradeCarShape(n.tradeListing?.listing),
+    tradeListingId: n.tradeListingId,
+    tradeListingStatus: n.tradeListing?.status || null,
+    counterparty: toNetworkDealer(n.ownerBusinessId === myId ? n.buyer : n.owner),
+    latestProposal: n._latest ? toTradeProposal(n._latest, myId) : null,
+    awaitingMyResponse: !!(n.status === 'OPEN' && n._latest && n._latest.status === 'PENDING' && n._latest.proposerBusinessId !== myId)
+  };
+}
+
+function toNegotiationDetail(n, myId) {
+  const summary = toNegotiationSummary(n, myId);
+  if (!summary) return null;
+  return {
+    ...summary,
+    proposals: (n.proposals || []).map(p => toTradeProposal(p, myId))
+  };
+}
+
 module.exports = {
   toNetworkDealer,
   toNetworkTransportRun,
@@ -107,4 +160,8 @@ module.exports = {
   toConversationSummary,
   toDealerMessage,
   toTradeListing,
+  toTradeProposal,
+  toNegotiationSummary,
+  toNegotiationDetail,
 };
+

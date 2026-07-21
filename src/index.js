@@ -112,6 +112,8 @@ app.use("/api/customers", customerRoutes);
 app.use("/api/network/transport", transportRoutes);
 const conversationRoutes = require("./routes/conversationRoutes");
 app.use("/api/network/conversations", conversationRoutes);
+const negotiationRoutes = require("./routes/negotiationRoutes");
+app.use("/api/network/trade/negotiations", negotiationRoutes);
 const tradeRoutes = require("./routes/tradeRoutes");
 app.use("/api/network/trade", tradeRoutes);
 app.use("/api/network", networkRoutes);

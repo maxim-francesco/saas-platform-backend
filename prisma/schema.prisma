@@ -58,6 +58,9 @@ model Business {
   conversationsB   Conversation[]  @relation("ConversationBusinessB")
   dealerMessages   DealerMessage[]
   tradeListings   NetworkTradeListing[]
+  negotiationsAsOwner  TradeNegotiation[] @relation("NegotiationOwner")
+  negotiationsAsBuyer  TradeNegotiation[] @relation("NegotiationBuyer")
+  tradeProposals       TradeProposal[]    @relation("ProposalProposer")
 }
 
 model User {
@@ -179,6 +182,7 @@ model Listing {
   reservations Reservation[]
   appointments Appointment[]
   tradeListing    NetworkTradeListing?
+  offeredInProposals   TradeProposal[]    @relation("ProposalOfferedListing")
 
   @@index([businessId, status])
   @@index([price])
@@ -355,6 +359,25 @@ enum ConversationContext {
   GENERAL
   TRANSPORT
   TRADE
+}
+
+enum TradeNegotiationStatus {
+  OPEN
+  ACCEPTED
+  DECLINED
+  CANCELLED
+}
+
+enum TradeProposalKind {
+  BUY
+  EXCHANGE
+}
+
+enum TradeProposalStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  SUPERSEDED
 }
 
 enum TradeListingStatus {
@@ -669,8 +692,45 @@ model NetworkTradeListing {
   status       TradeListingStatus @default(ACTIVE)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  negotiations         TradeNegotiation[]
 
   @@index([businessId, status])
   @@index([status])
+}
+
+model TradeNegotiation {
+  id              String   @id @default(cuid())
+  tradeListingId  String
+  tradeListing    NetworkTradeListing @relation(fields: [tradeListingId], references: [id], onDelete: Cascade)
+  ownerBusinessId String
+  owner           Business @relation("NegotiationOwner", fields: [ownerBusinessId], references: [id])
+  buyerBusinessId String
+  buyer           Business @relation("NegotiationBuyer", fields: [buyerBusinessId], references: [id])
+  status          TradeNegotiationStatus @default(OPEN)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  proposals       TradeProposal[]
+
+  @@unique([tradeListingId, buyerBusinessId])
+  @@index([ownerBusinessId, status])
+  @@index([buyerBusinessId, status])
+}
+
+model TradeProposal {
+  id                 String   @id @default(cuid())
+  negotiationId      String
+  negotiation        TradeNegotiation @relation(fields: [negotiationId], references: [id], onDelete: Cascade)
+  proposerBusinessId String
+  proposer           Business @relation("ProposalProposer", fields: [proposerBusinessId], references: [id])
+  kind               TradeProposalKind
+  offeredPrice       Float?
+  offeredListingId   String?
+  offeredListing     Listing? @relation("ProposalOfferedListing", fields: [offeredListingId], references: [id])
+  note               String?
+  status             TradeProposalStatus @default(PENDING)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([negotiationId, createdAt])
 }
 
