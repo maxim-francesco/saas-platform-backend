@@ -747,21 +747,50 @@ Folosește EXCLUSIV informațiile din specificația primită. Nu inventa dotări
 
 async function generateMarketing(req, res) {
   try {
-    const { format } = req.body;
+    const { format, listingId } = req.body;
     const allowedFormats = ["facebook", "whatsapp", "olx", "instagram"];
     if (!format || !allowedFormats.includes(format)) {
       return res.status(400).json({ error: "Format invalid." });
     }
 
-    const spec = await buildListingSpec(req.body);
+    let spec;
+    let priceToUse;
+
+    if (listingId) {
+      const { businessId } = req.user;
+      const listing = await prisma.listing.findFirst({
+        where: { id: listingId, businessId },
+        include: {
+          make: true,
+          model: true,
+          features: true
+        }
+      });
+
+      if (!listing) {
+        return res.status(404).json({ error: "Anunțul nu a fost găsit." });
+      }
+
+      const featureIds = listing.features ? listing.features.map(f => f.id) : [];
+      const specInput = {
+        ...listing,
+        featureIds
+      };
+      spec = await buildListingSpec(specInput);
+      priceToUse = listing.price;
+    } else {
+      spec = await buildListingSpec(req.body);
+      priceToUse = req.body.price;
+    }
+
     if (!spec) {
       return res.status(400).json({ error: "Date insuficiente. Completează măcar marca, modelul și anul." });
     }
 
-    const priceLine = getPriceLine(req.body.price);
+    const priceLine = getPriceLine(priceToUse);
     let specWithPrice = spec;
     if (priceLine) {
-      const priceVal = Number(req.body.price);
+      const priceVal = Number(priceToUse);
       const formatted = priceVal.toLocaleString("ro-RO");
       specWithPrice = spec + "\nPreț public: " + formatted + " €";
     }
