@@ -311,6 +311,7 @@ const getWeeklySummary = async (req, res) => {
         "- Dacă un câmp e null sau 0, nu-l inventa și nu-l comenta forțat. Excepție: dacă viewsThisWeek este 0 dar viewsLastWeek era mai mare ca 0, poți menționa scăderea vizualizărilor.\n" +
         "- Poți adăuga o SINGURĂ sugestie scurtă doar dacă rezultă evident din cifre (ex: topListing cu multe views dar 0 leads → sugerează verificarea prețului sau a pozelor; staleCount mare → sugerează revizuirea prețurilor la mașinile care stau demult).\n" +
         "- LIMBĂ NATURALĂ: nu lipi cifra de cuvinte ca 'toate' sau 'ambele'. Pentru două elemente folosește 'ambele' (nu 'toate 2', nu 'toate două'). Pentru trei sau mai multe folosește 'toate' sau 'toate cele N'. Scrie ca un om, nu ca un raport.\n" +
+        "- Fără salutări și fără formule de adresare — rezumatul trebuie să înceapă direct cu faptele (nu începe cu \"Salut\", \"Bună\", \"Dragă\" sau altele similare).\n" +
         "- Fără emoji. Fără markdown. Doar textul rezumatului.";
       const prompt = `Datele reale ale săptămânii (JSON):\n${JSON.stringify(facts, null, 2)}`;
       const aiText = await generateText({
@@ -342,4 +343,52 @@ const getWeeklySummary = async (req, res) => {
   }
 };
 
-module.exports = { getStats, getListingAnalytics, getViewsChart, getWeeklySummary };
+const getStockCounts = async (req, res) => {
+  const { businessId } = req.user;
+
+  console.log(
+    `[DEBUG] Se preiau stocurile pentru businessId: ${businessId}`
+  );
+  if (!businessId) {
+    console.error(
+      "[DEBUG] EROARE CRITICĂ: businessId este undefined în req.user!"
+    );
+    return res
+      .status(400)
+      .json({ message: "ID-ul de business lipsește din token." });
+  }
+
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+
+    const [available, reserved, incoming, sold, soldThisMonth] = await prisma.$transaction([
+      prisma.listing.count({ where: { businessId, status: "AVAILABLE" } }),
+      prisma.listing.count({ where: { businessId, status: "RESERVED" } }),
+      prisma.listing.count({ where: { businessId, status: "INCOMING" } }),
+      prisma.listing.count({ where: { businessId, status: "SOLD" } }),
+      prisma.contract.count({
+        where: {
+          businessId,
+          saleDate: {
+            gte: startOfMonth,
+            lte: now,
+          },
+        },
+      }),
+    ]);
+
+    return res.status(200).json({
+      available,
+      reserved,
+      incoming,
+      sold,
+      soldThisMonth,
+    });
+  } catch (error) {
+    console.error("[DEBUG] A apărut o eroare în getStockCounts:", error);
+    return res.status(500).json({ message: "Eroare la preluarea stocurilor." });
+  }
+};
+
+module.exports = { getStats, getListingAnalytics, getViewsChart, getWeeklySummary, getStockCounts };

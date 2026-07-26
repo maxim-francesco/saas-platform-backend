@@ -4,7 +4,8 @@ const {
   getStats,
   getListingAnalytics,
   getViewsChart,
-  getWeeklySummary
+  getWeeklySummary,
+  getStockCounts
 } = require("../controllers/dashboardController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -17,5 +18,6 @@ router.get("/stats", getStats);
 router.get("/listing-analytics", getListingAnalytics);
 router.get("/chart", getViewsChart); // Rută nouă: GET /api/dashboard/chart
 router.get("/weekly-summary", getWeeklySummary);
+router.get("/stock-counts", getStockCounts);
 
 module.exports = router;
