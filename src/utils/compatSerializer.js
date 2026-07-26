@@ -233,9 +233,12 @@ function toLegacyListing(listing, { mode = 'search' } = {}) {
   }
 
   // 13. color
-  if (listing.color || listing.colorDetail) {
-    const roColor = listing.colorDetail || COLOR_MAP[listing.color] || listing.color;
+  if (listing.color) {
+    const roColor = COLOR_MAP[listing.color] || listing.color;
     addAttrValue('color', 'Culoare', 'STRING', roColor, 'Informații Tehnice', 'group:techinfo');
+  }
+  if (listing.colorDetail) {
+    addAttrValue('colorDetail', 'Culoare detaliu', 'STRING', listing.colorDetail, 'Informații Tehnice', 'group:techinfo');
   }
 
   // 14. upholstery

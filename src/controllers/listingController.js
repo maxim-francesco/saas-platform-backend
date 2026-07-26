@@ -439,6 +439,13 @@ const updateListing = async (req, res) => {
       return res.status(404).json({ message: "Anunțul nu a fost găsit sau nu aveți acces la el." });
     }
 
+    if (originalListing.status === "RESERVED" && status !== undefined && status !== "RESERVED") {
+      return res.status(409).json({ message: "Mașina are o rezervare activă. Anulează sau finalizează rezervarea de pe fișa mașinii." });
+    }
+    if (status === "SOLD" && originalListing.status !== "SOLD") {
+      return res.status(409).json({ message: "Marchează vânzarea cu butonul Vândut, ca să se salveze prețul și data." });
+    }
+
     const updateData = {};
     if (title !== undefined) {
       updateData.title = title;
