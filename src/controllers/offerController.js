@@ -78,4 +78,33 @@ const createOffer = async (req, res) => {
   }
 };
 
-module.exports = { createOffer };
+const listOffers = async (req, res) => {
+  try {
+    const { businessId } = req.user;
+    const offers = await prisma.offer.findMany({
+      where: { businessId },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      select: {
+        id: true,
+        code: true,
+        clientName: true,
+        clientPhone: true,
+        offerPrice: true,
+        listPrice: true,
+        listingId: true,
+        listingTitleSnapshot: true,
+        listingImageSnapshot: true,
+        createdAt: true,
+        expiresAt: true,
+        viewedAt: true
+      }
+    });
+    return res.status(200).json(offers);
+  } catch (error) {
+    console.error("Eroare la listarea ofertelor:", error);
+    return res.status(500).json({ message: "Eroare la listarea ofertelor." });
+  }
+};
+
+module.exports = { createOffer, listOffers };

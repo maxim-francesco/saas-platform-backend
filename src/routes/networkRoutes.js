@@ -8,6 +8,7 @@ const {
   getNetworkSettings,
   updateNetworkSettings,
   getNetworkDealers,
+  getNetworkSummary,
 } = require("../controllers/networkController");
 
 const router = express.Router();
@@ -18,5 +19,6 @@ router.use(isAuthenticated);
 router.get("/settings", getNetworkSettings); // NOT behind requireNetworkMember
 router.patch("/settings", validate(updateNetworkSettingsSchema), updateNetworkSettings);
 router.get("/dealers", requireNetworkMember, getNetworkDealers); // membership required
+router.get("/summary", requireNetworkMember, getNetworkSummary);
 
 module.exports = router;

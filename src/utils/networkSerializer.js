@@ -31,6 +31,7 @@ function toNetworkTransportRun(run) {
     createdAt: run.createdAt,
     owner: run.business ? toNetworkDealer(run.business) : null,
     interestCount: typeof run._count?.interests === 'number' ? run._count.interests : undefined,
+    myInterest: Array.isArray(run.interests) ? run.interests.length > 0 : undefined,
   };
 }
 

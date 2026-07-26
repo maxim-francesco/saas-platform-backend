@@ -71,6 +71,7 @@ const browseRuns = async (req, res) => {
       where,
       include: {
         business: true,
+        interests: { where: { businessId: req.user.businessId }, select: { id: true } }
       },
       orderBy: {
         departureDate: "asc",

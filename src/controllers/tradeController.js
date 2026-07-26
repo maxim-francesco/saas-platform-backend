@@ -300,8 +300,9 @@ const unexposeListing = async (req, res) => {
       return res.status(404).json({ message: "Anunțul nu a fost găsit sau nu ești proprietarul acestuia." });
     }
 
-    await prisma.networkTradeListing.delete({
+    await prisma.networkTradeListing.update({
       where: { id },
+      data: { status: "CLOSED" },
     });
 
     return res.status(200).json({ message: "Anunțul a fost eliminat din rețeaua de trade." });
