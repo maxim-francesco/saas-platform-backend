@@ -24,7 +24,7 @@ const listCustomers = async (req, res) => {
   try {
     const { businessId } = req.user;
 
-    const [buyers, reservations, appointments, messages] = await Promise.all([
+    const [buyers, reservations, appointments, messages, offers] = await Promise.all([
       prisma.buyer.findMany({
         where: { businessId },
         include: {
@@ -47,6 +47,10 @@ const listCustomers = async (req, res) => {
           clientPhone: true,
           depositAmount: true,
           createdAt: true,
+          id: true,
+          status: true,
+          expiresAt: true,
+          listing: { select: { title: true } }
         }
       }),
       prisma.appointment.findMany({
@@ -57,6 +61,9 @@ const listCustomers = async (req, res) => {
           type: true,
           startAt: true,
           createdAt: true,
+          id: true,
+          title: true,
+          status: true,
         }
       }),
       prisma.message.findMany({
@@ -65,6 +72,22 @@ const listCustomers = async (req, res) => {
           name: true,
           phone: true,
           createdAt: true,
+          id: true,
+          status: true,
+          reminderAt: true,
+        }
+      }),
+      prisma.offer.findMany({
+        where: { businessId },
+        select: {
+          clientName: true,
+          clientPhone: true,
+          createdAt: true,
+          viewedAt: true,
+          id: true,
+          offerPrice: true,
+          expiresAt: true,
+          listingTitleSnapshot: true,
         }
       })
     ]);
@@ -82,13 +105,20 @@ const listCustomers = async (req, res) => {
           reservationsCount: 0,
           appointmentsCount: 0,
           messagesCount: 0,
+          offersCount: 0,
           purchasedCars: [],
           lastInteraction: new Date(0),
           sources: new Set(),
+          activeReservation: null,
+          pendingOffer: null,
+          nextAppointment: null,
+          openLead: null,
         });
       }
       return customerMap.get(normalized);
     };
+
+    const now = new Date();
 
     // 1. Buyers / Contracts
     for (const buyer of buyers) {
@@ -136,6 +166,18 @@ const listCustomers = async (req, res) => {
       cust.name = pickName(cust.name, resv.clientName);
       cust.reservationsCount++;
 
+      if (resv.status === 'ACTIVE') {
+        const expiresAtDate = new Date(resv.expiresAt);
+        if (!cust.activeReservation || expiresAtDate < new Date(cust.activeReservation.expiresAt)) {
+          cust.activeReservation = {
+            id: resv.id,
+            car: resv.listing?.title || null,
+            expiresAt: expiresAtDate.toISOString(),
+            depositAmount: resv.depositAmount,
+          };
+        }
+      }
+
       const resvCreated = new Date(resv.createdAt);
       if (resvCreated > cust.lastInteraction) {
         cust.lastInteraction = resvCreated;
@@ -151,13 +193,29 @@ const listCustomers = async (req, res) => {
       cust.name = pickName(cust.name, appt.clientName);
       cust.appointmentsCount++;
 
-      const apptTime = appt.startAt ? new Date(appt.startAt) : new Date(appt.createdAt);
-      if (apptTime > cust.lastInteraction) {
-        cust.lastInteraction = apptTime;
+      if (appt.status === 'SCHEDULED') {
+        const startAtDate = new Date(appt.startAt);
+        if (startAtDate > now) {
+          if (!cust.nextAppointment || startAtDate < new Date(cust.nextAppointment.startAt)) {
+            cust.nextAppointment = {
+              id: appt.id,
+              title: appt.title,
+              type: appt.type,
+              startAt: startAtDate.toISOString(),
+            };
+          }
+        }
       }
+
       const apptCreated = new Date(appt.createdAt);
       if (apptCreated > cust.lastInteraction) {
         cust.lastInteraction = apptCreated;
+      }
+      const apptStart = new Date(appt.startAt);
+      if (apptStart <= now) {
+        if (apptStart > cust.lastInteraction) {
+          cust.lastInteraction = apptStart;
+        }
       }
     }
 
@@ -170,9 +228,50 @@ const listCustomers = async (req, res) => {
       cust.name = pickName(cust.name, msg.name);
       cust.messagesCount++;
 
+      if (msg.status !== 'WON' && msg.status !== 'LOST') {
+        const msgCreatedDate = new Date(msg.createdAt);
+        if (!cust.openLead || msgCreatedDate > new Date(cust.openLead.createdAt)) {
+          cust.openLead = {
+            id: msg.id,
+            status: msg.status,
+            createdAt: msgCreatedDate.toISOString(),
+            reminderAt: msg.reminderAt ? new Date(msg.reminderAt).toISOString() : null,
+          };
+        }
+      }
+
       const msgCreated = new Date(msg.createdAt);
       if (msgCreated > cust.lastInteraction) {
         cust.lastInteraction = msgCreated;
+      }
+    }
+
+    // 5. Offers
+    for (const offer of offers) {
+      const cust = getOrCreateCustomer(offer.clientPhone, offer.clientName);
+      if (!cust) continue;
+      cust.sources.add("offer");
+      cust.name = pickName(cust.name, offer.clientName);
+      cust.offersCount++;
+
+      const offerExpiresAtDate = new Date(offer.expiresAt);
+      if (offerExpiresAtDate > now) {
+        if (!cust.pendingOffer || offerExpiresAtDate < new Date(cust.pendingOffer.expiresAt)) {
+          cust.pendingOffer = {
+            id: offer.id,
+            car: offer.listingTitleSnapshot || null,
+            offerPrice: offer.offerPrice,
+            expiresAt: offerExpiresAtDate.toISOString(),
+            viewedAt: offer.viewedAt ? new Date(offer.viewedAt).toISOString() : null,
+          };
+        }
+      }
+
+      const created = new Date(offer.createdAt);
+      if (created > cust.lastInteraction) cust.lastInteraction = created;
+      if (offer.viewedAt) {
+        const viewed = new Date(offer.viewedAt);
+        if (viewed > cust.lastInteraction) cust.lastInteraction = viewed;
       }
     }
 
@@ -200,7 +299,7 @@ const getCustomer = async (req, res) => {
     const { businessId } = req.user;
     const targetPhone = req.params.phone;
 
-    const [buyers, reservations, appointments, messages] = await Promise.all([
+    const [buyers, reservations, appointments, messages, offers] = await Promise.all([
       prisma.buyer.findMany({
         where: { businessId },
         include: {
@@ -248,6 +347,10 @@ const getCustomer = async (req, res) => {
             }
           }
         }
+      }),
+      prisma.offer.findMany({
+        where: { businessId },
+        include: { listing: { select: { id: true, title: true } } }
       })
     ]);
 
@@ -255,8 +358,9 @@ const getCustomer = async (req, res) => {
     const matchedReservations = reservations.filter(r => normalizePhone(r.clientPhone) === targetPhone);
     const matchedAppointments = appointments.filter(a => normalizePhone(a.clientPhone) === targetPhone);
     const matchedMessages = messages.filter(m => normalizePhone(m.phone) === targetPhone);
+    const matchedOffers = offers.filter(o => normalizePhone(o.clientPhone) === targetPhone);
 
-    if (matchedBuyers.length === 0 && matchedReservations.length === 0 && matchedAppointments.length === 0 && matchedMessages.length === 0) {
+    if (matchedBuyers.length === 0 && matchedReservations.length === 0 && matchedAppointments.length === 0 && matchedMessages.length === 0 && matchedOffers.length === 0) {
       return res.status(404).json({ message: "Client negăsit." });
     }
 
@@ -265,6 +369,7 @@ const getCustomer = async (req, res) => {
     matchedReservations.forEach(r => { bestName = pickName(bestName, r.clientName); });
     matchedAppointments.forEach(a => { bestName = pickName(bestName, a.clientName); });
     matchedMessages.forEach(m => { bestName = pickName(bestName, m.name); });
+    matchedOffers.forEach(o => { bestName = pickName(bestName, o.clientName); });
 
     const contracts = [];
     matchedBuyers.forEach(buyer => {
@@ -323,11 +428,23 @@ const getCustomer = async (req, res) => {
       listingId: m.listingId
     }));
 
+    const formattedOffers = matchedOffers.map(o => ({
+      id: o.id,
+      car: o.listing?.title || o.listingTitleSnapshot || null,
+      listingId: o.listingId,
+      offerPrice: o.offerPrice,
+      listPrice: o.listPrice,
+      createdAt: o.createdAt.toISOString(),
+      expiresAt: o.expiresAt ? o.expiresAt.toISOString() : null,
+      viewedAt: o.viewedAt ? o.viewedAt.toISOString() : null,
+    }));
+
     const detail = {
       phone: targetPhone,
       name: bestName,
       contracts,
       reservations: formattedReservations,
+      offers: formattedOffers,
       appointments: formattedAppointments,
       messages: formattedMessages
     };
