@@ -397,7 +397,17 @@ const markAsSold = async (req, res) => {
   const { businessId } = req.user;
   if (!sellingPrice || !soldAt) return res.status(400).json({ message: "Prețul de vânzare și data sunt obligatorii." });
   try {
-    const result = await prisma.listing.updateMany({ where: { id: listingId, businessId }, data: { status: "SOLD", sellingPrice: parseFloat(sellingPrice), soldAt: new Date(soldAt) } });
+    const result = await prisma.$transaction(async (tx) => {
+      const updateResult = await tx.listing.updateMany({
+        where: { id: listingId, businessId },
+        data: { status: "SOLD", sellingPrice: parseFloat(sellingPrice), soldAt: new Date(soldAt) }
+      });
+      await tx.reservation.updateMany({
+        where: { listingId, businessId, status: "ACTIVE" },
+        data: { status: "COMPLETED" }
+      });
+      return updateResult;
+    });
     if (result.count === 0) {
       return res.status(404).json({ message: "Anunțul nu a fost găsit sau nu aveți acces." });
     }
@@ -651,7 +661,12 @@ const getListingById = async (req, res) => {
         make: true,
         model: true,
         features: true,
-        images: { orderBy: { order: "asc" } }
+        images: { orderBy: { order: "asc" } },
+        reservations: {
+          where: { status: "ACTIVE" },
+          orderBy: { createdAt: "desc" },
+          take: 1
+        }
       },
     });
     if (!listing) return res.status(404).json({ message: "Anunțul nu a fost găsit." });

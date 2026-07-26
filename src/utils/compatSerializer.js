@@ -119,7 +119,16 @@ function toLegacyListing(listing, { mode = 'search' } = {}) {
     autovitStatus: listing.autovitStatus || null,
     youtubeVideoId: listing.youtubeVideoId || null,
     categoryId: "legacy-vehicule",
-    category: { name: "Vehicule" }
+    category: { name: "Vehicule" },
+    activeReservation: (listing.reservations && listing.reservations[0])
+      ? {
+          id: listing.reservations[0].id,
+          clientName: listing.reservations[0].clientName,
+          clientPhone: listing.reservations[0].clientPhone,
+          depositAmount: listing.reservations[0].depositAmount,
+          expiresAt: listing.reservations[0].expiresAt
+        }
+      : null
   };
 
   // Images mapping
