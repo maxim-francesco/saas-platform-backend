@@ -943,7 +943,8 @@
         "oglinzi exterioare cu reglare electrica",
         "oglinzi exterioare incalzite",
         "oglinzi exterioare rabatabile electric",
-        "oglinda heliomata"
+        "oglinda heliomata",
+        "oglinzi incalzite"
       ]
     },
     {
@@ -993,7 +994,9 @@
       "group": "COMFORT",
       "synonyms": [
         "sistem start/stop",
-        "start stop"
+        "start stop",
+        "star&stop",
+        "star stop"
       ]
     },
     {
@@ -1009,7 +1012,8 @@
       "name": "Computer de bord",
       "group": "COMFORT",
       "synonyms": [
-        "computer de bord"
+        "computer de bord",
+        "computer bord"
       ]
     },
     {
@@ -1114,7 +1118,8 @@
       "name": "Port USB",
       "group": "MULTIMEDIA",
       "synonyms": [
-        "port usb"
+        "port usb",
+        "usb"
       ]
     },
     {
@@ -1191,7 +1196,8 @@
       "name": "Jante aliaj",
       "group": "EXTERIOR",
       "synonyms": [
-        "prefix:jante aliaj"
+        "prefix:jante aliaj",
+        "prefix:jante aluminiu"
       ]
     },
     {
