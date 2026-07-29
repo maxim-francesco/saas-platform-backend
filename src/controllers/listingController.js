@@ -351,7 +351,7 @@ const getListings = async (req, res) => {
         model: true,
         features: true,
         images: { orderBy: { order: "asc" } },
-        _count: { select: { views: true } },
+        _count: { select: { views: true, messages: true } },
       },
     });
     const { toLegacyListing } = require("../utils/compatSerializer");
@@ -673,13 +673,16 @@ const getListingById = async (req, res) => {
           where: { status: "ACTIVE" },
           orderBy: { createdAt: "desc" },
           take: 1
-        }
+        },
+        _count: { select: { views: true, messages: true } },
       },
     });
     if (!listing) return res.status(404).json({ message: "Anunțul nu a fost găsit." });
     
     const { toLegacyListing } = require("../utils/compatSerializer");
-    res.status(200).json(toLegacyListing(listing, { mode: 'byId' }));
+    const legacy = toLegacyListing(listing, { mode: 'byId' });
+    legacy._count = listing._count;
+    res.status(200).json(legacy);
   } catch (error) {
     console.error("Error in getListingById:", error);
     res.status(500).json({ message: "Eroare la preluarea anunțului." });
