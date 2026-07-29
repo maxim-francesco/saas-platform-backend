@@ -30,6 +30,7 @@ model Business {
   companyRegCom   String?   // Nr. Registrul Comerțului
   companyLegalRep String?   // Reprezentant legal
   companyLogoUrl  String?   // rezervat fazei 2 (upload logo)
+  website         String?   // URL public al site-ului (homepage)
   // --- Dealer Network (M1) ---
   networkEnabled       Boolean  @default(true)
   city                 String?
