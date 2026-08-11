@@ -97,10 +97,19 @@ const listOffers = async (req, res) => {
         listingImageSnapshot: true,
         createdAt: true,
         expiresAt: true,
-        viewedAt: true
+        viewedAt: true,
+        bizSlug: true
       }
     });
-    return res.status(200).json(offers);
+    const base = process.env.PUBLIC_BASE_URL || "http://localhost:4400";
+    const withUrls = offers.map((o) => {
+      const carSlug = generateSlug(o.listingTitleSnapshot || "masina");
+      const publicUrl = o.bizSlug && o.code
+        ? `${base}/oferta/${o.bizSlug}/${carSlug}-${o.code}`
+        : null;
+      return { ...o, publicUrl };
+    });
+    return res.status(200).json(withUrls);
   } catch (error) {
     console.error("Eroare la listarea ofertelor:", error);
     return res.status(500).json({ message: "Eroare la listarea ofertelor." });
