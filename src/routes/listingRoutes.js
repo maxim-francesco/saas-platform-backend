@@ -9,6 +9,7 @@ const {
   updateImageOrder,
   deleteImage,
   getSoldListings,
+  getIncomingListings,
   markAsSold,
   reactivateListing,
   cloneListing,
@@ -34,6 +35,7 @@ router.post("/:listingId/images", uploadImage.single("image"), uploadImages);
 router.delete("/:listingId/images/:imageId", deleteImage);
 router.post("/:listingId/reorder-images", updateImageOrder);
 router.get("/status/sold", getSoldListings);
+router.get("/status/incoming", getIncomingListings);
 router.put("/:listingId/sell", validate(markAsSoldSchema), markAsSold);
 router.put("/:listingId/reactivate", reactivateListing);
 router.post("/:listingId/clone", cloneListing);

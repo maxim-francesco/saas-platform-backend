@@ -391,6 +391,30 @@ const getSoldListings = async (req, res) => {
   }
 };
 
+const getIncomingListings = async (req, res) => {
+  const businessId = req.user?.businessId || req.query.businessId;
+  if (!businessId) return res.status(400).json({ message: "Business ID is required." });
+  try {
+    const listings = await prisma.listing.findMany({
+      where: { businessId, status: "INCOMING" },
+      include: {
+        make: true,
+        model: true,
+        features: true,
+        images: { orderBy: { order: "asc" } }
+      },
+      orderBy: { createdAt: "desc" },
+      take: req.query.limit ? parseInt(req.query.limit) : undefined,
+    });
+    const { toLegacyListing } = require("../utils/compatSerializer");
+    const legacyListings = listings.map(l => toLegacyListing(l, { mode: 'search' }));
+    res.status(200).json(legacyListings);
+  } catch (error) {
+    console.error("Error in getIncomingListings:", error);
+    res.status(500).json({ message: "Eroare la preluarea anunțurilor care sosesc." });
+  }
+};
+
 const markAsSold = async (req, res) => {
   const { listingId } = req.params;
   const { sellingPrice, soldAt } = req.body;
@@ -834,6 +858,7 @@ module.exports = {
   uploadImages,
   updateImageOrder,
   getSoldListings,
+  getIncomingListings,
   markAsSold,
   reactivateListing,
   cloneListing,
