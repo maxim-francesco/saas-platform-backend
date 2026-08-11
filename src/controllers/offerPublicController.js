@@ -20,6 +20,30 @@ function formatDateRo(d) {
   return new Date(d).toLocaleDateString('ro-RO');
 }
 
+const FUEL_LABELS = {
+  PETROL: "Benzină", DIESEL: "Diesel", PETROL_LPG: "Benzină + GPL", LPG: "GPL",
+  HYBRID: "Hibrid", PLUGIN_HYBRID: "Plug-in Hibrid", MILD_HYBRID: "Mild Hibrid", ELECTRIC: "Electric"
+};
+const GEARBOX_LABELS = { MANUAL: "Manuală", AUTOMATIC: "Automată" };
+
+function buildSpecsHtml(listing) {
+  if (!listing) return '';
+  const rows = [];
+  if (listing.year) rows.push(["An", escapeHtml(String(listing.year))]);
+  if (listing.mileage != null) rows.push(["Kilometraj", formatPrice(listing.mileage) + " km"]);
+  if (listing.fuelType && FUEL_LABELS[listing.fuelType]) rows.push(["Combustibil", FUEL_LABELS[listing.fuelType]]);
+  if (listing.gearbox && GEARBOX_LABELS[listing.gearbox]) rows.push(["Cutie", GEARBOX_LABELS[listing.gearbox]]);
+  if (listing.powerHp) rows.push(["Putere", escapeHtml(String(listing.powerHp)) + " CP"]);
+  if (rows.length === 0) return '';
+  const cells = rows.map(([k, v]) =>
+    `<div style="background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;">
+       <div style="font-size:0.6875rem;text-transform:uppercase;letter-spacing:0.04em;color:#94a3b8;font-weight:700;">${k}</div>
+       <div style="font-size:0.9375rem;color:#0f172a;font-weight:700;margin-top:2px;">${v}</div>
+     </div>`
+  ).join('');
+  return `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:24px;">${cells}</div>`;
+}
+
 const notFoundHtml = () => {
   return `<!DOCTYPE html>
 <html lang="ro">
@@ -188,6 +212,7 @@ const offerHtml = (offer) => {
     ? `<p style="margin: 8px 0 0 0; font-size: 0.75rem; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 8px;">${companyIdentifiers.join(' · ')}</p>`
     : '';
 
+  const specsSection = buildSpecsHtml(offer.listing);
   return `<!DOCTYPE html>
 <html lang="ro">
 <head>
@@ -306,6 +331,8 @@ const offerHtml = (offer) => {
       
       ${imageBand}
       
+      ${specsSection}
+      
       <div class="info-grid">
         <div>
           <h3 class="section-title">Destinatari</h3>
@@ -342,7 +369,10 @@ const renderOfferPage = async (req, res) => {
     const { token } = req.params;
     const offer = await prisma.offer.findUnique({
       where: { token },
-      include: { business: true }
+      include: {
+        business: true,
+        listing: { include: { make: true, model: true } }
+      }
     });
 
     if (!offer) {
@@ -382,7 +412,10 @@ const renderOfferByCode = async (req, res) => {
 
     const offer = await prisma.offer.findUnique({
       where: { code },
-      include: { business: true }
+      include: {
+        business: true,
+        listing: { include: { make: true, model: true } }
+      }
     });
 
     if (!offer) {
