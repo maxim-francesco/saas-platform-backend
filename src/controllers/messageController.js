@@ -210,8 +210,8 @@ const updateMessage = async (req, res) => {
   const { businessId } = req.user;
   const { type, listingId } = req.body;
 
-  if (type !== undefined && !["GENERAL", "STOCK", "ORDER", "BUYBACK"].includes(type)) {
-    return res.status(400).json({ message: "Tipul de mesaj furnizat este invalid. Valori permise: GENERAL, STOCK, ORDER, BUYBACK." });
+  if (type !== undefined && !["GENERAL", "STOCK", "ORDER", "BUYBACK", "FINANCING"].includes(type)) {
+    return res.status(400).json({ message: "Tipul de mesaj furnizat este invalid. Valori permise: GENERAL, STOCK, ORDER, BUYBACK, FINANCING." });
   }
 
   const normalizedListingId = listingId === "" ? null : listingId;
@@ -422,6 +422,12 @@ const getMessageCounts = async (req, res) => {
       _count: { _all: true },
     });
 
+    const unreadTypeGroups = await prisma.message.groupBy({
+      by: ["type"],
+      where: { businessId: businessId, isRead: false },
+      _count: { _all: true },
+    });
+
     const byStatus = {};
     statusGroups.forEach((g) => {
       byStatus[g.status] = g._count._all;
@@ -432,11 +438,17 @@ const getMessageCounts = async (req, res) => {
       byType[g.type] = g._count._all;
     });
 
+    const unreadByType = {};
+    unreadTypeGroups.forEach((g) => {
+      unreadByType[g.type] = g._count._all;
+    });
+
     res.status(200).json({
       actionNeeded: actionNeededCount,
       unread: unreadCount,
       byStatus,
       byType,
+      unreadByType,
     });
   } catch (error) {
     console.error("Eroare la calcularea statisticilor mesajelor:", error);

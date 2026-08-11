@@ -35,8 +35,12 @@ async function main() {
 
   try {
     // 1. Guard check / Reset check
-    const existingListings = await prismaV2.listing.count();
-    const existingBiz = await prismaV2.business.count();
+    const existingListings = onlyFlag
+      ? await prismaV2.listing.count({ where: { businessId: onlyFlag } })
+      : await prismaV2.listing.count();
+    const existingBiz = onlyFlag
+      ? await prismaV2.business.count({ where: { id: onlyFlag } })
+      : await prismaV2.business.count();
 
     if (existingListings > 0 || existingBiz > 0) {
       if (!resetFlag) {

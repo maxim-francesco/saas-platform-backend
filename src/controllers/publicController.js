@@ -499,17 +499,18 @@ async function classifyContactMessageAsync({ messageId, businessId, messageText,
 Primești mesajul primit de la un client și lista stocului disponibil al dealerului.
 Trebuie să returnezi EXCLUSIV un obiect JSON de forma:
 {
-  "type": "GENERAL|STOCK|ORDER|BUYBACK",
+  "type": "GENERAL|STOCK|ORDER|BUYBACK|FINANCING",
   "make": "...",
   "model": "...",
   "year": ...
 }
 
 Reguli pentru tip ("type"):
-- type TREBUIE să fie una dintre aceste 4 valori: GENERAL, STOCK, ORDER, BUYBACK.
+- type TREBUIE să fie una dintre aceste 5 valori: GENERAL, STOCK, ORDER, BUYBACK, FINANCING.
 - STOCK = întreabă despre o mașină din stocul de mai jos;
 - ORDER = dorește să comande/importe o mașină specifică, nu neapărat în stoc;
 - BUYBACK = dorește să își VÂNDĂ mașina proprie dealerului;
+- FINANCING = clientul întreabă despre finanțare/rate/credit/leasing pentru o mașină;
 - GENERAL = orice altceva (orar, contact general etc.).
 
 Reguli pentru make/model/year:
@@ -550,7 +551,7 @@ Reguli pentru make/model/year:
 
     console.log(`[#7 classify] Parsed AI output:`, parsed);
 
-    const allowedTypes = ["GENERAL", "STOCK", "ORDER", "BUYBACK"];
+    const allowedTypes = ["GENERAL", "STOCK", "ORDER", "BUYBACK", "FINANCING"];
     const proposedType = parsed.type;
 
     const currentMessage = await prisma.message.findUnique({
@@ -563,7 +564,8 @@ Reguli pentru make/model/year:
     }
 
     const currentType = currentMessage.type;
-    const newType = (proposedType && allowedTypes.includes(proposedType)) ? proposedType : currentType;
+    const aiTypeAllowed = currentType === "GENERAL";   // only fill the unknown, never override a specific intent
+    const newType = (aiTypeAllowed && proposedType && allowedTypes.includes(proposedType)) ? proposedType : currentType;
     const typeChanged = newType !== currentType;
 
     console.log(`[#7 classify] Message type: current=${currentType}, proposed=${proposedType}, final=${newType}, changed=${typeChanged}`);

@@ -75,6 +75,8 @@ const listCustomers = async (req, res) => {
           id: true,
           status: true,
           reminderAt: true,
+          type: true,
+          isRead: true,
         }
       }),
       prisma.offer.findMany({
@@ -113,6 +115,8 @@ const listCustomers = async (req, res) => {
           pendingOffer: null,
           nextAppointment: null,
           openLead: null,
+          leadTypesSet: new Set(),
+          hasUnreadLead: false,
         });
       }
       return customerMap.get(normalized);
@@ -227,6 +231,8 @@ const listCustomers = async (req, res) => {
       cust.sources.add("message");
       cust.name = pickName(cust.name, msg.name);
       cust.messagesCount++;
+      cust.leadTypesSet.add(msg.type);
+      if (msg.isRead === false) cust.hasUnreadLead = true;
 
       if (msg.status !== 'WON' && msg.status !== 'LOST') {
         const msgCreatedDate = new Date(msg.createdAt);
@@ -236,6 +242,8 @@ const listCustomers = async (req, res) => {
             status: msg.status,
             createdAt: msgCreatedDate.toISOString(),
             reminderAt: msg.reminderAt ? new Date(msg.reminderAt).toISOString() : null,
+            type: msg.type,
+            isRead: msg.isRead,
           };
         }
       }
@@ -275,11 +283,16 @@ const listCustomers = async (req, res) => {
       }
     }
 
-    const customersArray = Array.from(customerMap.values()).map(c => ({
-      ...c,
-      sources: Array.from(c.sources),
-      lastInteraction: c.lastInteraction.getTime() === 0 ? null : c.lastInteraction.toISOString(),
-    }));
+    const customersArray = Array.from(customerMap.values()).map(c => {
+      const { leadTypesSet, ...rest } = c;
+      return {
+        ...rest,
+        leadTypes: Array.from(leadTypesSet),
+        hasUnreadLead: c.hasUnreadLead,
+        sources: Array.from(c.sources),
+        lastInteraction: c.lastInteraction.getTime() === 0 ? null : c.lastInteraction.toISOString(),
+      };
+    });
 
     const sortedArray = customersArray.sort((a, b) => {
       const timeA = a.lastInteraction ? new Date(a.lastInteraction).getTime() : 0;

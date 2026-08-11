@@ -2,7 +2,8 @@
 // PURPOSE: Extract equipment features from a listing's free-text description and
 // connect them (m2m) in saas_new. Strict word-boundary matching against the existing
 // featureDictionary (no new slugs). DRY_RUN by default; pass --write to persist.
-// Usage: node etl/extract_features_from_desc.js [--write] [--only <listingId>]
+// Usage: node etl/extract_features_from_desc.js (--business <businessId> | --only <listingId>) [--write]
+// Refuses to run without --business or --only (no hardcoded targets).
 const fs = require('fs');
 const path = require('path');
 const { PrismaClient } = require('@prisma/client');
@@ -10,7 +11,7 @@ const { PrismaClient } = require('@prisma/client');
 const mappings = JSON.parse(fs.readFileSync(path.join(__dirname, 'etl_value_mappings.json'), 'utf8'));
 const dict = mappings.featureDictionary;
 
-const TARGET_IDS = ['cmg5io0nu00u6s52ch9n9kut2','cmg6mfhin01bns52cyjtokq63','cmgccwxdm001hp02fvtsws5rw'];
+// Selection is driven by CLI args (set in main): --business <businessId> or --only <listingId>.
 
 function normalize(str){
   if (str === null || str === undefined) return '';
@@ -49,13 +50,26 @@ function matchLine(normLine){
 const SUPPRESS = { 'plafon-panoramic': ['trapa'] };
 
 async function main(){
-  const write = process.argv.includes('--write');
+  const argv = process.argv.slice(2);
+  const write = argv.includes('--write');
+  const biz = (i => i !== -1 ? argv[i+1] : null)(argv.indexOf('--business'));
+  const only = (i => i !== -1 ? argv[i+1] : null)(argv.indexOf('--only'));
+  if (!biz && !only) {
+    console.error('REFUSING TO RUN: pass --business <businessId> or --only <listingId>. (No default target.)');
+    process.exit(1);
+  }
   const prisma = new PrismaClient();
   const dbFeatures = await prisma.feature.findMany();
   const slugToId = {}; dbFeatures.forEach(f=>slugToId[f.slug]=f.id);
 
-  for (const id of TARGET_IDS){
-    const listing = await prisma.listing.findUnique({ where:{ id }, select:{ id:true, title:true, description:true } });
+  const targets = only
+    ? await prisma.listing.findMany({ where:{ id: only }, select:{ id:true, title:true, description:true } })
+    : await prisma.listing.findMany({ where:{ businessId: biz }, select:{ id:true, title:true, description:true } });
+  console.log(`Target: ${only ? '--only '+only : '--business '+biz} -> ${targets.length} listing(s). Mode: ${write?'WRITE':'DRY-RUN'}`);
+
+  let grandTotal = 0;
+  for (const listing of targets){
+    const id = listing.id;
     if (!listing || !listing.description){ console.log('=== '+id+' === NO DESCRIPTION'); continue; }
     // split into candidate lines/segments
     const segments = listing.description.split(/[\r\n]+|[•▪✔✅☑☐]|(?:^|\s)-\s/).map(normalize).filter(s=>s.length>2);
@@ -73,6 +87,7 @@ async function main(){
     console.log('=== '+id+' ('+listing.title+') ===');
     finalSlugs.forEach(s=>console.log('  '+s+'  <= '+JSON.stringify(found.get(s))));
     console.log('  TOTAL: '+finalSlugs.length+(write?' [WRITING]':' [DRY-RUN]'));
+    grandTotal += finalSlugs.length;
 
     if (write){
       await prisma.listing.update({
@@ -82,6 +97,7 @@ async function main(){
     }
   }
   await prisma.$disconnect();
-  console.log(write ? '\nWRITE COMPLETE' : '\nDRY-RUN COMPLETE (no writes)');
+  console.log(`\nGRAND TOTAL feature links ${write?'written':'that WOULD be written'}: ${grandTotal} across ${targets.length} listing(s).`);
+  console.log(write ? 'WRITE COMPLETE' : 'DRY-RUN COMPLETE (no writes)');
 }
 main().catch(e=>{ console.error(e); process.exit(1); });

@@ -134,7 +134,7 @@ const contactFormSchema = Joi.object({
   email: Joi.string().email().max(255).required(),
   phone: Joi.string().max(20).allow(null, "").optional(),
   message: Joi.string().trim().min(1).max(2000).required(),
-  type: Joi.string().valid("GENERAL", "STOCK", "ORDER", "BUYBACK").default("GENERAL").optional(),
+  type: Joi.string().valid("GENERAL", "STOCK", "ORDER", "BUYBACK", "FINANCING").default("GENERAL").optional(),
   listingId: Joi.string().allow(null, "").optional(),
 });
 
@@ -180,7 +180,7 @@ const createManualLeadSchema = Joi.object({
   email: Joi.string().email().max(255).allow(null, "").optional(),
   phone: Joi.string().trim().min(1).max(20).required(),
   message: Joi.string().trim().min(1).max(2000).allow(null, "").optional(),
-  type: Joi.string().valid("GENERAL", "STOCK", "ORDER", "BUYBACK").default("GENERAL").optional(),
+  type: Joi.string().valid("GENERAL", "STOCK", "ORDER", "BUYBACK", "FINANCING").default("GENERAL").optional(),
   listingId: Joi.string().allow(null, "").optional(),
 });
 

@@ -519,6 +519,7 @@ enum MessageType {
   STOCK
   ORDER
   BUYBACK
+  FINANCING
 }
 
 enum LeadStatus {
