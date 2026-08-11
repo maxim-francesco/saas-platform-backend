@@ -98,7 +98,20 @@ app.use("/api/views", viewRoutes);
 app.use("/api/reports", reportsRoutes); // <-- ADAUGĂ ASTA
 app.use("/api/super-admin", superAdminRoutes);
 app.use("/og", ogRoutes);
-app.use("/oferta", offerPublicRoutes);
+app.use(
+  "/oferta",
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        "img-src": ["'self'", "data:", "https://res.cloudinary.com"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "script-src": ["'self'", "'unsafe-inline'"],
+      },
+    },
+  }),
+  offerPublicRoutes
+);
 app.use("/api/autovit", autovitRoutes);
 app.use("/api/blog", blogRoutes);
 app.use("/api/public/blog", publicBlogRoutes);
