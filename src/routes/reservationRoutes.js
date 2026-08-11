@@ -3,7 +3,8 @@ const {
   createReservation, 
   listReservations, 
   completeReservation, 
-  cancelReservation 
+  cancelReservation,
+  extendReservation 
 } = require("../controllers/reservationController");
 const { isAuthenticated } = require("../middlewares/authMiddleware");
 const router = express.Router();
@@ -16,5 +17,6 @@ router.post("/", validate(createReservationSchema), createReservation);
 router.get("/", listReservations);
 router.patch("/:id/complete", completeReservation);
 router.patch("/:id/cancel", cancelReservation);
+router.patch("/:id/extend", extendReservation);
 
 module.exports = router;

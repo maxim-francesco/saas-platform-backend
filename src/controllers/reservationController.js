@@ -123,6 +123,37 @@ const completeReservation = async (req, res) => {
   }
 };
 
+const extendReservation = async (req, res) => {
+  try {
+    const { businessId } = req.user;
+    const { id } = req.params;
+    const { days } = req.body;
+    const addDays = parseInt(days, 10);
+    if (!addDays || addDays < 1 || addDays > 365) {
+      return res.status(400).json({ message: "Numărul de zile trebuie să fie între 1 și 365." });
+    }
+    const reservation = await prisma.reservation.findFirst({
+      where: { id, businessId }
+    });
+    if (!reservation) {
+      return res.status(404).json({ message: "Rezervarea nu a fost găsită." });
+    }
+    if (reservation.status !== "ACTIVE") {
+      return res.status(400).json({ message: "Numai o rezervare activă poate fi prelungită." });
+    }
+    const base = Math.max(Date.now(), new Date(reservation.expiresAt).getTime());
+    const newExpiresAt = new Date(base + addDays * 24 * 60 * 60 * 1000);
+    const updated = await prisma.reservation.update({
+      where: { id },
+      data: { expiresAt: newExpiresAt }
+    });
+    return res.status(200).json(updated);
+  } catch (error) {
+    console.error("Eroare la prelungirea rezervării:", error);
+    return res.status(500).json({ message: "Eroare la prelungirea rezervării." });
+  }
+};
+
 const cancelReservation = async (req, res) => {
   try {
     const { businessId } = req.user;
@@ -174,5 +205,6 @@ module.exports = {
   listReservations,
   completeReservation,
   cancelReservation,
+  extendReservation,
   releaseExpiredReservations
 };
