@@ -426,6 +426,10 @@ const getCustomer = async (req, res) => {
       startAt: a.startAt.toISOString(),
       endAt: a.endAt.toISOString(),
       notes: a.notes,
+      listingId: a.listingId,
+      car: a.listing?.title || null,
+      clientName: a.clientName,
+      clientPhone: a.clientPhone,
       createdAt: a.createdAt.toISOString()
     }));
 
