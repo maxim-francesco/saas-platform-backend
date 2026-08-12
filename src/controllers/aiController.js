@@ -612,45 +612,66 @@ async function diagnoseListing(req, res) {
     };
     const spec = await buildListingSpec(specInput);
 
-    let fallbackText = "";
+    let fallbackObj = { explanation: "", tips: [] };
     switch (verdictCode) {
       case "INSUFFICIENT_DATA":
-        fallbackText = "Nu există suficiente date pentru a genera o diagnoză. Stocul este prea mic sau anunțurile nu au vizualizări.";
+        fallbackObj = {
+          explanation: "Nu există suficiente date pentru a genera o diagnoză. Stocul este prea mic sau anunțurile nu au vizualizări.",
+          tips: ["Adăugați mai multe anunțuri în platformă", "Promovați anunțurile existente pentru a atrage trafic"]
+        };
         break;
       case "TOO_NEW":
-        fallbackText = "Anunțul este prea nou pentru a trage concluzii relevante. Reveniți peste câteva zile.";
+        fallbackObj = {
+          explanation: "Anunțul este prea nou pentru a trage concluzii relevante.",
+          tips: ["Așteptați câteva zile pentru a acumula statistici", "Promovați anunțul pentru a grăbi colectarea de vizualizări"]
+        };
         break;
       case "HIGH_VIEWS_NO_LEADS":
-        fallbackText = "Anunțul are un interes ridicat (multe vizualizări), dar niciun client nu a trimis mesaj. Verificați prețul și calitatea pozelor.";
+        fallbackObj = {
+          explanation: "Anunțul atrage atenția cumpărătorilor (are multe vizualizări), dar nu generează mesaje sau contacte.",
+          tips: ["Verificați prețul în comparație cu piața", "Adăugați fotografii de o calitate mai bună"]
+        };
         break;
       case "LOW_VIEWS":
-        fallbackText = "Anunțul are puține vizualizări comparativ cu media stocului. Verificați titlul și asigurați-vă că este promovat corespunzător.";
+        fallbackObj = {
+          explanation: "Anunțul are un nivel de vizualizări redus, mult sub media stocului curent.",
+          tips: ["Îmbunătățiți titlul anunțului cu detalii atractive", "Promovați anunțul pe alte platforme auto", "Verificați vizibilitatea pe portalurile auto"]
+        };
         break;
       case "STALE_NORMAL_TRAFFIC":
-        fallbackText = "Anunțul are trafic normal, dar se află pe stoc de peste 45 de zile. O mică reducere de preț sau refacerea descrierii ar putea ajuta.";
+        fallbackObj = {
+          explanation: "Mașina înregistrează un trafic normal, dar se află pe stoc de peste 45 de zile fără finalizare.",
+          tips: ["Scădeți ușor prețul cu 2-3%", "Reîmprospătați descrierea sau ordinea pozelor"]
+        };
         break;
       case "HEALTHY":
       default:
-        fallbackText = "Anunțul performează în parametri normali. Traficul și mesajele primite sunt aliniate cu restul stocului.";
+        fallbackObj = {
+          explanation: "Anunțul tău performează în parametri optimi. Traficul și mesajele sunt aliniate cu media stocului.",
+          tips: ["Mențineți anunțul activ fără modificări majore", "Verificați prețul periodic față de concurență"]
+        };
         break;
     }
 
     const systemInstruction = `Ești un asistent de vânzări auto specializat în mașini rulate în România. Analizezi performanța unui anunț auto.
 Primești un cod de diagnostic (verdictCode), metricile de trafic ale anunțului și detaliile mașinii (specificațiile).
-Sarcina ta este să scrii o diagnoză scurtă de 2-3 propoziții în limba română pentru dealer.
+Sarcina ta este să returnezi EXCLUSIV un obiect JSON valid (fără formatare markdown, fără backticks) de forma:
+{
+  "explanation": "1-2 propoziții simple, limbaj extrem de simplu pe înțelesul unui dealer fără cunoștințe tehnice, explicând ce se întâmplă cu anunțul",
+  "tips": ["sfat 1", "sfat 2"] // 1-3 sfaturi concrete scurte, acționabile, la modul imperativ (ex: "Adaugă poze mai clare", "Scade prețul cu 3-5%")
+}
 
 REGULI CRITICE:
 - Folosește un ton cald, profesionist și adresează-te la persoana a doua (ex: „Anunțul tău...”, „Îți recomandăm...”).
-- Explică pe scurt ce se întâmplă și propune 1-2 acțiuni concrete adaptate diagnosticului primit (verdictCode).
 - NU schimba, NU contrazice și NU trece peste diagnosticul deja decis (verdictCode).
 - Folosește strict cifrele/metricile transmise în prompt. Nu inventa alte numere, vizualizări sau date istorice.
-- FĂRĂ emoji-uri și FĂRĂ formatare markdown (nu folosi *, #, sau liste). Scrie doar text simplu.
+- FĂRĂ emoji-uri și FĂRĂ formatare markdown în texte. Fiecare sfat/tip trebuie să aibă maximum 8 cuvinte.
 - Limba română corectă, cu diacritice.
 
-Ghidaj în funcție de verdictCode:
-1. INSUFFICIENT_DATA: Spune clar că nu sunt destule date în stoc sau vizualizări pentru concluzii. Nu inventa o problemă. Recomandă generarea de trafic sau adăugarea de noi anunțuri.
-2. TOO_NEW: Spune că anunțul este proaspăt adăugat (sub 7 zile) și trebuie lăsat să acumuleze trafic înainte de a trage concluzii.
-3. HIGH_VIEWS_NO_LEADS: Explică faptul că mașina atrage atenția (are multe vizualizări), dar nu generează lead-uri/mesaje. Recomandă verificarea prețului comparativ cu piața, îmbunătățirea pozelor sau a descrierii.
+Ghidaj în funcție de verdictCode pentru explanation și tips:
+1. INSUFFICIENT_DATA: Spune clar că nu sunt destule date în stoc sau vizualizări pentru concluzii. Nu inventa o problemă. Sfatul să fie de a adăuga mai multe anunțuri sau de a le promova.
+2. TOO_NEW: Spune că anunțul este proaspăt adăugat (sub 7 zile) și trebuie lăsat să acumuleze trafic. Sfatul să fie de a aștepta câteva zile sau de a aduce trafic.
+3. HIGH_VIEWS_NO_LEADS: Explică faptul că mașina atrage atenția (are multe vizualizări), dar nu generează contacte. Recomandă verificarea prețului comparativ cu piața sau îmbunătățirea pozelor/descrierii.
 4. LOW_VIEWS: Explică faptul că traficul este redus sub media stocului. Recomandă optimizarea titlului, verificarea vizibilității sau promovarea anunțului.
 5. STALE_NORMAL_TRAFFIC: Menționează că mașina are trafic normal dar stă de mult pe stoc (peste 45 de zile). Sugerează o ușoară reducere de preț sau actualizarea anunțului.
 6. HEALTHY: Felicită dealerul pentru că anunțul este în parametri optimi. Menționează că are un comportament sănătos în ceea ce privește vizualizările și mesajele.`;
@@ -666,25 +687,60 @@ Metrici:
 Specificații mașină:
 ${spec || "Fără specificații disponibile."}`;
 
-    let text = fallbackText;
+    let explanation = fallbackObj.explanation;
+    let tips = fallbackObj.tips;
     let source = "fallback";
 
     try {
       const response = await generateText({
         systemInstruction,
-        prompt
+        prompt,
+        maxOutputTokens: 512,
+        responseMimeType: "application/json"
       });
       if (response && response.trim()) {
-        text = response.trim();
-        source = "ai";
+        let cleanRaw = response.trim();
+        if (cleanRaw.startsWith("```")) {
+          cleanRaw = cleanRaw.replace(/^```(json)?\n?/, "");
+          cleanRaw = cleanRaw.replace(/\n?```$/, "");
+          cleanRaw = cleanRaw.trim();
+        }
+        const parsed = JSON.parse(cleanRaw);
+        if (parsed && typeof parsed.explanation === "string" && parsed.explanation.trim() && Array.isArray(parsed.tips)) {
+          explanation = parsed.explanation.trim();
+          tips = parsed.tips.filter(t => typeof t === "string" && t.trim()).map(t => t.trim());
+          source = "ai";
+        }
       }
     } catch (geminiError) {
       console.error("[Diagnose Gemini Error]", geminiError.message || geminiError);
     }
 
+    let level = "warn";
+    if (verdictCode === "HEALTHY") {
+      level = "good";
+    } else if (verdictCode === "LOW_VIEWS") {
+      level = "bad";
+    }
+
+    let verdict = "De îmbunătățit";
+    let subtitle = "Câteva lucruri de reglat";
+
+    if (level === "good") {
+      verdict = "Se vinde bine";
+      subtitle = "Anunțul e sănătos";
+    } else if (level === "bad") {
+      verdict = "Nu se vinde";
+      subtitle = "Are nevoie de atenție";
+    }
+
     res.json({
       verdictCode,
-      text,
+      level,
+      verdict,
+      subtitle,
+      explanation,
+      tips,
       source,
       metrics: {
         myViews30,
