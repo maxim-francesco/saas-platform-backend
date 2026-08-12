@@ -15,7 +15,6 @@ async function generateText({ systemInstruction, prompt, maxOutputTokens, respon
     systemInstruction,
     temperature: temperature ?? 0.7,
     maxOutputTokens: maxOutputTokens ?? 1024,
-    thinkingConfig: { thinkingBudget: 0 },
   };
   if (responseMimeType) config.responseMimeType = responseMimeType;
   const response = await client.models.generateContent({
