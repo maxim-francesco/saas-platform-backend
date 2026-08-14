@@ -53,7 +53,11 @@ app.use(cors({
     const isAllowed = allowedOrigins.some((allowed) => {
       const normalizedAllowed = allowed.replace("://www.", "://");
       return normalizedOrigin === normalizedAllowed;
-    }) || origin.includes("localhost") || origin.includes("127.0.0.1");
+    })
+      || origin.includes("localhost")
+      || origin.includes("127.0.0.1")
+      || /\.vercel\.app$/.test(new URL(origin).hostname)
+      || /(^|\.)awdauto\.ro$/.test(new URL(origin).hostname);
 
     if (isAllowed) {
       return callback(null, true);
