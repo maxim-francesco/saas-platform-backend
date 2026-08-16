@@ -53,3 +53,29 @@ dev-server.log
 dev-server.err.log
 test-*.log
 scripts/v3_*.json
+
+# -------------------------------------------------------------
+# Local operational artefacts — never commit (added 2026-08-16)
+# -------------------------------------------------------------
+# Database dumps and backups (root only — Prisma migrations stay tracked)
+/*.sql
+/*.dump
+
+# Every .env variant except the documented example
+.env*
+!.env.example
+
+# Logs and run transcripts
+*.log
+/*.txt
+
+# One-off enrichment / migration reports and caches
+/*_report*.json
+/car_models_seed.json
+
+# Throwaway scripts left in the repo root
+/*.mjs
+
+# Editor / manual source backups
+*.backup_*
+*.bak
