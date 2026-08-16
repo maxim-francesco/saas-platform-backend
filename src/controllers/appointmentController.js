@@ -1,4 +1,5 @@
 const prisma = require("../config/prismaClient");
+const { normalizeRoPhone } = require("../utils/phone");
 
 const createAppointment = async (req, res) => {
   try {
@@ -23,7 +24,7 @@ const createAppointment = async (req, res) => {
         startAt: new Date(startAt),
         endAt: new Date(endAt),
         clientName: clientName || null,
-        clientPhone: clientPhone || null,
+        clientPhone: normalizeRoPhone(clientPhone),
         listingId: finalListingId,
         notes: notes || null
       }

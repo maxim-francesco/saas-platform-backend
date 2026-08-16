@@ -1,6 +1,7 @@
 const prisma = require("../config/prismaClient");
 const crypto = require("crypto");
 const { generateSlug, generateCode } = require("../utils/slugify");
+const { normalizeRoPhone } = require("../utils/phone");
 
 const createContract = async (req, res) => {
   try {
@@ -61,7 +62,7 @@ const createContract = async (req, res) => {
       type: buyerType,
       name: buyerName,
       address: buyerAddress || null,
-      phone: buyerPhone || null,
+      phone: normalizeRoPhone(buyerPhone),
       email: buyerEmail || null,
       cnp: buyerCnp || null,
       ciSeries: buyerCiSeries || null,

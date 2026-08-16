@@ -1,4 +1,5 @@
 const prisma = require("../config/prismaClient");
+const { normalizeRoPhone } = require("../utils/phone");
 
 async function releaseExpiredReservations(businessId) {
   const now = new Date();
@@ -45,7 +46,7 @@ const createReservation = async (req, res) => {
           businessId,
           listingId,
           clientName,
-          clientPhone,
+          clientPhone: normalizeRoPhone(clientPhone),
           depositAmount: parseFloat(depositAmount),
           expiresAt
         }

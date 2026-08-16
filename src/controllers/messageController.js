@@ -3,6 +3,7 @@ const prisma = require("../config/prismaClient");
 const { buildListingPublicUrl } = require("../utils/urlHelper");
 const { generateText } = require("../services/geminiService");
 const { buildListingSpec } = require("./aiController");
+const { normalizeRoPhone } = require("../utils/phone");
 
 
 // Funcția pentru a prelua toate mesajele pentru un business
@@ -484,7 +485,7 @@ const createMessage = async (req, res) => {
         data: {
           businessId,
           name: name?.trim() || "Lead telefonic",
-          phone: phone.trim(),
+          phone: normalizeRoPhone(phone),
           email: email?.trim() || "",
           message: message?.trim() || "",
           type: type || "GENERAL",

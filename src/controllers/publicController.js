@@ -4,6 +4,7 @@ const { generateText } = require("../services/geminiService");
 const { sendContactNotification } = require("../services/emailService");
 const { toLegacyListing } = require("../utils/compatSerializer");
 const { buildListingPublicUrl } = require("../utils/urlHelper");
+const { normalizeRoPhone } = require("../utils/phone");
 
 const COLOR_MAP = {
   BLACK: "Negru",
@@ -700,7 +701,7 @@ const submitContactForm = async (req, res) => {
         data: {
           name,
           email,
-          phone,
+          phone: normalizeRoPhone(phone),
           message,
           businessId,
           type: type || "GENERAL",
