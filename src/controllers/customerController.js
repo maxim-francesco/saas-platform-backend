@@ -1,17 +1,5 @@
 const prisma = require("../config/prismaClient");
-
-const normalizePhone = (raw) => {
-  if (!raw) return null;
-  const digits = raw.replace(/\D/g, "");
-  if (digits.length < 6) return null; // Prea scurt pentru a fi un număr valid
-
-  if (digits.startsWith("0")) {
-    if (digits.length >= 10) {
-      return "40" + digits.substring(1);
-    }
-  }
-  return digits;
-};
+const { normalizeRoPhone } = require("../utils/phone");
 
 const pickName = (existing, candidate) => {
   const ext = (existing || "").trim();
@@ -97,11 +85,12 @@ const listCustomers = async (req, res) => {
     const customerMap = new Map();
 
     const getOrCreateCustomer = (phone, initialName) => {
-      const normalized = normalizePhone(phone);
-      if (!normalized) return null;
-      if (!customerMap.has(normalized)) {
-        customerMap.set(normalized, {
-          phone: normalized,
+      const normalized = normalizeRoPhone(phone);
+      const key = normalized || (initialName ? "no-phone:" + initialName.trim().toLowerCase() : null);
+      if (!key) return null;
+      if (!customerMap.has(key)) {
+        customerMap.set(key, {
+          phone: normalized || "",
           name: initialName || "",
           contractsCount: 0,
           reservationsCount: 0,
@@ -119,7 +108,7 @@ const listCustomers = async (req, res) => {
           hasUnreadLead: false,
         });
       }
-      return customerMap.get(normalized);
+      return customerMap.get(key);
     };
 
     const now = new Date();
@@ -367,11 +356,11 @@ const getCustomer = async (req, res) => {
       })
     ]);
 
-    const matchedBuyers = buyers.filter(b => normalizePhone(b.phone) === targetPhone);
-    const matchedReservations = reservations.filter(r => normalizePhone(r.clientPhone) === targetPhone);
-    const matchedAppointments = appointments.filter(a => normalizePhone(a.clientPhone) === targetPhone);
-    const matchedMessages = messages.filter(m => normalizePhone(m.phone) === targetPhone);
-    const matchedOffers = offers.filter(o => normalizePhone(o.clientPhone) === targetPhone);
+    const matchedBuyers = buyers.filter(b => normalizeRoPhone(b.phone) === targetPhone);
+    const matchedReservations = reservations.filter(r => normalizeRoPhone(r.clientPhone) === targetPhone);
+    const matchedAppointments = appointments.filter(a => normalizeRoPhone(a.clientPhone) === targetPhone);
+    const matchedMessages = messages.filter(m => normalizeRoPhone(m.phone) === targetPhone);
+    const matchedOffers = offers.filter(o => normalizeRoPhone(o.clientPhone) === targetPhone);
 
     if (matchedBuyers.length === 0 && matchedReservations.length === 0 && matchedAppointments.length === 0 && matchedMessages.length === 0 && matchedOffers.length === 0) {
       return res.status(404).json({ message: "Client negăsit." });
