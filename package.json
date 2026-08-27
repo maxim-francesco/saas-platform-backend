@@ -34,6 +34,7 @@
     "sharp": "^0.34.4"
   },
   "devDependencies": {
+    "fast-xml-parser": "^5.11.1",
     "nodemon": "^3.1.10",
     "prisma": "^6.16.2"
   }

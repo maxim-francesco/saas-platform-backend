@@ -910,6 +910,156 @@ const getListingsCsvFeed = async (req, res) => {
   }
 };
 
+const getListingsXmlFeed = async (req, res) => {
+  const { businessId } = req.query;
+
+  if (!businessId) {
+    return res.status(400).json({ message: "businessId este obligatoriu." });
+  }
+
+  try {
+    const business = await prisma.business.findUnique({
+      where: { id: businessId },
+    });
+
+    if (!business) {
+      return res.status(404).json({ message: "Afacerea nu a fost găsită." });
+    }
+
+    const listings = await prisma.listing.findMany({
+      where: {
+        businessId,
+        status: "AVAILABLE",
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        slug: true,
+        price: true,
+        year: true,
+        vin: true,
+        mileage: true,
+        fuelType: true,
+        gearbox: true,
+        bodyType: true,
+        color: true,
+        doors: true,
+        seats: true,
+        powerHp: true,
+        co2Emissions: true,
+        engineCapacity: true,
+        make: {
+          select: {
+            name: true,
+          },
+        },
+        model: {
+          select: {
+            name: true,
+          },
+        },
+        images: {
+          select: {
+            url: true,
+          },
+          orderBy: {
+            order: "asc",
+          },
+        },
+      },
+    });
+
+    const stripHtml = (html) => {
+      if (!html) return "";
+      let text = html
+        .replace(/<\/p>/gi, " ")
+        .replace(/<br\s*\/?>/gi, " ")
+        .replace(/<\/div>/gi, " ");
+      text = text.replace(/<[^>]*>/g, "");
+      text = text
+        .replace(/&nbsp;/g, " ")
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'");
+      text = text.replace(/\s+/g, " ");
+      return text.trim();
+    };
+
+    const xmlEscape = (str) => {
+      if (str === null || str === undefined) return "";
+      return str
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+    };
+
+    let xml = '<?xml version="1.0" encoding="UTF-8"?>\n<data>\n';
+
+    for (const listing of listings) {
+      const id = listing.id;
+      const title = listing.title || "";
+      const description = stripHtml(listing.description);
+      const permalink = buildListingPublicUrl(business, listing) || "";
+      const price = listing.price !== null && listing.price !== undefined ? listing.price.toString() : "";
+      const currency = "EUR";
+      const make = listing.make?.name || listing.title.trim().split(/\s+/)[0] || "";
+      const model = listing.model?.name || listing.title.trim().split(/\s+/)[1] || "";
+      const bodyType = listing.bodyType ? (BODY_TYPE_MAP[listing.bodyType] || "") : "";
+      const color = listing.color ? (COLOR_MAP[listing.color] || "") : "";
+      const fuel = listing.fuelType ? (FUEL_TYPE_MAP[listing.fuelType] || "") : "";
+      const mileage = listing.mileage !== null && listing.mileage !== undefined ? listing.mileage.toString() : "";
+      const transmission = listing.gearbox ? (GEARBOX_MAP[listing.gearbox] || "") : "";
+      const year = listing.year !== null && listing.year !== undefined ? listing.year.toString() : "";
+      const vin = listing.vin || "";
+      const imageUrl = listing.images ? listing.images.map((img) => img.url).filter(Boolean).join("|") : "";
+      const doorsCount = listing.doors !== null && listing.doors !== undefined ? listing.doors.toString() : "";
+      const seatsCount = listing.seats !== null && listing.seats !== undefined ? listing.seats.toString() : "";
+      const power = listing.powerHp !== null && listing.powerHp !== undefined ? Math.round(listing.powerHp * 0.7355).toString() : "";
+      const emissions = listing.co2Emissions !== null && listing.co2Emissions !== undefined ? listing.co2Emissions.toString() : "";
+      const engineCapacity = listing.engineCapacity !== null && listing.engineCapacity !== undefined ? listing.engineCapacity.toString() : "";
+
+      xml += `  <post>\n`;
+      xml += `    <id>${xmlEscape(id)}</id>\n`;
+      xml += `    <title>${xmlEscape(title)}</title>\n`;
+      xml += `    <description>${xmlEscape(description)}</description>\n`;
+      xml += `    <permalink>${xmlEscape(permalink)}</permalink>\n`;
+      xml += `    <price>${xmlEscape(price)}</price>\n`;
+      xml += `    <currency>${xmlEscape(currency)}</currency>\n`;
+      xml += `    <make>${xmlEscape(make)}</make>\n`;
+      xml += `    <model>${xmlEscape(model)}</model>\n`;
+      xml += `    <body_type>${xmlEscape(bodyType)}</body_type>\n`;
+      xml += `    <color>${xmlEscape(color)}</color>\n`;
+      xml += `    <fuel>${xmlEscape(fuel)}</fuel>\n`;
+      xml += `    <mileage>${xmlEscape(mileage)}</mileage>\n`;
+      xml += `    <transmission>${xmlEscape(transmission)}</transmission>\n`;
+      xml += `    <year>${xmlEscape(year)}</year>\n`;
+      xml += `    <vin>${xmlEscape(vin)}</vin>\n`;
+      xml += `    <ImageURL>${xmlEscape(imageUrl)}</ImageURL>\n`;
+      xml += `    <doors_count>${xmlEscape(doorsCount)}</doors_count>\n`;
+      xml += `    <seats_count>${xmlEscape(seatsCount)}</seats_count>\n`;
+      xml += `    <power>${xmlEscape(power)}</power>\n`;
+      xml += `    <emissions>${xmlEscape(emissions)}</emissions>\n`;
+      xml += `    <engine_capacity>${xmlEscape(engineCapacity)}</engine_capacity>\n`;
+      xml += `    <engline_capacity>${xmlEscape(engineCapacity)}</engline_capacity>\n`;
+      xml += `  </post>\n`;
+    }
+
+    xml += `</data>`;
+
+    res.setHeader("Content-Type", "application/xml; charset=utf-8");
+    res.send(xml);
+  } catch (error) {
+    console.error("Eroare la generarea feed-ului XML:", error);
+    res.status(500).json({ message: "Eroare la generarea feed-ului XML." });
+  }
+};
+
 module.exports = {
   searchListings,
   getPublicListingById,
@@ -918,4 +1068,5 @@ module.exports = {
   getAttributeStats,
   submitContactForm,
   getListingsCsvFeed,
+  getListingsXmlFeed,
 };

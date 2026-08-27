@@ -8,6 +8,7 @@ const {
   getAttributeStats,
   submitContactForm,
   getListingsCsvFeed,
+  getListingsXmlFeed,
 } = require("../controllers/publicController");
 const { getSoldListings } = require("../controllers/listingController");
 const { publicFormLimiter, publicBrowseLimiter } = require("../middlewares/rateLimiter");
@@ -18,6 +19,7 @@ const { contactFormSchema } = require("../validations/schemas");
 
 // Acest endpoint nu folosește middleware-ul `isAuthenticated`
 router.get("/listings/csv-feed", publicBrowseLimiter, getListingsCsvFeed);
+router.get("/listings/xml-feed", publicBrowseLimiter, getListingsXmlFeed);
 router.get("/listings/search", publicBrowseLimiter, searchListings);
 router.get("/listings/status/incoming", publicBrowseLimiter, async (req, res) => {
   if (!req.query.businessId) {
